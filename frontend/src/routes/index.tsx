@@ -66,12 +66,11 @@ export function LandingPage() {
 
             {/* Desktop / Tablet Navigation Pill */}
             <nav className="hidden sm:flex items-center gap-3 md:gap-6 bg-white/95 backdrop-blur-md px-4 md:px-6 py-1.5 md:py-2 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] font-mono text-[11px] md:text-xs font-bold text-black">
-              <Link to="/app/upload" className="hover:underline font-black text-purple-950 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                <span>Studio</span>
-              </Link>
               <a href="#capabilities" className="hover:underline text-black">
                 Capabilities
+              </a>
+              <a href="#about" className="hover:underline text-black">
+                About
               </a>
               <Link to="/docs" className="hover:underline text-black font-black">
                 Docs
@@ -89,21 +88,13 @@ export function LandingPage() {
 
             {/* Top Right Action Button */}
             <div className="flex items-center gap-2">
-              <Link
-                to="/app/upload"
-                className="sm:hidden bg-[#ffe600] text-black font-mono font-black text-[11px] px-2.5 py-1.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Studio</span>
-              </Link>
-
               <button
                 onClick={handleCopyCLI}
-                className="bg-[#ec4899] text-white hover:bg-pink-600 font-mono font-black text-[11px] sm:text-xs px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
               >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span className="hidden xs:inline">{copied ? "COPIED!" : "COPY CLI"}</span>
-                <span className="xs:hidden">{copied ? "✓" : "CLI"}</span>
+                {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5 text-black" />}
+                <span className="hidden xs:inline">{copied ? "COPIED 1-LINER!" : "COPY 1-LINER"}</span>
+                <span className="xs:hidden">{copied ? "✓" : "COPY"}</span>
               </button>
             </div>
           </div>
@@ -187,13 +178,13 @@ export function LandingPage() {
 
           {/* Action Buttons (Mobile stacked, tablet/desktop row) */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-1 sm:pt-2 max-w-md sm:max-w-none mx-auto">
-            <Link to="/app/upload" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto bg-[#ffe600] text-black hover:bg-yellow-400 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
-                <span>LAUNCH STUDIO UI</span>
-                <ArrowRight className="w-4 h-4 text-black" />
-              </button>
-            </Link>
+            <button
+              onClick={handleCopyCLI}
+              className="w-full sm:w-auto bg-[#ffe600] text-black hover:bg-yellow-400 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
+            >
+              {copied ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" /> : <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-black" />}
+              <span>{copied ? "COPIED 1-LINE COMMAND!" : "⚡ COPY 1-LINE LAUNCHER"}</span>
+            </button>
 
             <Link to="/docs" className="w-full sm:w-auto">
               <button className="w-full sm:w-auto bg-white text-black hover:bg-gray-100 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]">
@@ -201,6 +192,18 @@ export function LandingPage() {
                 <span>EXPLORE DOCS</span>
               </button>
             </Link>
+
+            <a
+              href="https://github.com/SypherKx/InsightRAG"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full sm:w-auto"
+            >
+              <button className="w-full sm:w-auto bg-[#0d1117] text-white hover:bg-gray-900 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]">
+                <Code className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <span>VIEW REPO</span>
+              </button>
+            </a>
           </div>
         </main>
 
