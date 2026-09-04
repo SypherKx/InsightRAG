@@ -140,8 +140,10 @@ export function KnowledgeBaseStudioPage() {
   });
   const [querying, setQuerying] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   // Sync chat messages to localStorage & auto-scroll
   useEffect(() => {
@@ -173,29 +175,36 @@ export function KnowledgeBaseStudioPage() {
     if (!selected || selected.length === 0) return;
     const fileArray = Array.from(selected);
     setFiles(fileArray);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     await startUpload(fileArray);
   };
 
   const startUpload = async (fileList: File[]) => {
     setUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(15);
+    setUploadStatusMsg(null);
     const interval = setInterval(() => {
       setUploadProgress((p) => (p >= 90 ? 90 : p + 15));
     }, 150);
 
     try {
-      await uploadRAGDocuments(fileList);
+      const res = await uploadRAGDocuments(fileList);
       clearInterval(interval);
       setUploadProgress(100);
+      setUploadStatusMsg(`✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s) (${res?.chunks_created || 0} chunks)!`);
       setTimeout(() => {
         setUploading(false);
         setUploadProgress(0);
         loadSpecsAndStats();
-      }, 500);
-    } catch (err) {
+      }, 600);
+      setTimeout(() => {
+        setUploadStatusMsg(null);
+      }, 5000);
+    } catch (err: any) {
       clearInterval(interval);
       setUploading(false);
       setUploadProgress(0);
+      setUploadStatusMsg(`⚠️ Upload error: ${err?.response?.data?.detail || err?.message || "Failed to process files"}`);
       loadSpecsAndStats();
     }
   };
@@ -561,8 +570,8 @@ export function KnowledgeBaseStudioPage() {
             </div>
           </div>
 
-          {/* 4. DOCUMENT DROPZONE (Image 2 style) */}
-          <div className="pt-2">
+          {/* 4. DOCUMENT DROPZONE */}
+          <div className="pt-2 space-y-3">
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -574,16 +583,16 @@ export function KnowledgeBaseStudioPage() {
                 setDrag(false);
                 onSelectFiles(e.dataTransfer.files);
               }}
-              onClick={() => inputRef.current?.click()}
+              onClick={() => fileInputRef.current?.click()}
               className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${
                 drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
               }`}
             >
               <input
-                ref={inputRef}
+                ref={fileInputRef}
                 type="file"
                 multiple
-                accept=".pdf,.docx,.txt,.md,.csv,.png,.jpg,.jpeg"
+                accept=".pdf,.docx,.txt,.md,.csv,.json,.log,.rst,.html,.xml,.png,.jpg,.jpeg,.webp"
                 className="hidden"
                 onChange={(e) => onSelectFiles(e.target.files)}
               />
@@ -595,9 +604,30 @@ export function KnowledgeBaseStudioPage() {
                 Drop your documents, PDFs, or photos here
               </h2>
               <p className="text-xs font-mono font-bold text-gray-600 mt-1">
-                Supports PDF, DOCX, TXT, MD, CSV, PNG, JPG
+                Supports PDF, DOCX, TXT, MD, CSV, PNG, JPG, WEBP • Click to Browse Files
               </p>
             </div>
+
+            {/* Upload Status Banner */}
+            {uploadStatusMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_#000] ${
+                  uploadStatusMsg.startsWith("✓")
+                    ? "bg-emerald-400 text-black"
+                    : "bg-red-400 text-black"
+                }`}
+              >
+                <span>{uploadStatusMsg}</span>
+                <button
+                  onClick={() => setUploadStatusMsg(null)}
+                  className="cursor-pointer font-black text-xs hover:opacity-75"
+                >
+                  ✕
+                </button>
+              </motion.div>
+            )}
           </div>
 
           {/* Upload Progress Bar */}
@@ -881,7 +911,7 @@ export function KnowledgeBaseStudioPage() {
               className="flex gap-2"
             >
               <input
-                ref={inputRef}
+                ref={chatInputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

@@ -23,7 +23,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.upload.tsx (1000 lines)
+Module: frontend\src\routes\app.upload.tsx (1030 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
 Exports: export function KnowledgeBaseStudioPage

@@ -52,7 +52,7 @@ class RAGPipeline:
             "chunk_overlap": 50,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
             "batch_size": 32,
-            "allowed_extensions": [".pdf", ".txt", ".md", ".csv", ".json", ".docx", ".log", ".rst", ".html", ".xml"],
+            "allowed_extensions": [".pdf", ".txt", ".md", ".csv", ".json", ".docx", ".log", ".rst", ".html", ".xml", ".png", ".jpg", ".jpeg", ".webp", ".bmp"],
             ** (config or {})
         }
 

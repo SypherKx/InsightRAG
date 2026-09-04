@@ -32,7 +32,8 @@ class IngestionConfig:
         if self.allowed_extensions is None:
             self.allowed_extensions = [
                 ".pdf", ".txt", ".md", ".csv", ".json", ".log",
-                ".rst", ".html", ".xml", ".docx"
+                ".rst", ".html", ".xml", ".docx",
+                ".png", ".jpg", ".jpeg", ".webp", ".bmp"
             ]
 
 
@@ -67,6 +68,11 @@ class DocumentIngester:
             ".html": self._extract_txt,
             ".xml": self._extract_txt,
             ".docx": self._extract_docx,
+            ".png": self._extract_image,
+            ".jpg": self._extract_image,
+            ".jpeg": self._extract_image,
+            ".webp": self._extract_image,
+            ".bmp": self._extract_image,
         }
 
     def ingest_file(self, file_path: Union[str, Path], org_id: str,
@@ -375,13 +381,44 @@ class DocumentIngester:
             texts = [node.text for node in tree.iter() if node.text]
             return " ".join(texts), {"file_type": "docx"}
 
+    def _extract_image(self, file_path: Path) -> tuple[str, dict]:
+        """Extract text/metadata from image file."""
+        metadata = {
+            "file_type": "image",
+            "file_size": file_path.stat().st_size,
+            "page_count": 1,
+            "page": 1,
+        }
+        text = f"Visual Document & Diagram: {file_path.name}"
+        try:
+            from PIL import Image
+            with Image.open(file_path) as img:
+                metadata["width"] = img.width
+                metadata["height"] = img.height
+                metadata["format"] = img.format or file_path.suffix.lstrip(".")
+                text = f"Visual Diagram File: {file_path.name} (Image Resolution: {img.width}x{img.height} px)."
+        except Exception:
+            pass
+
+        try:
+            import pytesseract
+            from PIL import Image
+            ocr_text = pytesseract.image_to_string(Image.open(file_path)).strip()
+            if ocr_text:
+                text += f"\n\nOCR Extracted Text Content:\n{ocr_text}"
+        except Exception:
+            pass
+
+        return text, metadata
+
 
 def create_default_ingester() -> DocumentIngester:
     """Create ingester with default configuration."""
     config = IngestionConfig(
         allowed_extensions=[
             ".pdf", ".txt", ".md", ".csv", ".json", ".log",
-            ".rst", ".html", ".xml", ".docx"
+            ".rst", ".html", ".xml", ".docx",
+            ".png", ".jpg", ".jpeg", ".webp", ".bmp"
         ],
         max_file_size_mb=50,
         recursive=False
