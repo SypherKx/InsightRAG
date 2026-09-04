@@ -23,7 +23,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.anomalies.tsx (220 lines)
+Module: frontend\src\routes\app.anomalies.tsx (231 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
 Exports: export function AnomaliesPage

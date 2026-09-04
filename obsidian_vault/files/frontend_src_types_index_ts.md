@@ -19,16 +19,16 @@ tags:
 ## ⚙️ Key Symbols & Interfaces
 - `export interface Anomaly {`
 - `export interface Dataset {`
-- `export interface SeverityCount { severity: Severity; count: number; color: string }`
-- `export interface TypeCount { type: string; count: number; color: string }`
+- `export interface SeverityCount {`
+- `export interface TypeCount {`
 - `export interface HealthStatus {`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\types\index.ts (36 lines)
+Module: frontend\src\types\index.ts (44 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export interface Anomaly {, export interface Dataset {, export interface SeverityCount { severity: Severity; count: number; color: string }, export interface TypeCount { type: string; count: number; color: string }, export interface HealthStatus {
+Exports: export interface Anomaly {, export interface Dataset {, export interface SeverityCount {, export interface TypeCount {, export interface HealthStatus {
 ```

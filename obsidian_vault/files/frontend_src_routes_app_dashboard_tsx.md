@@ -23,7 +23,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.dashboard.tsx (280 lines)
+Module: frontend\src\routes\app.dashboard.tsx (354 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
 Exports: export function DashboardPage
