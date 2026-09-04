@@ -64,9 +64,9 @@ tags:
   - #hub
   - #architecture
 ---
-# 🧠 InsightForge AI — Master System Graph
+# 🧠 InsightRAG AI — Master System Graph
 
-> **Welcome to the Central Navigation Hub**. This graph maps out all core subsystems of InsightForge AI. Click any node or link below to navigate the project architecture.
+> **Welcome to the Central Navigation Hub**. This graph maps out all core subsystems of InsightRAG AI. Click any node or link below to navigate the project architecture.
 
 ---
 
@@ -421,7 +421,7 @@ Exports: {', '.join((classes + functions)[:5]) if (classes or functions) else 'S
     print(f"[+] Successfully created {processed_count} tightly connected module notes!")
 
 def main():
-    print("[*] Rebuilding Clean, Interconnected Obsidian Vault for InsightForge AI...")
+    print("[*] Rebuilding Clean, Interconnected Obsidian Vault for InsightRAG AI...")
     reset_vault()
     write_obsidian_graph_config()
     build_core_hub_notes()

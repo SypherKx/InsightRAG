@@ -3,9 +3,9 @@ tags:
   - #hub
   - #architecture
 ---
-# 🧠 InsightForge AI — Master System Graph
+# 🧠 InsightRAG AI — Master System Graph
 
-> **Welcome to the Central Navigation Hub**. This graph maps out all core subsystems of InsightForge AI. Click any node or link below to navigate the project architecture.
+> **Welcome to the Central Navigation Hub**. This graph maps out all core subsystems of InsightRAG AI. Click any node or link below to navigate the project architecture.
 
 ---
 
