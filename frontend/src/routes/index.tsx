@@ -150,26 +150,38 @@ export function LandingPage() {
             university curricula into a turnkey, anti-hallucination AI knowledge studio in seconds.
           </p>
 
-          {/* Interactive Command Box */}
-          <div className="max-w-2xl mx-auto bg-black text-white p-3 sm:p-4 rounded-2xl border-2 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] space-y-2 font-mono text-xs sm:text-sm text-left">
-            <div className="text-gray-400 text-[9px] sm:text-[10px] uppercase tracking-widest flex items-center justify-between">
-              <span>⚡ 1-Line Quickstart (PowerShell)</span>
-              <span className="text-[#ffe600]">100% Local</span>
+          {/* Interactive Command Box with Multi-Platform Tabs */}
+          <div className="max-w-2xl mx-auto bg-black text-white p-3 sm:p-4 rounded-2xl border-2 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] space-y-2.5 font-mono text-xs sm:text-sm text-left">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2">
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs">
+                <span className="text-[#ffe600] font-black">⚡ 1-LINE INSTALL</span>
+                <span className="text-gray-500">|</span>
+                <span className="text-emerald-400 font-bold">100% Local Air-Gapped</span>
+              </div>
+              <span className="text-[9px] bg-[#1a1a1a] text-gray-300 px-2 py-0.5 rounded border border-gray-700">
+                Zero Setup Bills
+              </span>
             </div>
-            <div className="flex items-center gap-2 justify-between bg-[#0d1117] rounded-xl p-2 sm:px-3 sm:py-2 border border-gray-800">
+
+            <div className="flex items-center gap-2 justify-between bg-[#0d1117] rounded-xl p-2 sm:px-3 sm:py-2.5 border border-gray-800">
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0 scrollbar-none">
-                <span className="text-gray-500 flex-shrink-0 text-xs">PS&gt;</span>
-                <code className="whitespace-nowrap text-[10px] sm:text-xs">
-                  powershell -ExecutionPolicy Bypass -File .\launch.ps1
+                <span className="text-gray-500 flex-shrink-0 text-xs font-mono">PS&gt;</span>
+                <code className="whitespace-nowrap text-[10px] sm:text-xs text-emerald-300">
+                  {cliCommand}
                 </code>
               </div>
               <button
                 onClick={handleCopyCLI}
-                className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1 ml-1 sm:ml-2 active:scale-95 transition"
+                className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-1.5 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1 ml-1 sm:ml-2 active:scale-95 transition"
               >
-                {copied ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? "COPIED!" : "COPY"}</span>
               </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400 font-mono pt-0.5">
+              <span>💡 Or double-click <strong className="text-white">run.bat</strong> in folder</span>
+              <span className="text-gray-500">Auto-launches browser on completion</span>
             </div>
           </div>
 
