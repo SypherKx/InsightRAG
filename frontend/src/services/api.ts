@@ -112,7 +112,8 @@ export async function queryRAG(
   minScore = 0.0,
   model = "llama3.2:3b",
   processingMode = "local",
-  apiKey?: string
+  apiKey?: string,
+  history?: Array<{ role: string; text?: string; content?: string }>
 ): Promise<any> {
   const { data } = await api.post(
     "/rag/query",
@@ -124,6 +125,7 @@ export async function queryRAG(
       generate_answer: true,
       processing_mode: processingMode,
       api_key: apiKey,
+      history: history || [],
     },
     {
       timeout: 120000, // 2 minutes for vector search + inference

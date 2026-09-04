@@ -189,6 +189,7 @@ async def query_rag(request: RAGQueryRequest):
         generate_answer=request.generate_answer,
         processing_mode=request.processing_mode or "local",
         api_key=request.api_key,
+        history=request.history,
     )
 
     answer = result.get("answer")

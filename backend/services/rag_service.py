@@ -65,9 +65,10 @@ class RAGService:
         self, query: str, top_k: int = 5, min_score: float = 0.0,
         filters: Optional[Dict] = None, model: str = "llama3.2:3b",
         generate_answer: bool = True, ollama_url: Optional[str] = None,
-        processing_mode: str = "local", api_key: Optional[str] = None
+        processing_mode: str = "local", api_key: Optional[str] = None,
+        history: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
-        """Query RAG for relevant context and synthesize answer using Local Ollama or Turbo Cloud Server."""
+        """Query RAG for relevant context and synthesize answer using Local Ollama or Turbo Cloud Server with multi-turn history."""
         if not self.is_available:
             return {"results": [], "error": "RAG not available", "answer": None}
 
@@ -84,22 +85,40 @@ class RAGService:
             llm_model = None
 
             if generate_answer:
+                # Format conversation history
+                history_str = ""
+                chat_history_turns = []
+                if history and isinstance(history, list):
+                    recent = history[-6:]
+                    for turn in recent:
+                        r = "user" if turn.get("role") == "user" else "assistant"
+                        txt = (turn.get("text") or turn.get("content") or "").strip()
+                        if txt:
+                            chat_history_turns.append({"role": r, "content": txt})
+                    if chat_history_turns:
+                        history_str = "PREVIOUS CONVERSATION HISTORY:\n" + "\n".join(
+                            f"{'User' if t['role'] == 'user' else 'Assistant'}: {t['content']}"
+                            for t in chat_history_turns
+                        ) + "\n\n"
+
                 if results:
                     # Build context from retrieved FAISS passages
                     context_texts = [f"[{i+1}] {r.get('text', '')}" for i, r in enumerate(results)]
                     context_str = "\n\n".join(context_texts)
                     prompt = (
                         f"You are InsightRAG AI, a high-precision multimodal RAG assistant.\n"
-                        f"Answer the user's question clearly and accurately using the provided document context below. Cite sources where possible.\n\n"
+                        f"Answer the user's question clearly, helpfully, and accurately using the provided document context below.\n\n"
+                        f"{history_str}"
                         f"DOCUMENT CONTEXT:\n{context_str}\n\n"
-                        f"USER QUESTION:\n{query}\n\n"
+                        f"CURRENT USER QUESTION:\n{query}\n\n"
                         f"GROUNDED ANSWER:"
                     )
                 else:
                     prompt = (
                         f"You are InsightRAG AI, an expert local AI assistant.\n"
                         f"Answer the user's query clearly and concisely:\n\n"
-                        f"QUESTION: {query}\n\n"
+                        f"{history_str}"
+                        f"CURRENT QUESTION: {query}\n\n"
                         f"ANSWER:"
                     )
 
@@ -110,6 +129,13 @@ class RAGService:
                 
                 if is_cloud_mode:
                     try:
+                        # Build standard chat messages
+                        cloud_messages = [
+                            {"role": "system", "content": "You are InsightRAG AI, a high-speed accurate RAG engine. Maintain helpful context across conversation turns and ground answers strictly on documents."}
+                        ]
+                        cloud_messages.extend(chat_history_turns)
+                        cloud_messages.append({"role": "user", "content": prompt})
+
                         # 1A. Groq High-Speed Cloud Inference
                         if model.startswith("groq") or "groq" in processing_mode or not (model.startswith("gemini") or model.startswith("openai")):
                             g_key = api_key or os.getenv("GROQ_API_KEY")
@@ -122,10 +148,7 @@ class RAGService:
                                         headers={"Authorization": f"Bearer {g_key}", "Content-Type": "application/json"},
                                         json={
                                             "model": g_model,
-                                            "messages": [
-                                                {"role": "system", "content": "You are InsightRAG AI, a high-speed accurate RAG engine."},
-                                                {"role": "user", "content": prompt}
-                                            ],
+                                            "messages": cloud_messages,
                                             "temperature": 0.2,
                                         }
                                     )
@@ -160,7 +183,7 @@ class RAGService:
                                         headers={"Authorization": f"Bearer {oai_key}", "Content-Type": "application/json"},
                                         json={
                                             "model": "gpt-4o-mini",
-                                            "messages": [{"role": "user", "content": prompt}],
+                                            "messages": cloud_messages,
                                             "temperature": 0.2
                                         }
                                     )

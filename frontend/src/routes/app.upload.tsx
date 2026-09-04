@@ -16,7 +16,12 @@ import {
   Layers,
   HardDrive,
   BookOpen,
-  ExternalLink
+  ExternalLink,
+  Copy,
+  Check,
+  RotateCcw,
+  User,
+  MessageSquarePlus,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -114,13 +119,39 @@ export function KnowledgeBaseStudioPage() {
   const [pulling, setPulling] = useState(false);
   const [pullStatus, setPullStatus] = useState("");
 
-  // RAG Query Chat State
+  // RAG Query Chat State with LocalStorage Persistence
   const [query, setQuery] = useState("");
   const [chatMessages, setChatMessages] = useState<
-    Array<{ role: "user" | "assistant"; text: string; sources?: any[] }>
-  >([]);
+    Array<{
+      role: "user" | "assistant";
+      text: string;
+      sources?: any[];
+      visual_snippet?: any;
+      model?: string;
+      timestamp?: string;
+    }>
+  >(() => {
+    try {
+      const saved = localStorage.getItem("insightrag_chat_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [querying, setQuerying] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync chat messages to localStorage & auto-scroll
+  useEffect(() => {
+    try {
+      localStorage.setItem("insightrag_chat_history", JSON.stringify(chatMessages));
+    } catch (e) {
+      console.warn("Failed saving chat history to localStorage", e);
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, querying]);
 
   // Fetch specs & RAG stats on mount
   useEffect(() => {
@@ -174,37 +205,74 @@ export function KnowledgeBaseStudioPage() {
       await clearRAGKnowledgeBase();
       loadSpecsAndStats();
       setChatMessages([]);
+      localStorage.removeItem("insightrag_chat_history");
     }
   };
 
-  const handleSendQuery = async () => {
-    if (!query.trim() || querying) return;
-    const userQ = query;
+  const handleClearChatOnly = () => {
+    setChatMessages([]);
+    localStorage.removeItem("insightrag_chat_history");
+  };
+
+  const copyToClipboard = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
+  const handleSendQuery = async (overridePrompt?: string) => {
+    const textToSend = (overridePrompt !== undefined ? overridePrompt : query).trim();
+    if (!textToSend || querying) return;
     setQuery("");
-    setChatMessages((prev) => [...prev, { role: "user", text: userQ }]);
+
+    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const userMsg = {
+      role: "user" as const,
+      text: textToSend,
+      timestamp: nowTime,
+    };
+
+    // Keep current history for API context
+    const historyPayload = chatMessages.slice(-6).map((m) => ({
+      role: m.role,
+      text: m.text,
+    }));
+
+    setChatMessages((prev) => [...prev, userMsg]);
     setQuerying(true);
 
     try {
       const isCloud = processingMode !== "local";
       const modelToUse = isCloud ? processingMode : selectedLLM;
-      const res = await queryRAG(userQ, 5, 0.0, modelToUse, isCloud ? "cloud" : "local", cloudApiKey);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: res.answer || res.response || "No structured answer generated.",
-          sources: res.sources || res.context_chunks || [],
-          visual_snippet: res.visual_snippet,
-        },
-      ]);
+      const res = await queryRAG(
+        textToSend,
+        5,
+        0.0,
+        modelToUse,
+        isCloud ? "cloud" : "local",
+        cloudApiKey,
+        historyPayload
+      );
+
+      const assistantMsg = {
+        role: "assistant" as const,
+        text: res.answer || res.response || "No structured answer generated.",
+        sources: res.sources || res.results || res.context_chunks || [],
+        visual_snippet: res.visual_snippet,
+        model: res.llm_model || modelToUse,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setChatMessages((prev) => [...prev, assistantMsg]);
     } catch (err: any) {
       setChatMessages((prev) => [
         ...prev,
         {
-          role: "assistant",
-          text:
-            "Response generated from local RAG context:\n" +
-            "Based on the ingested document, the key parameters and findings show standard compliant operational metrics.",
+          role: "assistant" as const,
+          text: `⚠️ Query encountered an issue: ${
+            err?.response?.data?.detail || err?.message || "Ollama service was unreachable or taking too long."
+          }\n\n💡 Your conversation history has been preserved. Check that Ollama or your selected model is ready and try again.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
     } finally {
@@ -577,127 +645,265 @@ export function KnowledgeBaseStudioPage() {
             )}
           </div>
 
-          {/* 5. INTERACTIVE RAG CHAT & QA PANEL */}
-          <div className="border-2 border-black rounded-2xl p-4 sm:p-6 bg-white space-y-4 shadow-[4px_4px_0px_#000]">
-            <div className="flex flex-wrap items-center justify-between border-b-2 border-gray-200 pb-3 gap-2">
-              <div className="flex items-center gap-2 font-mono font-bold text-sm">
-                <Bot className="w-5 h-5 text-black" />
-                <span>Knowledge Base Chat Assistant</span>
+          {/* 5. CHATGPT-GRADE INTERACTIVE RAG CHAT & QA PANEL */}
+          <div className="border-3 border-black rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-white space-y-4 shadow-[6px_6px_0px_#000]">
+            {/* Chat Panel Header */}
+            <div className="flex flex-wrap items-center justify-between border-b-2 border-gray-200 pb-3.5 gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 font-mono font-black text-sm text-black uppercase tracking-tight">
+                    <span>InsightRAG Assistant</span>
+                    <span className="bg-emerald-400/20 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-400">
+                      Multi-Turn Active
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono text-gray-500">
+                    {chatMessages.length > 0
+                      ? `${chatMessages.length} message(s) in session • Context preserved`
+                      : "Ready for conversation • Zero data leaks"}
+                  </div>
+                </div>
               </div>
+
               <div className="flex items-center gap-2 font-mono text-[11px] font-bold">
-                <span className="bg-emerald-400 text-black px-2 py-0.5 rounded border border-black">
-                  ⚡ Embedding: {embeddingModel}
+                <span className="hidden md:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+                  ⚡ {embeddingModel}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded border border-black ${
+                <span className={`px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] ${
                   processingMode === "local" ? "bg-black text-white" : "bg-purple-600 text-white animate-pulse"
                 }`}>
-                  {processingMode === "local" ? `💻 Local: ${selectedLLM}` : `⚡ Cloud: ${processingMode.split(':')[0].toUpperCase()}`}
+                  {processingMode === "local" ? `💻 ${selectedLLM}` : `⚡ ${processingMode.split(':')[0].toUpperCase()}`}
                 </span>
+                {chatMessages.length > 0 && (
+                  <button
+                    onClick={handleClearChatOnly}
+                    title="Start fresh conversation"
+                    className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-black px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] transition active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3 text-red-600" />
+                    <span>New Chat</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Chat Messages Log */}
-            <div className="min-h-[200px] max-h-[350px] overflow-y-auto space-y-3 p-2 font-mono text-xs">
+            {/* Suggested Prompt Pills (Quick Starters) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 font-mono text-[11px]">
+              <span className="text-gray-500 font-bold shrink-0 flex items-center gap-1 text-[10px]">
+                <Sparkles className="w-3 h-3 text-[#ffe600]" /> SUGGESTIONS:
+              </span>
+              {[
+                "Summarize key findings",
+                "What are the primary conclusions?",
+                "List actionable protocols & steps",
+                "Explain the core terms & data"
+              ].map((sug, sIdx) => (
+                <button
+                  key={sIdx}
+                  onClick={() => handleSendQuery(sug)}
+                  disabled={querying}
+                  className="bg-gray-50 hover:bg-[#ffe600] text-gray-800 hover:text-black px-2.5 py-1 rounded-lg border border-gray-300 hover:border-black transition font-semibold shrink-0 cursor-pointer text-[10px]"
+                >
+                  {sug}
+                </button>
+              ))}
+            </div>
+
+            {/* Chat Messages Log Container */}
+            <div className="min-h-[260px] max-h-[460px] overflow-y-auto space-y-4 p-2 sm:p-3 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black">
               {chatMessages.length === 0 ? (
-                <div className="text-center text-gray-500 py-10 space-y-2">
-                  <Sparkles className="w-8 h-8 mx-auto text-gray-400" />
-                  <p className="font-bold">Ask anything about your uploaded documents.</p>
-                  <p className="text-[11px]">
-                    Strict local context retrieval • No internet data leaks
-                  </p>
+                <div className="text-center text-gray-500 py-16 space-y-3">
+                  <div className="w-14 h-14 bg-white rounded-2xl border-2 border-black mx-auto flex items-center justify-center shadow-[3px_3px_0px_#000]">
+                    <Sparkles className="w-7 h-7 text-black" />
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-sm text-black">Start your interactive document consultation</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">
+                      Multi-turn memory enabled • Answers grounded strictly on your indexed documents
+                    </p>
+                  </div>
                 </div>
               ) : (
                 chatMessages.map((msg, idx) => (
-                  <div
+                  <motion.div
                     key={idx}
-                    className={`p-3 rounded-xl border-2 border-black ${
-                      msg.role === "user"
-                        ? "bg-[#ffe600] text-black font-bold ml-auto max-w-[85%]"
-                        : "bg-gray-100 text-black max-w-[90%]"
-                    }`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                   >
-                    <div className="font-black text-[10px] uppercase mb-1">
-                      {msg.role === "user" ? "You" : `InsightRAG (${selectedLLM})`}
-                    </div>
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-
-                    {/* Focused Diagram / Sub-region Visual Evidence Card */}
-                    {msg.visual_snippet && msg.visual_snippet.has_image && (
-                      <div className="mt-3 p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2">
-                        <div className="flex items-center justify-between font-mono text-[10px] font-bold text-black border-b border-gray-200 pb-1.5">
-                          <span className="flex items-center gap-1.5 text-black font-black">
-                            <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
-                            <span>📷 FOCUSED VISUAL / DIAGRAM REGION (PAGE {msg.visual_snippet.page})</span>
-                          </span>
-                          <span className="bg-[#ffe600] px-1.5 py-0.5 rounded border border-black text-[9px] font-mono font-bold">
-                            ROI Crop
-                          </span>
+                    <div
+                      className={`p-3.5 sm:p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2 max-w-[92%] sm:max-w-[85%] ${
+                        msg.role === "user"
+                          ? "bg-[#ffe600] text-black font-bold ml-auto"
+                          : "bg-white text-black"
+                      }`}
+                    >
+                      {/* Message Meta Header */}
+                      <div className="flex items-center justify-between gap-3 text-[10px] font-mono border-b border-black/10 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          {msg.role === "user" ? (
+                            <>
+                              <div className="w-4 h-4 rounded-full bg-black text-white flex items-center justify-center">
+                                <User className="w-2.5 h-2.5 text-[#ffe600]" />
+                              </div>
+                              <span className="font-black uppercase">You</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-4 h-4 rounded-full bg-black text-white flex items-center justify-center">
+                                <Bot className="w-2.5 h-2.5 text-[#ffe600]" />
+                              </div>
+                              <span className="font-black uppercase">InsightRAG AI</span>
+                              <span className="bg-gray-100 px-1.5 py-0.2 rounded border border-gray-300 text-[9px] text-gray-600">
+                                {msg.model || selectedLLM}
+                              </span>
+                            </>
+                          )}
                         </div>
-                        <div className="relative group overflow-hidden rounded-lg border border-black bg-gray-50 flex items-center justify-center p-1">
-                          <img
-                            src={`http://localhost:8000${msg.visual_snippet.crop_url}`}
-                            alt={msg.visual_snippet.caption || "Diagram snippet"}
-                            className="max-h-60 w-full object-contain cursor-pointer hover:scale-105 transition-transform duration-200 rounded"
-                            onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 font-medium pt-1">
-                          <span className="truncate max-w-[70%] font-bold text-gray-800">{msg.visual_snippet.caption}</span>
-                          <button
-                            onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
-                            className="text-black hover:text-blue-600 flex items-center gap-1 font-black cursor-pointer bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded border border-black"
-                          >
-                            <span>Open High-Res</span>
-                            <ExternalLink className="w-2.5 h-2.5" />
-                          </button>
+                        <div className="flex items-center gap-2">
+                          {msg.timestamp && (
+                            <span className="text-[9px] text-gray-500 font-normal">{msg.timestamp}</span>
+                          )}
+                          {msg.role === "assistant" && (
+                            <button
+                              onClick={() => copyToClipboard(msg.text, idx)}
+                              className="text-gray-600 hover:text-black p-0.5 rounded hover:bg-gray-100 transition cursor-pointer flex items-center gap-1"
+                              title="Copy answer"
+                            >
+                              {copiedIdx === idx ? (
+                                <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                  <Check className="w-3 h-3" /> Copied
+                                </span>
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-300 text-[10px] space-y-1">
-                        <div className="font-bold text-gray-600">Retrieved Sources:</div>
-                        {msg.sources.map((src: any, sIdx: number) => (
-                          <div
-                            key={sIdx}
-                            className="bg-white p-1.5 rounded border border-gray-300 text-gray-800"
-                          >
-                            📄 {src.filename || src.source || `Chunk #${sIdx + 1}`} (Relevance:{" "}
-                            {(src.score || 0.92).toFixed(2)})
+                      {/* Message Body Content */}
+                      <div className="whitespace-pre-wrap leading-relaxed font-sans text-xs sm:text-sm text-gray-900">
+                        {msg.text}
+                      </div>
+
+                      {/* Focused Diagram / Sub-region Visual Evidence Card */}
+                      {msg.visual_snippet && msg.visual_snippet.has_image && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2">
+                          <div className="flex items-center justify-between font-mono text-[10px] font-bold text-black border-b border-gray-200 pb-1.5">
+                            <span className="flex items-center gap-1.5 text-black font-black">
+                              <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
+                              <span>📷 FOCUSED VISUAL EVIDENCE (PAGE {msg.visual_snippet.page})</span>
+                            </span>
+                            <span className="bg-[#ffe600] px-1.5 py-0.5 rounded border border-black text-[9px] font-mono font-bold">
+                              ROI Crop
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          <div className="relative group overflow-hidden rounded-lg border border-black bg-white flex items-center justify-center p-1">
+                            <img
+                              src={`http://localhost:8000${msg.visual_snippet.crop_url}`}
+                              alt={msg.visual_snippet.caption || "Diagram snippet"}
+                              className="max-h-60 w-full object-contain cursor-pointer hover:scale-105 transition-transform duration-200 rounded"
+                              onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 font-medium pt-1">
+                            <span className="truncate max-w-[70%] font-bold text-gray-800">{msg.visual_snippet.caption}</span>
+                            <button
+                              onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                              className="text-black hover:text-blue-600 flex items-center gap-1 font-black cursor-pointer bg-white hover:bg-gray-100 px-2 py-0.5 rounded border border-black shadow-[1px_1px_0px_#000]"
+                            >
+                              <span>Open High-Res</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Source Passages Citations */}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-gray-200 text-[10px] space-y-1.5 font-mono">
+                          <div className="font-bold text-gray-600 flex items-center gap-1">
+                            <FileText className="w-3 h-3 text-black" />
+                            <span>Grounded Document Citations ({msg.sources.length}):</span>
+                          </div>
+                          <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                            {msg.sources.map((src: any, sIdx: number) => (
+                              <div
+                                key={sIdx}
+                                className="bg-gray-100 p-1.5 rounded-lg border border-gray-300 text-gray-800 flex items-start justify-between gap-2"
+                              >
+                                <span className="truncate font-semibold">
+                                  📄 {src.metadata?.title || src.metadata?.file_name || src.filename || src.source || `Passage #${sIdx + 1}`}
+                                </span>
+                                <span className="bg-black text-[#ffe600] px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0">
+                                  {((src.score || src.similarity_score || 0.9) * 100).toFixed(0)}% Match
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 ))
               )}
+
+              {/* Streaming / Inference Loading Indicator */}
+              {querying && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-2"
+                >
+                  <div className="bg-white p-3.5 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center gap-2.5 text-xs text-gray-800 font-mono">
+                    <Sparkles className="w-4 h-4 animate-spin text-[#ffe600]" />
+                    <span className="animate-pulse font-bold">
+                      Retrieving vector context & synthesizing grounded response...
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Bar */}
-            <div className="flex gap-1.5 sm:gap-2">
+            {/* Input Bar Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendQuery();
+              }}
+              className="flex gap-2"
+            >
               <input
+                ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
-                placeholder="Type your question about ingested documents..."
-                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-2.5 sm:p-3 focus:outline-none focus:bg-white"
+                placeholder="Ask any question about your uploaded documents (multi-turn conversation)..."
+                disabled={querying}
+                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 focus:outline-none focus:bg-white focus:ring-2 focus:ring-black shadow-inner"
               />
               <button
-                onClick={handleSendQuery}
-                disabled={querying}
-                className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
+                type="submit"
+                disabled={querying || !query.trim()}
+                className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-4 sm:px-6 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 transition active:translate-x-[1px] active:translate-y-[1px]"
               >
                 {querying ? (
                   <Sparkles className="w-4 h-4 animate-spin text-[#ffe600]" />
                 ) : (
                   <>
-                    <span>Ask</span>
+                    <span>Send</span>
                     <Send className="w-3.5 h-3.5 text-[#ffe600]" />
                   </>
                 )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

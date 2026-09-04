@@ -70,7 +70,9 @@ class FAISSVectorStore:
         self._next_id = 0
 
         # Try to load existing index
-        if index_path and os.path.exists(index_path):
+        faiss_file = f"{index_path}.faiss" if index_path else None
+        meta_file = f"{index_path}.meta" if index_path else None
+        if index_path and ((faiss_file and os.path.exists(faiss_file) and meta_file and os.path.exists(meta_file)) or os.path.exists(index_path)):
             self.load(index_path)
         else:
             self._init_index()

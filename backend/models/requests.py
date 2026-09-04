@@ -32,3 +32,5 @@ class RAGQueryRequest(BaseModel):
     generate_answer: bool = True
     processing_mode: Optional[str] = "local"
     api_key: Optional[str] = None
+    history: List[Dict[str, Any]] = Field(default_factory=list)
+
