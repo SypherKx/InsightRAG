@@ -1,182 +1,197 @@
-# 🛠️ InsightForge AI — Local Retrieval-Augmented Generation (RAG) for Healthcare & Education
+# ⚡ InsightRAG AI — Autonomous Multimodal Local RAG Factory
 
-> **AI-powered healthcare and educational intelligence platform that detects clinical vitals anomalies, uncovers protocol root causes, and delivers grounded, context-aware explanations using a local Retrieval-Augmented Generation (RAG) pipeline and semantic vector search.**
-
-Welcome to **InsightForge AI**—a production-grade **RAG (Retrieval-Augmented Generation)** platform designed for **Healthcare & Education**! InsightForge AI connects clinical vital anomaly detection and academic metric tracking with local LLMs (Ollama `llama3.2:3b` / Groq) and FAISS vector knowledge bases.
-
-InsightForge AI helps medical clinicians, clinical trialists, researchers, and university faculties monitor key health and academic signals in real time (blood lab test spikes, patient ICU vitals, course completion drop-offs). It automatically detects deviations, traces them to protocol root causes, and uses a local RAG pipeline to pull context from clinical guidelines (FDA drug protocols, PubMed medical research papers, university lecture syllabi) to explain **what** happened and **why** with exact page and paragraph citations.
-
----
-
-## 📁 Clean Repository Structure
+<div align="center">
 
 ```
-Insight-Forge-AI/
-├── backend/                  # FastAPI REST API & Storage Engine
-│   ├── main.py               # Application entry point & CORS configuration
-│   ├── config.py             # App settings (Pydantic BaseSettings)
-│   ├── routers/              # Endpoint routes (health, datasets, anomalies, RAG)
-│   ├── services/             # Business logic & RAG integration
-│   └── storage/              # SQLite DB models & file storage
-│
-├── frontend/                 # React 19 + Vite 7 Modern Editorial Web App
-│   ├── src/                  # App components, TanStack router, services, & styles
-│   ├── public/               # Static web assets
-│   └── package.json          # Node dependencies
-│
-├── src/                      # Core AI & Analytical Python Packages
-│   ├── detection/            # Statistical anomaly detection (Z-score, IQR, Pettitt test)
-│   ├── root_cause/           # Driver dimension quantification & correlation analysis
-│   ├── explainer/            # Context synthesis & LLM prompt generators
-│   ├── ingestion/            # Document parsing, cleaning, and metadata validation
-│   └── rag/                  # FAISS vector store, text chunking, and dense embeddings
-│
-├── data/                     # Sample datasets and generator scripts
-│   ├── sample_data.csv       # Clinical & academic test dataset
-│   └── generate_sample.py    # Synthetic dataset generator script
-│
-├── scripts/                  # Repository utility & verification scripts
-│   ├── verify_ingestion.py   # Verification suite for RAG & ingestion pipeline
-│   └── generate_obsidian_vault.py # Rebuilds Obsidian architecture knowledge graph
-│
-├── tests/                    # Pytest test suite (83 unit & integration tests)
-│   ├── detection/            # Anomaly detection unit tests
-│   └── ingestion/            # Pipeline, cleaner, and validator tests
-│
-├── docs/                     # System architecture & design documentation
-│   └── architecture.md       # Comprehensive technical design doc
-│
-└── obsidian_vault/           # Interactive Obsidian Knowledge Graph (57 module notes)
+  ___           _       _     _     ____      _    ____ 
+ |_ _|_ __  ___(_) __ _| |__ | |_  |  _ \    / \  / ___|
+  | || '_ \/ __| |/ _` | '_ \| __| | |_) |  / _ \| |  _ 
+  | || | | \__ \ | (_| | | | | |_  |  _ <  / ___ \ |_| |
+ |___|_| |_|___/_|\__, |_| |_|\__| |_| \_\/_/   \_\____|
+                  |___/                                 
+```
+
+**Zero-Budget • 100% Local Compute • Hardware Auto-Tuned • Multimodal Vision OCR**
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev)
+[![FAISS](https://img.shields.io/badge/FAISS-CPU%20VectorStore-blue.svg)](https://github.com/facebookresearch/faiss)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?logo=ollama&logoColor=white)](https://ollama.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
+---
+
+## 📖 Overview
+
+**InsightRAG AI** is an autonomous, local-first multimodal Retrieval-Augmented Generation (RAG) factory engineered specifically for high-stakes **Healthcare & Medical** (clinical guidelines, PubMed research, diagnostic OCR) and **Education & Academia** (university curricula, textbooks, lecture slides).
+
+It turns messy PDFs, Word documents, scanned clinical charts, and lecture notes into a turnkey, private, anti-hallucination knowledge microservice in seconds — **with zero mandatory API bills and 100% on-device data privacy**.
+
+---
+
+## ⚡ 1-Line Quickstart
+
+### 🪟 Windows 10 / 11 (PowerShell)
+Open PowerShell in the repository root directory and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\launch.ps1
+```
+
+*What `launch.ps1` does automatically:*
+1. Profiles system hardware (CPU cores, RAM, GPU/VRAM).
+2. Verifies Python 3.10+ and Node.js/npm.
+3. Checks and starts local **Ollama** in the background.
+4. Auto-installs backend & frontend dependencies.
+5. Starts the FastAPI backend (`http://localhost:8000`) and Vite frontend (`http://localhost:5173`).
+6. Automatically launches the **Knowledge Base Studio** (`http://localhost:5173/app/upload`) in your browser once ready!
+
+---
+
+### 🐧 Linux / macOS / Manual Python Launch
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/SypherKx/InsightRAG.git
+cd InsightRAG
+
+# 2. Run the automated local runner
+python scripts/run_local.py
 ```
 
 ---
 
-## 🚀 How the RAG Pipeline Works
+## 🌟 Key Capabilities
 
-Here is a breakdown of the RAG architecture implemented in `src/rag/`:
+### 1. 🧠 Speed-Tiered On-Device Embeddings
+Configure the exact speed vs. precision tradeoff tailored to your machine:
+* **⚡ `all-MiniLM-L6-v2` (Ultra-Fast 5x • 4GB+ RAM • 384-dim)**: Blazing fast CPU-friendly inference for laptops and quick tests.
+* **⚖️ `bge-small-en-v1.5` (Balanced 3x • 6GB+ RAM • 384-dim)**: Top retrieval accuracy for standard desktop PCs.
+* **🧠 `bge-base-en-v1.5` (SOTA High Precision • 8-16GB RAM/GPU • 768-dim)**: State-of-the-art dense semantic capture for clinical research & academic depth.
+* **🚀 `nomic-embed-text` (Ollama Native 8K • 8GB+ RAM • 768-dim)**: High-context 8,192 token window for large book chapters and clinical trials.
+
+### 2. 👁️ Multimodal Vision & OCR
+* Ingests scanned clinical reports, lab printouts, whiteboard lecture notes, and textbook diagrams.
+* Extracts structured text and tabular information with automated image preprocessing.
+
+### 3. 🛡️ Anti-Hallucination & Privacy Guardrails
+* **100% On-Device Vector Store**: Indexing with `faiss-cpu` ensures HIPAA and FERPA-compliant privacy with zero data leaving your machine.
+* **Strict Source Attributions**: Every LLM response is anchored to exact document passages, page numbers, and cosine similarity confidence scores.
+* **Hypothetical Document Embeddings (HyDE)**: Expands ambiguous queries to bridge vocabulary gaps between student questions and academic textbook text.
+
+### 4. 📦 Standalone Knowledge Export
+* Export your indexed knowledge base as a standalone microservice bundle (`.zip`) that can run offline in air-gapped environments.
+
+---
+
+## 🏗️ System Architecture
 
 ```
-┌──────────────────┐      ┌─────────────────┐      ┌────────────────────────┐
-│  Upload Context  │ ───> │ Text Chunking   │ ───> │  Dense Embeddings      │
-│ (Medical PDF, MD)│      │ (Size: 500 chars)│      │  (all-MiniLM-L6-v2)    │
-└──────────────────┘      └─────────────────┘      └────────────────────────┘
-                                                                │
-                                                                ▼
-┌──────────────────┐      ┌─────────────────┐      ┌────────────────────────┐
-│   FastAPI API    │ <─── │ Local Ollama /  │ <─── │  FAISS Vector Index    │
-│  Response        │      │   Groq LLM      │      │ (IndexFlatIP Search)   │
-└──────────────────┘      └─────────────────┘      └────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        InsightRAG AI Pipeline                          │
+└────────────────────────────────────────────────────────────────────────┘
+
+ [ Documents / Scans ] ──> [ Multimodal Ingestion ] ──> [ Overlapping Chunker ]
+   • Clinical PDFs           • OCR Vision Extraction      • 500 chars (50 ovlp)
+   • PubMed Studies          • Table & Text Normalizer    • Token-Aware Splitting
+   • Textbooks & Notes
+                                                                 │
+                                                                 ▼
+ [ User Natural Query ]                                 [ Dense Embedding Engine ]
+          │                                               • all-MiniLM-L6-v2 (384d)
+          ▼                                               • bge-small / bge-base
+ [ HyDE Query Expander ] ──> [ Cosine Similarity ] ───>   • nomic-embed-text (8k)
+                               (FAISS IndexFlatIP)               │
+                                       │                         ▼
+                                       ▼                 [ Vector Knowledge Base ]
+                             [ Grounded RAG Prompt ]       • 100% Local FAISS Store
+                                       │                   • Metadata Attribution
+                                       ▼
+                         [ Local LLM / Cloud Fallback ]
+                           • Ollama (llama3.2 / qwen)
+                           • Optional: Groq / Gemini / Claude
+                                       │
+                                       ▼
+                       [ Cited, Explainable Answer ]
 ```
 
-### 1. Ingestion & Chunking (`src/rag/ingestion.py` & `src/rag/chunker.py`)
-* **File Ingestion**: Supports uploading PubMed `.pdf` papers, EMR `.csv` files, `.txt`, and `.md` textbook syllabi.
-* **Overlapping Chunks**: Uses a windowing approach (`chunk_size=500` with `overlap=50`) to ensure medical sentences and clinical dosages are never split across boundaries.
+---
 
-### 2. Dense Vector Embeddings (`src/rag/embeddings.py`)
-* Uses local **Hugging Face Sentence-Transformers** (`sentence-transformers/all-MiniLM-L6-v2`) to map each clinical text chunk into a **384-dimensional dense vector**.
+## 📂 Repository Structure
 
-### 3. Local Vector Database (`src/rag/vectorstore.py` & `src/rag/retriever.py`)
-* **Facebook AI Similarity Search (FAISS)**: Runs 100% locally with `faiss-cpu` to ensure HIPAA & FERPA ready data privacy with zero third-party cloud data leakage.
-* **Cosine Similarity**: Normalizes embedding vectors and uses FAISS `IndexFlatIP` to calculate relevance scores.
-
-### 4. LLM Retrieval & Prompt Synthesis (`src/rag/pipeline.py` & `backend/services/rag_service.py`)
-* Searches the FAISS index for top `k` matching text chunks for any query.
-* Inserts retrieved evidence into prompt templates alongside anomaly stats and sends it to **Local Ollama (`llama3.2:3b`)** or **Groq API** to generate cited, grounded explanations.
+```
+InsightRAG/
+├── backend/                      # FastAPI Backend & RAG Engine
+│   ├── main.py                   # App entrypoint & CORS middleware
+│   ├── config.py                 # Pydantic configuration & model parameters
+│   ├── routers/                  # API routers (rag, dataset, anomalies, system)
+│   ├── services/                 # RAG pipeline, embedding loader & Ollama manager
+│   └── storage/                  # SQLite database models & session management
+│
+├── frontend/                     # React 19 + Vite 7 Frontend Application
+│   ├── src/
+│   │   ├── routes/               # TanStack Router pages (/, /docs, /app/upload)
+│   │   ├── components/           # Neo-Brutalist design system & studio cards
+│   │   ├── services/             # Axios API client & WebSocket handlers
+│   │   └── styles.css            # Tailwind CSS styling & animations
+│   └── package.json              # Frontend dependencies
+│
+├── src/                          # Core analytical and RAG modules
+│   ├── detection/                # Vital anomaly detection algorithms
+│   ├── explainer/                # Prompt generators & context formatting
+│   ├── ingestion/                # Document cleaning & format parsers
+│   └── rag/                      # FAISS store, chunkers, & vector retriever
+│
+├── scripts/                      # Utility & automation scripts
+│   ├── run_local.py              # Cross-platform Python local runner
+│   └── generate_obsidian_vault.py# Obsidian knowledge graph generator
+│
+├── launch.ps1                    # 1-Click PowerShell launcher for Windows
+└── README.md                     # Project documentation
+```
 
 ---
 
-## ✨ Core Features
+## 🔌 REST API Reference
 
-* **🔍 Statistical Health Signal Detection**: Ensemble algorithms (IQR, Z-score, Pettitt test) automatically isolate vital drops or lab test spikes.
-* **📊 Protocol & Curriculum Attribution**: Quantifies exact driver dimensions (e.g., *Medication Dosage: Paxlovid* or *ICU Ward: 4*).
-* **💬 Medical RAG Evidence Search**: Search FDA drug labels, PubMed papers, and textbook syllabi using natural language with cited passages.
-* **✨ Warm Editorial Interface**: A warm-tinted interface with Light/Dark mode toggling, responsive charts, and smooth scroll animations.
-
----
-
-## ⚡ Quick Start & Development Guide
-
-### Step 1: Backend Setup
-
-1. **Setup Python Virtual Environment**:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Verify Pipeline & Run Tests**:
-   ```bash
-   python scripts/verify_ingestion.py
-   pytest
-   ```
-
-4. **Start FastAPI Backend Server**:
-   ```bash
-   python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
-   ```
-   * **API Documentation (Swagger UI)**: `http://127.0.0.1:8000/docs`
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Server health check and uptime status |
+| `POST` | `/api/v1/rag/upload` | Upload and vectorize PDF, DOCX, CSV, TXT files |
+| `POST` | `/api/v1/rag/query` | Perform grounded RAG query with source citations |
+| `GET` | `/api/v1/rag/documents` | List all active indexed knowledge documents |
+| `GET` | `/api/v1/system/hardware` | Retrieve CPU cores, RAM, and GPU profiling stats |
+| `GET` | `/api/v1/system/ollama-models`| List installed and running Ollama models |
 
 ---
 
-### Step 2: Frontend Setup
+## 🛠️ Environment Configuration
 
-1. **Navigate to `frontend/`**:
-   ```bash
-   cd frontend
-   ```
+Create a `.env` file in the project root:
 
-2. **Install Node Dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start Development Server**:
-   ```bash
-   npm run dev
-   ```
-   * **App UI**: `http://localhost:8081`
-
----
-
-### Step 3: Configure LLM Provider (Ollama or Groq)
-
-Edit `.env` in the root directory:
 ```env
-LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-LLM_MODEL=llama3.2:3b
+# RAG Configuration
 RAG_ENABLED=true
+EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-# Optional: Cloud LLM fallback
-GROQ_API_KEY=your_groq_api_key_here
+# Local LLM (Ollama)
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+LLM_MODEL=llama3.2:3b
+
+# Optional: Cloud Fallback Keys
+GROQ_API_KEY=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
 ```
 
 ---
 
-## 🛠️ Tech Stack Overview
+## 👤 Author & Credits
 
-### Backend & AI Engine
-* **RAG Core**: FAISS (`faiss-cpu`), Sentence Transformers (`all-MiniLM-L6-v2`), PyPDF.
-* **LLM Engine**: Local Ollama (`llama3.2:3b`) & Groq API integration.
-* **FastAPI**: High performance Python backend framework.
-* **Pandas & NumPy**: Core statistical processing and ensemble anomaly detection.
+Designed and built with ❤️ by **[Karan Pratap Singh](https://github.com/SypherKx)**.
 
-### Frontend Application
-* **React 19 & Vite 7**: Modern UI runtime and build engine.
-* **TanStack Router**: Type-safe routing for dashboard views.
-* **Tailwind CSS 4 & Framer Motion**: Responsive styling and smooth scroll animations.
-* **Recharts**: Clinical and academic metric charts.
-
----
-
-## 💬 Community & Contributions
-
-Contributions, bug reports, and feature requests are welcome! Feel free to open an issue or submit a pull request. 🚀
+Contributions and pull requests are welcome! If you find InsightRAG helpful, please star ⭐ the repository.
