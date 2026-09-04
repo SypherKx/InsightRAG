@@ -17,14 +17,14 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-- `export function UploadPage`
+- `export function KnowledgeBaseStudioPage`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.upload.tsx (251 lines)
+Module: frontend\src\routes\app.upload.tsx (653 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export function UploadPage
+Exports: export function KnowledgeBaseStudioPage
 ```

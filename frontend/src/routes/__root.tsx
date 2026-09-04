@@ -65,14 +65,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "InsightForge AI — Retrieval-Augmented Generation for Healthcare & Education" },
+      { title: "InsightRAG AI — Retrieval-Augmented Generation for Healthcare & Education" },
       {
         name: "description",
         content:
           "AI-powered healthcare and educational intelligence platform that detects clinical vitals anomalies, uncovers protocol root causes, and delivers grounded, context-aware explanations using a local Retrieval-Augmented Generation (RAG) pipeline and semantic vector search.",
       },
-      { name: "author", content: "InsightForge AI" },
-      { property: "og:title", content: "InsightForge AI — Healthcare & Education RAG" },
+      { name: "author", content: "InsightRAG AI" },
+      { property: "og:title", content: "InsightRAG AI — Healthcare & Education RAG" },
       { property: "og:description", content: "Warm cream canvas, coral accents, serif display headlines, and dark navy product chrome." },
       { property: "og:type", content: "website" },
     ],

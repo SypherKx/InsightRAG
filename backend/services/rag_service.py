@@ -85,34 +85,62 @@ class RAGService:
             used_llm = False
             llm_model = None
 
-            if generate_answer and results:
-                ollama_endpoint = ollama_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
-                # Build context from retrieved passages
-                context_texts = [f"[{i+1}] {r.get('text', '')}" for i, r in enumerate(results)]
-                context_str = "\n\n".join(context_texts)
-                prompt = (
-                    f"You are a helpful AI assistant. Answer the user's question using ONLY the provided document context below.\n"
-                    f"If the answer cannot be determined from context alone, explain what is available.\n\n"
-                    f"CONTEXT:\n{context_str}\n\n"
-                    f"QUESTION:\n{query}\n\n"
-                    f"ANSWER:"
-                )
-
-                # Try Ollama with candidate model names (tag variants)
-                candidate_models = [model]
-                base = model.split(":")[0] if ":" in model else model
-                if base not in candidate_models:
-                    candidate_models.append(base)
+            if generate_answer:
+                if results:
+                    # Build context from retrieved FAISS passages
+                    context_texts = [f"[{i+1}] {r.get('text', '')}" for i, r in enumerate(results)]
+                    context_str = "\n\n".join(context_texts)
+                    prompt = (
+                        f"You are a helpful AI assistant. Answer the user's question using the provided document context below.\n\n"
+                        f"CONTEXT:\n{context_str}\n\n"
+                        f"QUESTION:\n{query}\n\n"
+                        f"ANSWER:"
+                    )
+                else:
+                    # General prompt fallback when no document chunks match
+                    prompt = (
+                        f"You are InsightRAG AI, an expert local AI assistant for Healthcare & Education.\n"
+                        f"Answer the user's query clearly and concisely:\n\n"
+                        f"QUESTION: {query}\n\n"
+                        f"ANSWER:"
+                    )
 
                 try:
+                    from .ollama_manager import get_working_ollama_host, get_installed_models
+                    import asyncio
+
+                    # Get working host and installed models using modular helper
+                    working_endpoint = ollama_url
+                    if not working_endpoint:
+                        try:
+                            working_endpoint = asyncio.run(get_working_ollama_host(auto_start=True))
+                        except Exception:
+                            working_endpoint = "http://127.0.0.1:11434"
+
+                    if not working_endpoint:
+                        working_endpoint = "http://127.0.0.1:11434"
+
+                    try:
+                        installed_models = asyncio.run(get_installed_models())
+                    except Exception:
+                        installed_models = []
+
+                    # Build list of candidate models to try
+                    candidate_models = [model]
+                    base = model.split(":")[0] if ":" in model else model
+                    if base not in candidate_models:
+                        candidate_models.append(base)
+                    
+                    for inst in installed_models:
+                        if inst not in candidate_models:
+                            candidate_models.append(inst)
+
                     with httpx.Client(timeout=120.0) as client:
                         resp = None
-                        successful_model = model
                         for cand in candidate_models:
                             try:
                                 res = client.post(
-                                    f"{ollama_endpoint}/api/generate",
+                                    f"{working_endpoint}/api/generate",
                                     json={"model": cand, "prompt": prompt, "stream": False}
                                 )
                                 if res.status_code == 200:
@@ -120,9 +148,9 @@ class RAGService:
                                     successful_model = cand
                                     break
                                 elif res.status_code == 404:
-                                    logger.warning(f"Ollama model '{cand}' not found. Run: ollama pull {cand}")
+                                    logger.warning(f"Ollama model '{cand}' not found on endpoint {working_endpoint}")
                             except httpx.ConnectError:
-                                logger.warning(f"Cannot connect to Ollama at {ollama_endpoint}. Is Ollama running?")
+                                logger.warning(f"Cannot connect to Ollama at {working_endpoint}")
                                 break
                             except Exception as req_err:
                                 logger.warning(f"Ollama request failed for model '{cand}': {req_err}")
@@ -132,7 +160,7 @@ class RAGService:
                             answer = data.get("response", "").strip()
                             used_llm = True
                             llm_model = successful_model
-                        else:
+                        elif results:
                             # Fallback: synthesize a readable answer from FAISS passages
                             answer = (
                                 f"⚠ Ollama ({model}) is not available. Make sure Ollama is running "
@@ -144,15 +172,16 @@ class RAGService:
                                 )
                             )
                 except Exception as ollama_err:
-                    logger.info(f"Ollama generation unavailable ({ollama_err}). Returning RAG context.")
-                    answer = (
-                        f"⚠ Could not reach Ollama for LLM synthesis.\n\n"
-                        f"Here are the most relevant passages from your documents:\n\n"
-                        + "\n\n".join(
-                            f"📄 [{i+1}] {r.get('text', '')[:500]}"
-                            for i, r in enumerate(results[:3])
+                    logger.info(f"Ollama generation unavailable ({ollama_err}).")
+                    if results:
+                        answer = (
+                            f"⚠ Could not reach Ollama for LLM synthesis.\n\n"
+                            f"Here are the most relevant passages from your documents:\n\n"
+                            + "\n\n".join(
+                                f"📄 [{i+1}] {r.get('text', '')[:500]}"
+                                for i, r in enumerate(results[:3])
+                            )
                         )
-                    )
 
             return {
                 "results": results,

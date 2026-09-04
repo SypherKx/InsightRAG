@@ -44,6 +44,7 @@ insightforge.db
 rag_index.faiss
 rag_index.meta
 OllamaSetup.exe
+*.zip
 
 # Agent Metadata
 .agents/

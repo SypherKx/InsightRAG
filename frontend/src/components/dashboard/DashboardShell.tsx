@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
-import { Sidebar } from "./Sidebar";
 import { AmbientBackground } from "@/components/premium/AmbientBackground";
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-screen text-white bg-[#000000] transition-colors duration-300">
       <AmbientBackground />
-      <Sidebar />
       <main className="min-w-0 flex-1 scrollbar-thin">
         {children}
       </main>

@@ -12,7 +12,7 @@ tags:
 
 ## 🔗 Connected Dependencies & Imported Modules
 - Main Subsystem Hub: [[05_FastAPI_Backend_Hub]]
-- *Standalone / Top-level Module*
+- Imported Module: [[files/backend_services_ollama_manager_py]]
 
 ---
 
@@ -29,7 +29,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\services\rag_service.py (207 lines)
+Module: backend\services\rag_service.py (236 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: class RAGService:, def __init__, def is_available, def ingest_documents, def query

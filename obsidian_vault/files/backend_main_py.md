@@ -18,14 +18,15 @@ tags:
 
 ## ⚙️ Key Symbols & Interfaces
 - `async def lifespan`
+- `async def serve_spa`
 - `async def root`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\main.py (86 lines)
+Module: backend\main.py (132 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
-Exports: async def lifespan, async def root
+Exports: async def lifespan, async def serve_spa, async def root
 ```

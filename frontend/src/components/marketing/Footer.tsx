@@ -15,19 +15,19 @@ export function Footer() {
         {/* 4-Column Directory Grid */}
         <div className="grid gap-12 md:grid-cols-4">
           <div className="flex flex-col gap-3 text-sm">
-            <div className="caption-uppercase text-[var(--on-dark-soft)] mb-1">Product</div>
-            <Link to="/app/anomalies" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
-              Clinical Anomaly Engine
-            </Link>
-            <Link to="/app/query" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
-              PubMed & Textbook RAG
-            </Link>
-            <Link to="/app/dashboard" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
-              Protocol Attribution
-            </Link>
-            <Link to="/app/upload" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
-              Medical PDF Ingestion
-            </Link>
+            <div className="caption-uppercase text-[var(--on-dark-soft)] mb-1">Desktop Product</div>
+            <a href="/#download-locally" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
+              1-Click Desktop Installer
+            </a>
+            <a href="/#download-locally" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
+              Local FAISS RAG Search
+            </a>
+            <a href="/#download-locally" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
+              Ollama Llama 3.2 Setup
+            </a>
+            <a href="/#download-locally" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
+              Terminal / CLI Installation
+            </a>
           </div>
 
           <div className="flex flex-col gap-3 text-sm">
@@ -65,7 +65,7 @@ export function Footer() {
           <div className="flex flex-col gap-3 text-sm">
             <div className="caption-uppercase text-[var(--on-dark-soft)] mb-1">Company</div>
             <Link to="/about" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
-              About InsightForge
+              About InsightRAG
             </Link>
             <a href="#" className="text-[var(--on-dark-soft)] hover:text-[var(--on-dark)] transition">
               Careers
@@ -81,7 +81,7 @@ export function Footer() {
 
         {/* Copyright Footer Line */}
         <div className="mt-16 border-t border-white/10 pt-8 flex flex-col md:flex-row md:items-center justify-between text-xs text-[var(--on-dark-soft)]">
-          <div>© {new Date().getFullYear()} InsightForge AI Inc. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} InsightRAG AI. Made by <span className="text-white font-semibold">Karan Pratap Singh</span>.</div>
           <div className="mt-2 md:mt-0">Clinical & Academic Retrieval-Augmented Generation Platform</div>
         </div>
       </div>

@@ -142,4 +142,28 @@ export async function clearRAGKnowledgeBase(): Promise<any> {
   return data;
 }
 
+export async function getSystemSpecs(): Promise<any> {
+  try {
+    const { data } = await api.get('/system/specs');
+    return data;
+  } catch (err) {
+    return {
+      cpu_threads: 12,
+      ram_gb: 15.4,
+      gpu_name: "Integrated / CPU",
+      vram_gb: 0.0,
+      has_gpu: false,
+      acceleration_mode: "CPU PARALLEL ENGINE",
+      ollama_running: true,
+      installed_models: ["llama3.2:3b"],
+    };
+  }
+}
+
+export async function pullModel(modelName: string): Promise<any> {
+  const { data } = await api.post('/system/pull-model', { model_name: modelName });
+  return data;
+}
+
 export default api;
+

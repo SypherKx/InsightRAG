@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # App
-    app_name: str = "InsightForge AI"
+    app_name: str = "InsightRAG AI"
     app_version: str = "1.0.0"
     debug: bool = True
 

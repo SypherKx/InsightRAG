@@ -3,9 +3,9 @@ tags:
   - #code
   - #frontend
 ---
-# 📄 `app.anomalies.tsx`
+# 📄 `docs.tsx`
 
-> **File Path**: `frontend\src\routes\app.anomalies.tsx`
+> **File Path**: `frontend\src\routes\docs.tsx`
 > **Parent Hub**: [[06_Frontend_App_Hub]] | **Master Hub**: [[00_Master_Hub]]
 
 ---
@@ -17,14 +17,14 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-- `export function AnomaliesPage`
+- `export function DocsPage`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.anomalies.tsx (220 lines)
+Module: frontend\src\routes\docs.tsx (731 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export function AnomaliesPage
+Exports: export function DocsPage
 ```

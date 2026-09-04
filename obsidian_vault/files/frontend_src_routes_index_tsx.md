@@ -17,14 +17,14 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-*Core logic module*
+- `export function LandingPage`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\index.tsx (361 lines)
+Module: frontend\src\routes\index.tsx (302 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: System Execution
+Exports: export function LandingPage
 ```
