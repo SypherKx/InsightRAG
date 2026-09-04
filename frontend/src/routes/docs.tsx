@@ -336,7 +336,7 @@ export function DocsPage() {
                 </div>
 
                 <p className="text-xs sm:text-sm text-gray-900 font-medium leading-relaxed">
-                  Ek baar install/download hone ke baad, agli baar se bina internet ke bas kisi bhi <strong>PowerShell</strong> ya <strong>Terminal</strong> me jakar <code className="bg-black text-[#ffe600] font-bold px-1.5 py-0.5 rounded">insightrag</code> likhiye — and you are good to go! Dobara bada command chalane ki koi jarurat nahi:
+                  Once downloaded and installed, you <strong>never need an active internet connection</strong> or the long installation script again. Simply open any <strong>PowerShell</strong> or <strong>Terminal</strong> window and run <code className="bg-black text-[#ffe600] font-bold px-1.5 py-0.5 rounded">insightrag</code> — and you're good to go:
                 </p>
 
                 <div className="flex items-center justify-between bg-black text-emerald-300 font-mono text-xs sm:text-sm font-bold px-4 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000]">
@@ -355,7 +355,7 @@ export function DocsPage() {
 
                 <p className="text-[11px] text-emerald-900 font-mono font-bold flex items-center gap-1.5">
                   <span>💡</span>
-                  <span>Ye automatically saari local backend services start karke browser open kar dega.</span>
+                  <span>Automatically initializes all local AI backend engines and opens the Live Studio in your default browser.</span>
                 </p>
               </div>
 
