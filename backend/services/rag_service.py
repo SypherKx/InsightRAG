@@ -367,6 +367,31 @@ class RAGService:
         except Exception as e:
             return {"status": "error", "error": str(e), "total_vectors": 0, "files": []}
 
+    def delete_single_document(self, doc_name: str) -> Dict[str, Any]:
+        """Delete a single document from uploads and rebuild the FAISS vector index."""
+        if not self.is_available:
+            return {"status": "unavailable", "error": "RAG service unavailable"}
+        try:
+            from ..utils.security import sanitize_filename, validate_safe_path
+            safe_name = sanitize_filename(doc_name)
+            uploads_dir = Path("./uploads")
+            target_path = validate_safe_path(uploads_dir, uploads_dir / safe_name)
+            
+            if target_path.exists() and target_path.is_file():
+                target_path.unlink()
+                logger.info(f"Deleted document '{safe_name}' from uploads.")
+
+            # Re-index remaining files into FAISS
+            remaining_files = [str(f) for f in uploads_dir.iterdir() if f.is_file()]
+            self.pipeline.clear()
+            if remaining_files:
+                self.pipeline.ingest_and_index(remaining_files)
+
+            return {"status": "deleted", "deleted_file": safe_name, **self.get_stats()}
+        except Exception as e:
+            logger.error(f"Failed to delete document {doc_name}: {e}")
+            return {"status": "error", "error": str(e)}
+
     def clear(self) -> Dict[str, Any]:
         """Clear all documents and vectors from the RAG index."""
         if not self.is_available:

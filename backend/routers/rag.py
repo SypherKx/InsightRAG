@@ -32,6 +32,16 @@ async def clear_rag_knowledge_base():
     return rag_svc.clear()
 
 
+@router.delete("/documents/{doc_name}")
+async def delete_single_rag_document(doc_name: str):
+    """Delete a specific document and its vector embeddings from the knowledge base."""
+    rag_svc = get_rag_service()
+    result = rag_svc.delete_single_document(doc_name)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("error", "Failed to delete document."))
+    return result
+
+
 @router.post("/documents", response_model=RAGUploadResponse)
 async def upload_rag_documents(
     files: List[UploadFile] = File(...),

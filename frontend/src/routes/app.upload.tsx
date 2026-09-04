@@ -28,6 +28,7 @@ import {
   queryRAG,
   getRAGStats,
   clearRAGKnowledgeBase,
+  deleteRAGDocument,
   getSystemSpecs,
   pullModel,
 } from "../services/api";
@@ -106,14 +107,17 @@ export function KnowledgeBaseStudioPage() {
   const [processingMode, setProcessingMode] = useState("local");
   const [cloudApiKey, setCloudApiKey] = useState("");
 
-  // Upload States
+  // Upload & Scope Selection Modal States
   const [drag, setDrag] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [ragStats, setRagStats] = useState<any>({ total_vectors: 0, files: [] });
+  const [deletingDocName, setDeletingDocName] = useState<string | null>(null);
 
-  // Page Range Slicing State
+  // Page Range Slicing State (Controlled inside upload confirmation modal)
   const [usePageRange, setUsePageRange] = useState(false);
   const [startPage, setStartPage] = useState<number | "">(1);
   const [endPage, setEndPage] = useState<number | "">("");
@@ -176,12 +180,25 @@ export function KnowledgeBaseStudioPage() {
     }
   };
 
-  const onSelectFiles = async (selected: FileList | null) => {
+  // When files are picked/dropped -> Open the interactive page range & confirmation modal
+  const onSelectFiles = (selected: FileList | null) => {
     if (!selected || selected.length === 0) return;
     const fileArray = Array.from(selected);
-    setFiles(fileArray);
+    setPendingFiles(fileArray);
+    setUsePageRange(false);
+    setStartPage(1);
+    setEndPage("");
+    setShowUploadModal(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    await startUpload(fileArray);
+  };
+
+  // Execute upload after user confirms page range in modal
+  const handleConfirmUpload = async () => {
+    if (pendingFiles.length === 0) return;
+    setShowUploadModal(false);
+    const filesToUpload = [...pendingFiles];
+    setFiles(filesToUpload);
+    await startUpload(filesToUpload);
   };
 
   const startUpload = async (fileList: File[]) => {
@@ -220,8 +237,23 @@ export function KnowledgeBaseStudioPage() {
     }
   };
 
+  const handleDeleteSingleDoc = async (docName: string) => {
+    if (!confirm(`Are you sure you want to remove '${docName}' from the knowledge base? Vector index will be recalculated.`)) return;
+    setDeletingDocName(docName);
+    try {
+      await deleteRAGDocument(docName);
+      setUploadStatusMsg(`✓ Deleted '${docName}' and updated vector index.`);
+      loadSpecsAndStats();
+    } catch (err: any) {
+      setUploadStatusMsg(`⚠️ Failed to delete '${docName}': ${err?.response?.data?.detail || err?.message || "Error"}`);
+    } finally {
+      setDeletingDocName(null);
+      setTimeout(() => setUploadStatusMsg(null), 5000);
+    }
+  };
+
   const handleClearKnowledgeBase = async () => {
-    if (confirm("Clear all vector indices in knowledge base?")) {
+    if (confirm("Clear all vector indices and all documents in knowledge base?")) {
       await clearRAGKnowledgeBase();
       loadSpecsAndStats();
       setChatMessages([]);
@@ -579,64 +611,6 @@ export function KnowledgeBaseStudioPage() {
                 </label>
               </div>
             </div>
-
-            {/* PAGE RANGE SLICING SELECTOR (OPTIONAL) */}
-            <div className="space-y-2 md:col-span-2 border-2 border-black rounded-2xl p-3.5 sm:p-4 bg-gray-50/80 shadow-[2px_2px_0px_#000]">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="flex items-center gap-2 cursor-pointer font-mono text-xs font-black text-black">
-                  <input
-                    type="checkbox"
-                    checked={usePageRange}
-                    onChange={(e) => setUsePageRange(e.target.checked)}
-                    className="w-4 h-4 rounded accent-black cursor-pointer"
-                  />
-                  <span>📄 INGEST SPECIFIC PAGE RANGE ONLY (PDF & DOCS)</span>
-                </label>
-                <span className="bg-[#ffe600] text-black font-mono text-[10px] font-black px-2 py-0.5 rounded border border-black">
-                  {usePageRange ? "CUSTOM SLICE ACTIVE" : "ALL PAGES (DEFAULT)"}
-                </span>
-              </div>
-
-              {usePageRange && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs"
-                >
-                  <div className="space-y-1">
-                    <span className="font-bold text-gray-700 block text-[11px]">
-                      From Start Page (1-Indexed):
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={startPage}
-                      onChange={(e) => setStartPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
-                      placeholder="e.g. 1"
-                      className="w-full bg-white border-2 border-black rounded-xl p-2.5 font-bold focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="font-bold text-gray-700 block text-[11px]">
-                      To End Page (Optional - Leave blank for end):
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={endPage}
-                      onChange={(e) => setEndPage(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
-                      placeholder="e.g. 25"
-                      className="w-full bg-white border-2 border-black rounded-xl p-2.5 font-bold focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 text-[11px] text-gray-600 font-bold bg-white p-2.5 rounded-lg border border-gray-300">
-                    💡 Only pages from <strong>{startPage || 1}</strong> to <strong>{endPage || "End of Document"}</strong> will be processed & indexed into your vector store. Perfect for dense chapters, protocols, or specific research paper sections!
-                  </div>
-                </motion.div>
-              )}
-            </div>
           </div>
 
           {/* 4. DOCUMENT DROPZONE */}
@@ -724,7 +698,7 @@ export function KnowledgeBaseStudioPage() {
               <span className="flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-gray-700" />
                 Indexed Vectors:{" "}
-                <span className="text-black font-extrabold">{ragStats.total_vectors || 120}</span>
+                <span className="text-black font-extrabold">{ragStats.total_vectors || 0}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <HardDrive className="w-4 h-4 text-gray-700" />
@@ -736,13 +710,62 @@ export function KnowledgeBaseStudioPage() {
             {ragStats.total_vectors > 0 && (
               <button
                 onClick={handleClearKnowledgeBase}
-                className="text-xs font-mono font-bold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer"
+                className="text-xs font-mono font-bold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-red-300 hover:border-red-600 shadow-[1px_1px_0px_#000]"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Clear Index
+                Clear Entire Index
               </button>
             )}
           </div>
+
+          {/* Indexed Knowledge Base Documents List with Individual Deletion */}
+          {ragStats.files && ragStats.files.length > 0 && (
+            <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-[3px_3px_0px_#000] space-y-3 font-mono">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                <span className="text-xs font-black uppercase text-gray-800 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-black" />
+                  <span>INDEXED DOCUMENTS ({ragStats.files.length})</span>
+                </span>
+                <span className="text-[10px] text-gray-500 font-bold">
+                  Delete individual files to re-index knowledge base
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {ragStats.files.map((file: any, fIdx: number) => (
+                  <div
+                    key={fIdx}
+                    className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-300 hover:border-black transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="bg-black text-[#ffe600] text-[9px] font-black px-1.5 py-0.5 rounded border border-black uppercase shrink-0">
+                        {file.extension ? file.extension.replace('.', '') : 'DOC'}
+                      </span>
+                      <span className="truncate text-xs font-bold text-gray-900" title={file.name}>
+                        {file.name}
+                      </span>
+                      <span className="text-[10px] text-gray-500 shrink-0">
+                        ({(file.size_bytes / 1024).toFixed(0)} KB)
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteSingleDoc(file.name)}
+                      disabled={deletingDocName === file.name}
+                      title={`Delete ${file.name}`}
+                      className="p-1.5 bg-white hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-lg border border-gray-300 hover:border-red-500 shadow-[1px_1px_0px_#000] transition active:scale-95 cursor-pointer shrink-0"
+                    >
+                      {deletingDocName === file.name ? (
+                        <Sparkles className="w-3.5 h-3.5 animate-spin text-red-500" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 5. CHATGPT-GRADE INTERACTIVE RAG CHAT & QA PANEL */}
           <div className="border-3 border-black rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-white space-y-4 shadow-[6px_6px_0px_#000]">
@@ -1006,6 +1029,189 @@ export function KnowledgeBaseStudioPage() {
           </div>
         </div>
       </div>
+
+      {/* 5.5 INTERACTIVE INGESTION & PAGE RANGE SCOPE MODAL */}
+      <AnimatePresence>
+        {showUploadModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 15 }}
+              className="bg-white border-4 border-black rounded-3xl p-6 max-w-lg w-full shadow-[10px_10px_0px_#000] space-y-5 font-mono text-black"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b-2 border-gray-200 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#ffe600] border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_#000]">
+                    <Layers className="w-4 h-4 text-black" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black uppercase">
+                    Configure Document Scope
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setPendingFiles([]);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded-lg border-2 border-transparent hover:border-black transition cursor-pointer"
+                >
+                  <X className="w-5 h-5 text-black hover:text-red-600" />
+                </button>
+              </div>
+
+              {/* Selected Files List */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-gray-600 block">
+                  Selected File{pendingFiles.length > 1 ? "s" : ""} to Index ({pendingFiles.length})
+                </label>
+                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2 bg-gray-50 border-2 border-black rounded-xl shadow-inner">
+                  {pendingFiles.map((f, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-xs font-bold bg-white border border-gray-300 px-3 py-1.5 rounded-lg"
+                    >
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <FileText className="w-3.5 h-3.5 text-[#e5a000] shrink-0" />
+                        <span className="truncate">{f.name}</span>
+                      </div>
+                      <span className="text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-300 shrink-0 font-mono">
+                        {(f.size / 1024).toFixed(1)} KB
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scope Options */}
+              <div className="space-y-3">
+                <label className="text-[11px] font-black uppercase text-gray-600 block">
+                  Which Pages Do You Want to Ingest?
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setUsePageRange(false)}
+                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${
+                      !usePageRange
+                        ? "bg-[#ffe600] shadow-[3px_3px_0px_#000] font-black"
+                        : "bg-white hover:bg-gray-50 shadow-[1px_1px_0px_#000] font-bold text-gray-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-xs font-black">All Pages</span>
+                      {!usePageRange && <CheckCircle2 className="w-4 h-4 text-black shrink-0" />}
+                    </div>
+                    <span className="text-[10px] text-gray-800 leading-tight">
+                      Full document parsing & chunking
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setUsePageRange(true)}
+                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${
+                      usePageRange
+                        ? "bg-[#ffe600] shadow-[3px_3px_0px_#000] font-black"
+                        : "bg-white hover:bg-gray-50 shadow-[1px_1px_0px_#000] font-bold text-gray-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-xs font-black">Custom Page Range</span>
+                      {usePageRange && <CheckCircle2 className="w-4 h-4 text-black shrink-0" />}
+                    </div>
+                    <span className="text-[10px] text-gray-800 leading-tight">
+                      Slice specific start & end pages
+                    </span>
+                  </button>
+                </div>
+
+                {/* Custom Page Range Inputs */}
+                {usePageRange && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-3.5 bg-yellow-50 border-2 border-black rounded-xl space-y-2.5 shadow-[2px_2px_0px_#000]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-black">PAGE RANGE RANGE SLICE</span>
+                      <span className="text-[10px] bg-black text-yellow-300 px-2 py-0.5 rounded font-mono font-bold">
+                        1-INDEXED
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-700 block mb-1">
+                          START PAGE
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={startPage}
+                          onChange={(e) =>
+                            setStartPage(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))
+                          }
+                          placeholder="1"
+                          className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none shadow-[2px_2px_0px_#000]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-700 block mb-1">
+                          END PAGE
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={endPage}
+                          onChange={(e) =>
+                            setEndPage(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))
+                          }
+                          placeholder="e.g. 50 (or leave empty)"
+                          className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none shadow-[2px_2px_0px_#000]"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-600 font-bold leading-tight">
+                      💡 InsightRAG will only parse, extract text/tables/visuals, and embed vectors within pages {startPage || 1} to {endPage || "End"}.
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2 border-t-2 border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setPendingFiles([]);
+                  }}
+                  className="bg-gray-200 hover:bg-gray-300 font-bold text-xs px-4 py-2.5 rounded-xl border-2 border-black cursor-pointer shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmUpload}
+                  className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black text-xs px-5 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] cursor-pointer flex items-center gap-2 active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Start Indexing ({pendingFiles.length})</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 6. OLLAMA MODEL DOWNLOAD MODAL */}
       <AnimatePresence>

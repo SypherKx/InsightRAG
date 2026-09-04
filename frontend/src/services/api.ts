@@ -158,6 +158,11 @@ export async function clearRAGKnowledgeBase(): Promise<any> {
   return data;
 }
 
+export async function deleteRAGDocument(docName: string): Promise<any> {
+  const { data } = await api.delete(`/rag/documents/${encodeURIComponent(docName)}`);
+  return data;
+}
+
 export async function getSystemSpecs(): Promise<any> {
   try {
     const { data } = await api.get("/system/specs");
