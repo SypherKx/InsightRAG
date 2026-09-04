@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 export function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const cliCommand = `powershell -ExecutionPolicy Bypass -File .\\launch.ps1`;
+  const cliCommand = `irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex`;
 
   const handleCopyCLI = () => {
     navigator.clipboard.writeText(cliCommand);

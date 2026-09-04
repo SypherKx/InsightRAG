@@ -141,9 +141,10 @@ export const LocalInstallationGuide: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 hashicorp-card max-w-2xl mx-auto text-left font-mono text-xs space-y-2 text-white border-[rgba(178,182,189,0.2)]"
             >
-              <div className="text-[#656a76]"># Clone & run from terminal</div>
-              <div>git clone https://github.com/SypherKx/InsightRAG.git</div>
-              <div>cd InsightRAG && powershell -ExecutionPolicy Bypass -File .\launch.ps1</div>
+              <div className="text-[#656a76]"># Universal 1-line command (run from anywhere in PowerShell)</div>
+              <div className="text-emerald-400 font-bold">irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex</div>
+              <div className="text-[#656a76] pt-2"># Or 1-click local launch</div>
+              <div>.\run.bat</div>
             </motion.div>
           )}
         </div>

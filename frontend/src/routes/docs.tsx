@@ -255,12 +255,12 @@ export function DocsPage() {
                 <div className="flex items-center justify-between">
                   <span className="font-mono font-bold text-xs uppercase tracking-wider text-black flex items-center gap-1.5">
                     <Terminal className="w-4 h-4 text-[#ec4899]" />
-                    Windows 1-Line Installer
+                    Universal 1-Line Installer (Run from anywhere)
                   </span>
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `powershell -ExecutionPolicy Bypass -Command "& '$env:USERPROFILE\\OneDrive\\Desktop\\Insight-Forge-master\\Insight-Forge-master\\launch.ps1'"`,
+                        `irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex`,
                         "ps1",
                       )
                     }
@@ -276,10 +276,10 @@ export function DocsPage() {
                 </div>
 
                 <div className="bg-black text-[#ffe600] font-mono text-xs sm:text-sm p-4 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] overflow-x-auto">
-                  <code># Run in PowerShell (Windows 10 or 11)</code>
+                  <code># Paste in PowerShell (No folder navigation needed)</code>
                   <br />
                   <code className="text-white">
-                    powershell -ExecutionPolicy Bypass -File .\launch.ps1
+                    irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
                   </code>
                 </div>
               </div>
@@ -289,12 +289,12 @@ export function DocsPage() {
                 <div className="flex items-center justify-between">
                   <span className="font-mono font-bold text-xs uppercase tracking-wider text-black flex items-center gap-1.5">
                     <Code className="w-4 h-4 text-black" />
-                    Manual Installation (Git / All Platforms)
+                    Local 1-Click Launch (Double-Click or Git)
                   </span>
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `git clone https://github.com/SypherKx/InsightRAG.git\ncd InsightRAG\npip install -r requirements.txt\npython scripts/run_local.py`,
+                        `git clone https://github.com/SypherKx/InsightRAG.git && cd InsightRAG && .\\run.bat`,
                         "git",
                       )
                     }
@@ -309,14 +309,13 @@ export function DocsPage() {
                   </button>
                 </div>
 
-                <div className="bg-gray-900 text-gray-200 font-mono text-xs sm:text-sm p-4 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] overflow-x-auto space-y-1">
-                  <div className="text-gray-500"># Clone and start the factory server</div>
-                  <div className="text-green-400">
-                    git clone https://github.com/SypherKx/InsightRAG.git
+                <div className="bg-black text-[#ffe600] font-mono text-xs sm:text-sm p-4 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] overflow-x-auto space-y-1">
+                  <code># Option A: Double-click run.bat in project folder</code>
+                  <div className="text-emerald-300">.\run.bat</div>
+                  <code># Option B: Clone & run via PowerShell / Terminal</code>
+                  <div className="text-white">
+                    git clone https://github.com/SypherKx/InsightRAG.git &amp;&amp; cd InsightRAG &amp;&amp; .\run.bat
                   </div>
-                  <div>cd InsightRAG</div>
-                  <div>pip install -r requirements.txt</div>
-                  <div className="text-[#ffe600]">python scripts/run_local.py</div>
                 </div>
               </div>
 

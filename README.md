@@ -49,20 +49,23 @@
 
 ## ⚡ 1-Line Quickstart
 
-### 🪟 Windows 10 / 11 (PowerShell)
-Open PowerShell in the repository root directory and run:
+### 🪟 Windows (Universal 1-Line - Run from ANY Terminal / Directory)
+Open **PowerShell** (no need to `cd` or navigate to any folder) and paste:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\launch.ps1
+irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
 ```
 
-*What `launch.ps1` does automatically:*
-1. Profiles system hardware (CPU cores, RAM, GPU/VRAM).
-2. Verifies Python 3.10+ and Node.js/npm.
-3. Checks and starts local **Ollama** in the background.
-4. Auto-installs backend & frontend dependencies.
-5. Starts the FastAPI backend (`http://localhost:8000`) and Vite frontend (`http://localhost:5173`).
-6. Automatically launches the **Knowledge Base Studio** (`http://localhost:5173/app/upload`) in your browser once ready!
+### 🖱️ 1-Click Double-Click (Local Folder)
+If you downloaded/cloned the repository locally, simply double-click:
+👉 **`run.bat`** in the project folder!
+
+*What happens automatically in seconds:*
+1. 🔍 **Zero-Friction Detection**: Automatically finds or sets up the project.
+2. ⚡ **Hardware Profiling**: Detects CPU cores, RAM, and NVIDIA CUDA GPU.
+3. 📦 **Self-Healing Dependencies**: Auto-verifies and installs Python + Node.js packages.
+4. 🤖 **Ollama Auto-Start**: Starts local AI engine in the background.
+5. 🚀 **Auto-Opens Browser**: Cleans ports and directly opens the **Live Studio** at `http://localhost:5173/app/upload`!
 
 ---
 
