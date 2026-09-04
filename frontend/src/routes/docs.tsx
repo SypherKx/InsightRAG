@@ -319,6 +319,46 @@ export function DocsPage() {
                 </div>
               </div>
 
+              {/* Offline / Subsequent Launch Callout */}
+              <div className="bg-emerald-100 border-3 border-black p-5 rounded-2xl shadow-[5px_5px_0px_#000] space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-emerald-400 text-black font-mono font-black text-xs px-2.5 py-1 rounded-lg border-2 border-black shadow-[1px_1px_0px_#000]">
+                      ⚡ NEXT TIME / OFFLINE USE
+                    </span>
+                    <span className="font-mono font-black text-xs sm:text-sm text-black">
+                      Launch Instantly with Just 1 Word
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-900 bg-emerald-200 px-2 py-0.5 rounded border border-emerald-400">
+                    100% OFFLINE • NO INTERNET NEEDED
+                  </span>
+                </div>
+
+                <p className="text-xs sm:text-sm text-gray-900 font-medium leading-relaxed">
+                  Ek baar install/download hone ke baad, agli baar se bina internet ke bas kisi bhi <strong>PowerShell</strong> ya <strong>Terminal</strong> me jakar <code className="bg-black text-[#ffe600] font-bold px-1.5 py-0.5 rounded">insightrag</code> likhiye — and you are good to go! Dobara bada command chalane ki koi jarurat nahi:
+                </p>
+
+                <div className="flex items-center justify-between bg-black text-emerald-300 font-mono text-xs sm:text-sm font-bold px-4 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">PS&gt;</span>
+                    <span className="text-[#ffe600] text-sm sm:text-base">insightrag</span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard("insightrag", "offline_cmd")}
+                    className="bg-[#ffe600] text-black text-[11px] sm:text-xs px-3 py-1.5 rounded-lg border border-black hover:bg-yellow-400 cursor-pointer font-black flex items-center gap-1.5 active:scale-95 transition"
+                  >
+                    {copiedCmd === "offline_cmd" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedCmd === "offline_cmd" ? "COPIED!" : "COPY"}</span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-emerald-900 font-mono font-bold flex items-center gap-1.5">
+                  <span>💡</span>
+                  <span>Ye automatically saari local backend services start karke browser open kar dega.</span>
+                </p>
+              </div>
+
               {/* 3 Value Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                 <div className="bg-[#ffe600]/20 border-2 border-black p-4 rounded-xl space-y-1.5 shadow-[3px_3px_0px_#000]">

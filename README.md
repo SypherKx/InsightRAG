@@ -55,6 +55,14 @@ Open **PowerShell** (no need to `cd` or navigate to any folder) and run:
 irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
 ```
 
+> [!TIP]
+> ### ⚡ Next Time / Subsequent Offline Launch (No Internet Needed!)
+> Ek baar download / setup hone ke baad, agli baar se **bina internet ke** bas kisi bhi **PowerShell** ya **CMD** me jakar type karein:
+> ```powershell
+> insightrag
+> ```
+> **And you're good to go!** Ye automatically saari local services aur Studio browser open kar dega — dobara install command chalane ki koi jarurat nahi!
+
 ### 🖱️ 1-Click Double-Click (Local Folder)
 If you downloaded/cloned the repository locally, simply double-click:
 👉 **`run.bat`** in the project folder!
