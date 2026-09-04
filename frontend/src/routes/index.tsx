@@ -69,7 +69,7 @@ export function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 bg-white/90 backdrop-blur-md px-6 py-2 rounded-full border-2 border-black shadow-[3px_3px_0px_#000] font-mono text-xs font-bold text-black">
             <a href="#capabilities" className="hover:underline">Capabilities</a>
             <Link to="/docs" className="hover:underline text-black font-black">Docs</Link>
-            <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+            <a href="https://github.com/SypherKx/InsightRAG" target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
               <Code className="w-3.5 h-3.5" />
               GitHub
             </a>

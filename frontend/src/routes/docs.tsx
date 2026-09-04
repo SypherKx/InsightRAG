@@ -127,7 +127,7 @@ export function DocsPage() {
               Home
             </Link>
             <a
-              href="https://github.com"
+              href="https://github.com/SypherKx/InsightRAG"
               target="_blank"
               rel="noreferrer"
               className="bg-black hover:bg-gray-800 text-white px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] transition active:translate-x-[1px] active:translate-y-[1px] flex items-center gap-1.5"
@@ -201,7 +201,7 @@ export function DocsPage() {
 
             <div className="pt-2 border-t-2 border-black space-y-2">
               <a
-                href="https://github.com"
+                href="https://github.com/SypherKx/InsightRAG"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-between px-3 py-2 rounded-xl border-2 border-black bg-black text-white hover:bg-gray-800 font-mono text-xs font-bold transition shadow-[2px_2px_0px_#000]"
@@ -277,7 +277,7 @@ export function DocsPage() {
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `git clone https://github.com/itskaranpratapsingh/InsightForge-AI.git\ncd InsightForge-AI\npip install -r requirements.txt\npython scripts/run_local.py`,
+                        `git clone https://github.com/SypherKx/InsightRAG.git\ncd InsightRAG\npip install -r requirements.txt\npython scripts/run_local.py`,
                         "git"
                       )
                     }
@@ -290,7 +290,7 @@ export function DocsPage() {
 
                 <div className="bg-gray-900 text-gray-200 font-mono text-xs sm:text-sm p-4 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] overflow-x-auto space-y-1">
                   <div className="text-gray-500"># Clone and start the factory server</div>
-                  <div className="text-green-400">git clone https://github.com/itskaranpratapsingh/InsightRAG.git</div>
+                  <div className="text-green-400">git clone https://github.com/SypherKx/InsightRAG.git</div>
                   <div>cd InsightRAG</div>
                   <div>pip install -r requirements.txt</div>
                   <div className="text-[#ffe600]">python scripts/run_local.py</div>

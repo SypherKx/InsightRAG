@@ -138,9 +138,8 @@ export const LocalInstallationGuide: React.FC = () => {
               className="mt-4 hashicorp-card max-w-2xl mx-auto text-left font-mono text-xs space-y-2 text-white border-[rgba(178,182,189,0.2)]"
             >
               <div className="text-[#656a76]"># Clone & run from terminal</div>
-              <div>git clone https://github.com/InsightForge/Insight-Forge.git</div>
-              <div>cd Insight-Forge && install_desktop.bat</div>
-              <div>run_desktop.bat</div>
+              <div>git clone https://github.com/SypherKx/InsightRAG.git</div>
+              <div>cd InsightRAG && powershell -ExecutionPolicy Bypass -File .\launch.ps1</div>
             </motion.div>
           )}
         </div>
