@@ -81,8 +81,8 @@ export function Footer() {
 
         {/* Copyright Footer Line */}
         <div className="mt-16 border-t border-white/10 pt-8 flex flex-col md:flex-row md:items-center justify-between text-xs text-[var(--on-dark-soft)]">
-          <div>© {new Date().getFullYear()} InsightRAG AI. Made by <span className="text-white font-semibold">Karan Pratap Singh</span>.</div>
-          <div className="mt-2 md:mt-0">Clinical & Academic Retrieval-Augmented Generation Platform</div>
+          <div>© {new Date().getFullYear()} InsightRAG AI. Made by <span className="text-white">Karan Pratap Singh</span>.</div>
+          <div className="mt-2 md:mt-0">Autonomous Multimodal Retrieval-Augmented Generation</div>
         </div>
       </div>
     </footer>

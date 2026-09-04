@@ -638,13 +638,13 @@ export function KnowledgeBaseStudioPage() {
       </AnimatePresence>
 
       {/* Bottom Footer */}
-      <footer className="w-full border-t-2 border-black bg-white/90 backdrop-blur-md py-3 px-6 mt-12 font-mono text-xs text-black">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 font-bold">
-          <div>⚡ InsightRAG AI — Knowledge Base Studio</div>
-          <div className="bg-[#ffe600] text-black px-3 py-1 rounded-full border-2 border-black shadow-[2px_2px_0px_#000]">
-            Made with ❤️ by <span className="font-black">Karan Pratap Singh</span>
+      <footer className="w-full border-t-2 border-black bg-white/90 backdrop-blur-md py-3 px-6 mt-12 font-mono text-xs text-gray-600">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="font-bold text-black">⚡ InsightRAG AI — Knowledge Base Studio</div>
+          <div>
+            Made by <span className="font-bold text-black">Karan Pratap Singh</span>
           </div>
-          <div className="text-gray-600">Zero-Budget Local Multimodal RAG</div>
+          <div>Zero-Budget Local Multimodal RAG</div>
         </div>
       </footer>
 

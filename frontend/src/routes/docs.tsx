@@ -714,12 +714,15 @@ export function DocsPage() {
           {/* ========================================================================= */}
           {/* BOTTOM FOOTER */}
           {/* ========================================================================= */}
-          <footer className="border-3 border-black bg-white p-6 rounded-2xl shadow-[4px_4px_0px_#000] flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs">
-            <div className="font-bold">
+          <footer className="border-3 border-black bg-white p-5 rounded-2xl shadow-[4px_4px_0px_#000] flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs text-gray-700">
+            <div className="font-bold text-black">
               InsightRAG Autonomous Multimodal RAG Engine
             </div>
-            <div className="bg-[#ffe600] text-black px-3.5 py-1.5 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] font-black">
-              Open Source MIT License • Built by Karan Pratap Singh
+            <div>
+              Made by <span className="font-bold text-black">Karan Pratap Singh</span>
+            </div>
+            <div className="text-gray-500">
+              MIT License • Local First
             </div>
           </footer>
 

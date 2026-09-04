@@ -285,15 +285,10 @@ export function LandingPage() {
       <footer className="border-t-2 border-gray-800 bg-black py-6 px-6 font-mono text-xs text-gray-400">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>InsightRAG — Autonomous Multimodal RAG Engine</div>
-
-          <div className="flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-full border border-gray-700">
-            <div className="w-6 h-6 rounded-full bg-[#ffe600] border border-black flex items-center justify-center font-black text-black text-[9px]">
-              KPS
-            </div>
-            <span className="text-gray-200 font-bold tracking-wide">Made by <span className="text-[#ffe600]">Karan Pratap Singh</span></span>
+          <div className="text-gray-400">
+            Made by <span className="text-gray-200">Karan Pratap Singh</span>
           </div>
-
-          <div>Built for Healthcare & Education Intelligence</div>
+          <div>© {new Date().getFullYear()} InsightRAG AI. All rights reserved.</div>
         </div>
       </footer>
 
