@@ -1,5 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Database, GitBranch, Brain, ArrowRight, Check, Download, ShieldCheck, Cpu } from "lucide-react";
+import {
+  Database,
+  GitBranch,
+  Brain,
+  ArrowRight,
+  Check,
+  Download,
+  ShieldCheck,
+  Cpu,
+} from "lucide-react";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 
 export const Route = createFileRoute("/features")({
@@ -80,7 +89,8 @@ function FeaturesPage() {
             Engineered for medical precision & academic clarity.
           </h1>
           <p className="body-hashicorp-lg text-[#b2b6bd] max-w-2xl mx-auto">
-            Specialized modules built to accelerate medical research, assist clinical decision-making, and streamline academic document search on your PC.
+            Specialized modules built to accelerate medical research, assist clinical
+            decision-making, and streamline academic document search on your PC.
           </p>
         </div>
       </section>
@@ -155,7 +165,8 @@ function FeaturesPage() {
               Run Local RAG On Your Computer's Hardware.
             </h2>
             <p className="body-hashicorp text-sm text-[#b2b6bd] max-w-xl mx-auto">
-              Download the standalone executable to process PubMed PDFs and lecture syllabi 100% offline on your machine.
+              Download the standalone executable to process PubMed PDFs and lecture syllabi 100%
+              offline on your machine.
             </p>
             <div className="pt-2">
               <a

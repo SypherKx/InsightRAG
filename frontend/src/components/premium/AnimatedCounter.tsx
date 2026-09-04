@@ -34,5 +34,9 @@ export function AnimatedCounter({
     };
   }, [inView, value, prefix, suffix, decimals]);
 
-  return <span ref={ref} className="font-mono tabular-nums">{prefix}0{suffix}</span>;
+  return (
+    <span ref={ref} className="font-mono tabular-nums">
+      {prefix}0{suffix}
+    </span>
+  );
 }

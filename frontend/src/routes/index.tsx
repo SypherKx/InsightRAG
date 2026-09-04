@@ -12,9 +12,8 @@ import {
   Sparkles,
   ExternalLink,
   BookOpen,
-  Code
+  Code,
 } from "lucide-react";
-
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,7 +41,6 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-[#ffe600] selection:text-black">
-      
       {/* 
         ========================================================================
         HERO SECTION (Image 2 & 5 Style - Sky Noise Textured Background)
@@ -52,12 +50,11 @@ export function LandingPage() {
         className="relative bg-cover bg-center bg-no-repeat border-b-4 border-black min-h-[92vh] flex flex-col justify-between"
         style={{
           backgroundImage: `url('/assets/skytextured.jpg'), url('/skytextured.jpg')`,
-          backgroundColor: '#86b0d9',
+          backgroundColor: "#86b0d9",
         }}
       >
         {/* Top Navbar */}
         <header className="p-4 sm:p-6 max-w-7xl mx-auto w-full flex items-center justify-between gap-4 z-20">
-          
           {/* Logo */}
           <div className="flex items-center gap-2">
             <span className="bg-black text-white font-black font-mono text-lg sm:text-xl px-3 py-1.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] italic tracking-tighter">
@@ -67,9 +64,18 @@ export function LandingPage() {
 
           {/* Navigation Pill */}
           <nav className="hidden md:flex items-center gap-6 bg-white/90 backdrop-blur-md px-6 py-2 rounded-full border-2 border-black shadow-[3px_3px_0px_#000] font-mono text-xs font-bold text-black">
-            <a href="#capabilities" className="hover:underline">Capabilities</a>
-            <Link to="/docs" className="hover:underline text-black font-black">Docs</Link>
-            <a href="https://github.com/SypherKx/InsightRAG" target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+            <a href="#capabilities" className="hover:underline">
+              Capabilities
+            </a>
+            <Link to="/docs" className="hover:underline text-black font-black">
+              Docs
+            </Link>
+            <a
+              href="https://github.com/SypherKx/InsightRAG"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:underline flex items-center gap-1"
+            >
               <Code className="w-3.5 h-3.5" />
               GitHub
             </a>
@@ -87,7 +93,6 @@ export function LandingPage() {
 
         {/* Hero Central Content */}
         <main className="max-w-4xl mx-auto px-4 py-12 text-center space-y-6 z-10 my-auto">
-          
           {/* Eyebrow Badge */}
           <div className="inline-block bg-black text-[#ffe600] font-mono font-black text-xs px-4 py-1.5 rounded-full border-2 border-black shadow-[3px_3px_0px_#000] uppercase tracking-wider">
             CLINICAL & ACADEMIC MULTIMODAL RAG FACTORY
@@ -103,16 +108,21 @@ export function LandingPage() {
 
           {/* Subtitle */}
           <p className="max-w-2xl mx-auto text-black font-mono font-bold text-sm sm:text-base leading-relaxed bg-white/70 backdrop-blur-sm p-3 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000]">
-            Turn complex clinical guidelines, diagnostic diagrams, PubMed research papers, and university curricula into a turnkey, anti-hallucination AI knowledge studio in seconds.
+            Turn complex clinical guidelines, diagnostic diagrams, PubMed research papers, and
+            university curricula into a turnkey, anti-hallucination AI knowledge studio in seconds.
           </p>
 
           {/* Interactive Command Box */}
           <div className="max-w-2xl mx-auto bg-black text-white p-3 sm:p-4 rounded-2xl border-2 border-black shadow-[6px_6px_0px_#000] space-y-3 font-mono text-xs sm:text-sm">
-            <div className="text-gray-400 text-[10px] uppercase tracking-widest">Open PowerShell → cd into project folder → paste:</div>
+            <div className="text-gray-400 text-[10px] uppercase tracking-widest">
+              Open PowerShell → cd into project folder → paste:
+            </div>
             <div className="flex items-center gap-2 justify-between bg-[#0d1117] rounded-xl px-3 py-2">
               <div className="flex items-center gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0">
                 <span className="text-gray-500 flex-shrink-0">PS&gt;</span>
-                <code className="whitespace-nowrap text-[11px] sm:text-xs">powershell -ExecutionPolicy Bypass -File .\launch.ps1</code>
+                <code className="whitespace-nowrap text-[11px] sm:text-xs">
+                  powershell -ExecutionPolicy Bypass -File .\launch.ps1
+                </code>
               </div>
               <button
                 onClick={handleCopyCLI}
@@ -123,11 +133,13 @@ export function LandingPage() {
               </button>
             </div>
             <div className="text-gray-500 text-[10px] leading-relaxed">
-              📁 First navigate to project folder:<br />
-              <span className="text-gray-300">cd "$env:USERPROFILE\OneDrive\Desktop\Insight-Forge-master\Insight-Forge-master"</span>
+              📁 First navigate to project folder:
+              <br />
+              <span className="text-gray-300">
+                cd "$env:USERPROFILE\OneDrive\Desktop\Insight-Forge-master\Insight-Forge-master"
+              </span>
             </div>
           </div>
-
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -143,11 +155,14 @@ export function LandingPage() {
               onClick={handleCopyCLI}
               className="bg-white text-black hover:bg-gray-100 font-black font-mono text-sm px-6 py-3.5 rounded-xl border-3 border-black shadow-[4px_4px_0px_#000] flex items-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Terminal className="w-4 h-4 text-black" />}
+              {copied ? (
+                <Check className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <Terminal className="w-4 h-4 text-black" />
+              )}
               <span>{copied ? "CLI COMMAND COPIED!" : "COPY CLI LAUNCH"}</span>
             </button>
           </div>
-
         </main>
 
         {/* Bottom Ticker Marquee Bar (Infinite Scrolling Motion) */}
@@ -161,13 +176,28 @@ export function LandingPage() {
               repeat: Infinity,
             }}
           >
-            <span>⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS • ZERO DATA LEAKS • HARDWARE ACCELERATED</span>
-            <span>⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS • ZERO DATA LEAKS • HARDWARE ACCELERATED</span>
-            <span>⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS • ZERO DATA LEAKS • HARDWARE ACCELERATED</span>
-            <span>⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS • ZERO DATA LEAKS • HARDWARE ACCELERATED</span>
+            <span>
+              ⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY
+              CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS •
+              ZERO DATA LEAKS • HARDWARE ACCELERATED
+            </span>
+            <span>
+              ⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY
+              CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS •
+              ZERO DATA LEAKS • HARDWARE ACCELERATED
+            </span>
+            <span>
+              ⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY
+              CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS •
+              ZERO DATA LEAKS • HARDWARE ACCELERATED
+            </span>
+            <span>
+              ⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY
+              CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS •
+              ZERO DATA LEAKS • HARDWARE ACCELERATED
+            </span>
           </motion.div>
         </div>
-
       </div>
 
       {/* 
@@ -176,7 +206,6 @@ export function LandingPage() {
         ========================================================================
       */}
       <section id="capabilities" className="py-20 px-6 max-w-6xl mx-auto space-y-12">
-        
         <div className="text-center space-y-3">
           <h2 className="text-3xl sm:text-5xl font-black font-sans text-white tracking-tight">
             Engineered for Zero Fluff and Real Grounding
@@ -188,16 +217,18 @@ export function LandingPage() {
 
         {/* 3 Neo-Brutalist Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
           {/* Card 1: MULTIMODAL (Yellow Card) */}
           <div className="bg-[#ffe600] text-black border-4 border-black rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-[8px_8px_0px_#ffffff] hover:translate-y-[-4px] transition-transform">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-3">
-                <h3 className="text-2xl font-black font-mono uppercase tracking-tight">MULTIMODAL</h3>
+                <h3 className="text-2xl font-black font-mono uppercase tracking-tight">
+                  MULTIMODAL
+                </h3>
                 <span className="w-3.5 h-3.5 bg-black rounded-sm" />
               </div>
               <p className="font-mono text-xs font-bold leading-relaxed text-black/90">
-                One-shot deep visual scene extraction. Understands photos, diagrams, flowcharts, and foreign scripts via local Vision models.
+                One-shot deep visual scene extraction. Understands photos, diagrams, flowcharts, and
+                foreign scripts via local Vision models.
               </p>
             </div>
 
@@ -210,11 +241,14 @@ export function LandingPage() {
           <div className="bg-[#22c55e] text-black border-4 border-black rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-[8px_8px_0px_#ffffff] hover:translate-y-[-4px] transition-transform">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-3">
-                <h3 className="text-2xl font-black font-mono uppercase tracking-tight">GUARDRAILS</h3>
+                <h3 className="text-2xl font-black font-mono uppercase tracking-tight">
+                  GUARDRAILS
+                </h3>
                 <span className="w-3.5 h-3.5 bg-black rounded-sm" />
               </div>
               <p className="font-mono text-xs font-bold leading-relaxed text-black/90">
-                Strict cosine distance relevance gates and zero-evidence refusal fallbacks ensure the engine never hallucinates out-of-context facts.
+                Strict cosine distance relevance gates and zero-evidence refusal fallbacks ensure
+                the engine never hallucinates out-of-context facts.
               </p>
             </div>
 
@@ -227,11 +261,14 @@ export function LandingPage() {
           <div className="bg-[#ec4899] text-black border-4 border-black rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-[8px_8px_0px_#ffffff] hover:translate-y-[-4px] transition-transform">
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-3">
-                <h3 className="text-2xl font-black font-mono uppercase tracking-tight">STANDALONE</h3>
+                <h3 className="text-2xl font-black font-mono uppercase tracking-tight">
+                  STANDALONE
+                </h3>
                 <span className="w-3.5 h-3.5 bg-black rounded-sm" />
               </div>
               <p className="font-mono text-xs font-bold leading-relaxed text-black/90">
-                Export a turnkey production bundle containing pre-indexed vector DB, standalone FastAPI server, web UI, and launch scripts.
+                Export a turnkey production bundle containing pre-indexed vector DB, standalone
+                FastAPI server, web UI, and launch scripts.
               </p>
             </div>
 
@@ -239,9 +276,7 @@ export function LandingPage() {
               FastAPI + ChromaDB + Batch
             </div>
           </div>
-
         </div>
-
       </section>
 
       {/* 
@@ -251,7 +286,6 @@ export function LandingPage() {
       */}
       <section id="about" className="border-t-4 border-white bg-black py-20 px-6">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          
           {/* Left Description Column */}
           <div className="space-y-6">
             <h2 className="text-3xl font-black font-mono text-white uppercase tracking-wider">
@@ -259,14 +293,22 @@ export function LandingPage() {
             </h2>
 
             <p className="font-mono text-xs sm:text-sm text-gray-300 font-bold leading-relaxed uppercase">
-              THE CREATION OF THE INSIGHTRAG ENGINE WAS DRIVEN BY THE NEED FOR PRIVATE, ZERO-COST, AND UNCOMPROMISING LOCAL ARTIFICIAL INTELLIGENCE. WE BUILT A HIGH-PERFORMANCE ARCHITECTURE CAPABLE OF PROCESSING MULTI-FORMAT DOCUMENTS, SCANNED MEDICAL RECORDS, AND VISUAL MEDIA WITH STRICT ANTI-HALLUCINATION GUARDRAILS AND 1-CLICK STANDALONE DEPLOYMENT.
+              THE CREATION OF THE INSIGHTRAG ENGINE WAS DRIVEN BY THE NEED FOR PRIVATE, ZERO-COST,
+              AND UNCOMPROMISING LOCAL ARTIFICIAL INTELLIGENCE. WE BUILT A HIGH-PERFORMANCE
+              ARCHITECTURE CAPABLE OF PROCESSING MULTI-FORMAT DOCUMENTS, SCANNED MEDICAL RECORDS,
+              AND VISUAL MEDIA WITH STRICT ANTI-HALLUCINATION GUARDRAILS AND 1-CLICK STANDALONE
+              DEPLOYMENT.
             </p>
 
             <button
               onClick={handleCopyCLI}
               className="bg-white text-black hover:bg-[#ffe600] font-mono font-black text-xs px-6 py-3 rounded-full border-2 border-white shadow-[3px_3px_0px_#fff] flex items-center gap-2 cursor-pointer transition-colors"
             >
-              {copied ? <Check className="w-4 h-4 text-black" /> : <Copy className="w-4 h-4 text-black" />}
+              {copied ? (
+                <Check className="w-4 h-4 text-black" />
+              ) : (
+                <Copy className="w-4 h-4 text-black" />
+              )}
               <span>COPY CLI LAUNCH</span>
             </button>
           </div>
@@ -274,10 +316,11 @@ export function LandingPage() {
           {/* Right Text Graphic Column */}
           <div className="flex items-center justify-center">
             <div className="text-6xl sm:text-8xl md:text-9xl font-black font-sans tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-400 to-gray-800 select-none">
-              INSIGHT<br />RAG
+              INSIGHT
+              <br />
+              RAG
             </div>
           </div>
-
         </div>
       </section>
 
@@ -291,7 +334,6 @@ export function LandingPage() {
           <div>© {new Date().getFullYear()} InsightRAG AI. All rights reserved.</div>
         </div>
       </footer>
-
     </div>
   );
 }

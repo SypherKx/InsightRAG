@@ -1,6 +1,12 @@
 import { Link } from "@tanstack/react-router";
 
-export function BrandLogo({ size = "md", disableLink = false }: { size?: "sm" | "md" | "lg"; disableLink?: boolean }) {
+export function BrandLogo({
+  size = "md",
+  disableLink = false,
+}: {
+  size?: "sm" | "md" | "lg";
+  disableLink?: boolean;
+}) {
   const textSizes = {
     sm: "text-lg",
     md: "text-xl",
@@ -20,7 +26,10 @@ export function BrandLogo({ size = "md", disableLink = false }: { size?: "sm" | 
   }
 
   return (
-    <Link to="/" className="inline-flex items-center no-underline hover:opacity-90 transition-opacity">
+    <Link
+      to="/"
+      className="inline-flex items-center no-underline hover:opacity-90 transition-opacity"
+    >
       {content}
     </Link>
   );

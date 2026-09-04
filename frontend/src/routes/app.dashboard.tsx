@@ -1,7 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Activity, AlertTriangle, FileText, Search, Upload, ShieldCheck, Sparkles, Plus } from "lucide-react";
 import {
-  Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Activity,
+  AlertTriangle,
+  FileText,
+  Search,
+  Upload,
+  ShieldCheck,
+  Sparkles,
+  Plus,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { PageHeader } from "@/components/dashboard/DashboardShell";
 import { GlassCard } from "@/components/premium/GlassCard";
@@ -27,10 +44,7 @@ export function DashboardPage() {
     async function loadRealData() {
       setLoading(true);
       try {
-        const [dsRes, ragRes] = await Promise.allSettled([
-          getDatasets(1, 20),
-          getRAGStats(),
-        ]);
+        const [dsRes, ragRes] = await Promise.allSettled([getDatasets(1, 20), getRAGStats()]);
 
         if (!isMounted) return;
 
@@ -74,7 +88,9 @@ export function DashboardPage() {
   const typeCounts = { spike: 0, drop: 0, deviation: 0, trend: 0 };
 
   anomaliesList.forEach((a) => {
-    const sev = (a.severity_level || (a.severity >= 0.8 ? "critical" : a.severity >= 0.5 ? "high" : "medium")).toLowerCase();
+    const sev = (
+      a.severity_level || (a.severity >= 0.8 ? "critical" : a.severity >= 0.5 ? "high" : "medium")
+    ).toLowerCase();
     if (sev in severityCounts) severityCounts[sev as keyof typeof severityCounts]++;
     else severityCounts.high++;
 
@@ -121,41 +137,67 @@ export function DashboardPage() {
       <div className="p-6 md:p-8 space-y-8 bg-[var(--canvas)] min-h-screen text-[var(--ink)] transition-colors duration-300">
         {/* 1. TOP METRIC STAT CARDS */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <GlassCard variant="canvas" className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]">
+          <GlassCard
+            variant="canvas"
+            className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
+          >
             <div className="flex items-center justify-between">
-              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">Active Datasets</span>
+              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">
+                Active Datasets
+              </span>
               <FileText className="h-4 w-4 text-[#c1fbd4]" />
             </div>
             <div className="mt-3 text-3xl font-bold text-[var(--ink)]">{datasetsList.length}</div>
             <div className="mt-1 text-xs text-[var(--muted)]">Uploaded Files</div>
           </GlassCard>
 
-          <GlassCard variant="canvas" className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]">
+          <GlassCard
+            variant="canvas"
+            className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
+          >
             <div className="flex items-center justify-between">
-              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">Detected Anomalies</span>
+              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">
+                Detected Anomalies
+              </span>
               <AlertTriangle className="h-4 w-4 text-[#aa2d00]" />
             </div>
             <div className="mt-3 text-3xl font-bold text-[var(--ink)]">{anomaliesList.length}</div>
             <div className="mt-1 text-xs text-[#aa2d00] font-semibold">
-              {severityCounts.critical > 0 ? `${severityCounts.critical} Critical Spikes` : "Live Backend Signals"}
+              {severityCounts.critical > 0
+                ? `${severityCounts.critical} Critical Spikes`
+                : "Live Backend Signals"}
             </div>
           </GlassCard>
 
-          <GlassCard variant="canvas" className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]">
+          <GlassCard
+            variant="canvas"
+            className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
+          >
             <div className="flex items-center justify-between">
-              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">FAISS Vectors Indexed</span>
+              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">
+                FAISS Vectors Indexed
+              </span>
               <Sparkles className="h-4 w-4 text-[#c1fbd4]" />
             </div>
-            <div className="mt-3 text-3xl font-bold text-[var(--ink)]">{totalVectors.toLocaleString()}</div>
+            <div className="mt-3 text-3xl font-bold text-[var(--ink)]">
+              {totalVectors.toLocaleString()}
+            </div>
             <div className="mt-1 text-xs text-[#c1fbd4] font-semibold">100% Local Privacy</div>
           </GlassCard>
 
-          <GlassCard variant="canvas" className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]">
+          <GlassCard
+            variant="canvas"
+            className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
+          >
             <div className="flex items-center justify-between">
-              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">RAG Engine Status</span>
+              <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">
+                RAG Engine Status
+              </span>
               <ShieldCheck className="h-4 w-4 text-[#c1fbd4]" />
             </div>
-            <div className="mt-3 text-3xl font-bold text-[var(--ink)]">{totalVectors > 0 ? "Active" : "Ready"}</div>
+            <div className="mt-3 text-3xl font-bold text-[var(--ink)]">
+              {totalVectors > 0 ? "Active" : "Ready"}
+            </div>
             <div className="mt-1 text-xs text-[var(--muted)]">Page & Paragraph Citation</div>
           </GlassCard>
         </div>
@@ -163,11 +205,18 @@ export function DashboardPage() {
         {/* 2. CHARTS OVERVIEW */}
         <div className="grid gap-6 lg:grid-cols-2 min-w-0">
           {/* Severity Distribution */}
-          <GlassCard variant="canvas" className="p-6 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)] min-w-0">
+          <GlassCard
+            variant="canvas"
+            className="p-6 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)] min-w-0"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="heading-sm font-semibold text-[var(--ink)]">Clinical Severity Distribution</h3>
-                <p className="caption text-xs text-[var(--muted)]">Breakdown of patient vital & academic metric alerts</p>
+                <h3 className="heading-sm font-semibold text-[var(--ink)]">
+                  Clinical Severity Distribution
+                </h3>
+                <p className="caption text-xs text-[var(--muted)]">
+                  Breakdown of patient vital & academic metric alerts
+                </p>
               </div>
               <GlowBadge variant="mint">REALTIME</GlowBadge>
             </div>
@@ -193,11 +242,18 @@ export function DashboardPage() {
           </GlassCard>
 
           {/* Anomaly Types */}
-          <GlassCard variant="canvas" className="p-6 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)] min-w-0">
+          <GlassCard
+            variant="canvas"
+            className="p-6 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)] min-w-0"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="heading-sm font-semibold text-[var(--ink)]">Anomaly Detection Classes</h3>
-                <p className="caption text-xs text-[var(--muted)]">Spike, Drop, and Change-Point counts</p>
+                <h3 className="heading-sm font-semibold text-[var(--ink)]">
+                  Anomaly Detection Classes
+                </h3>
+                <p className="caption text-xs text-[var(--muted)]">
+                  Spike, Drop, and Change-Point counts
+                </p>
               </div>
               <GlowBadge variant="shade">STATISTICAL</GlowBadge>
             </div>
@@ -215,11 +271,18 @@ export function DashboardPage() {
         </div>
 
         {/* 3. RECENT ANOMALIES / DATASETS TABLE */}
-        <GlassCard variant="canvas" className="p-6 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]">
+        <GlassCard
+          variant="canvas"
+          className="p-6 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="heading-md font-semibold text-[var(--ink)]">Recent Datasets & Health Signals</h3>
-              <p className="caption text-xs text-[var(--muted)]">Real-time telemetry and uploaded files</p>
+              <h3 className="heading-md font-semibold text-[var(--ink)]">
+                Recent Datasets & Health Signals
+              </h3>
+              <p className="caption text-xs text-[var(--muted)]">
+                Real-time telemetry and uploaded files
+              </p>
             </div>
             <Link to="/app/upload">
               <PremiumButton variant="outlineOnDark" size="sm">
@@ -232,7 +295,10 @@ export function DashboardPage() {
             <div className="py-12 text-center text-[var(--muted)] space-y-3">
               <Activity className="h-10 w-10 mx-auto opacity-40 text-[#c1fbd4]" />
               <p className="text-sm font-medium">No datasets uploaded yet.</p>
-              <p className="text-xs max-w-md mx-auto">Upload a medical CSV or PDF document to start automatic anomaly detection & vector indexing.</p>
+              <p className="text-xs max-w-md mx-auto">
+                Upload a medical CSV or PDF document to start automatic anomaly detection & vector
+                indexing.
+              </p>
               <Link to="/app/upload" className="inline-block mt-2">
                 <PremiumButton variant="primaryPill" size="sm">
                   Upload First Dataset
@@ -256,12 +322,20 @@ export function DashboardPage() {
                     <tr key={ds.id} className="hover:bg-[var(--surface-soft)] transition-colors">
                       <td className="py-3 px-4 font-medium text-[var(--ink)]">{ds.name}</td>
                       <td className="py-3 px-4">
-                        <GlowBadge variant={ds.status === "completed" || ds.status === "analyzed" ? "mint" : "shade"}>
+                        <GlowBadge
+                          variant={
+                            ds.status === "completed" || ds.status === "analyzed" ? "mint" : "shade"
+                          }
+                        >
                           {ds.status || "analyzed"}
                         </GlowBadge>
                       </td>
-                      <td className="py-3 px-4 text-[var(--muted)]">{ds.row_count || ds.rows || 0}</td>
-                      <td className="py-3 px-4 font-semibold text-[#aa2d00]">{ds.anomalies_detected || ds.anomalies || 0}</td>
+                      <td className="py-3 px-4 text-[var(--muted)]">
+                        {ds.row_count || ds.rows || 0}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-[#aa2d00]">
+                        {ds.anomalies_detected || ds.anomalies || 0}
+                      </td>
                       <td className="py-3 px-4">
                         <Link to="/app/query" className="text-xs text-[#c1fbd4] hover:underline">
                           Query RAG &rarr;

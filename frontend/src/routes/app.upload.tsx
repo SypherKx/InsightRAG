@@ -15,7 +15,7 @@ import {
   X,
   Layers,
   HardDrive,
-  BookOpen
+  BookOpen,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -23,7 +23,7 @@ import {
   getRAGStats,
   clearRAGKnowledgeBase,
   getSystemSpecs,
-  pullModel
+  pullModel,
 } from "../services/api";
 
 export const Route = createFileRoute("/app/upload")({
@@ -43,7 +43,7 @@ const EMBEDDING_OPTIONS = [
     ramReq: "4GB+ RAM (80MB Model)",
     hardwareLabel: "CPU & Laptop Friendly",
     dim: "384-dim",
-    desc: "Lightest & fastest. Zero lag on laptops and multi-core CPUs. Ideal for notes, summaries & rapid PDF indexing."
+    desc: "Lightest & fastest. Zero lag on laptops and multi-core CPUs. Ideal for notes, summaries & rapid PDF indexing.",
   },
   {
     id: "bge-small-en-v1.5",
@@ -54,7 +54,7 @@ const EMBEDDING_OPTIONS = [
     ramReq: "6GB+ RAM (130MB Model)",
     hardwareLabel: "Standard Workstations",
     dim: "384-dim",
-    desc: "Optimal balance of low latency and sharp semantic retrieval across standard PDFs, Word documents & EMR records."
+    desc: "Optimal balance of low latency and sharp semantic retrieval across standard PDFs, Word documents & EMR records.",
   },
   {
     id: "bge-base-en-v1.5",
@@ -65,7 +65,7 @@ const EMBEDDING_OPTIONS = [
     ramReq: "8GB-16GB RAM / GPU (430MB Model)",
     hardwareLabel: "High-Accuracy Research",
     dim: "768-dim",
-    desc: "Industry benchmark for retrieval depth. Recommended for clinical guidelines, dense research papers & textbooks."
+    desc: "Industry benchmark for retrieval depth. Recommended for clinical guidelines, dense research papers & textbooks.",
   },
   {
     id: "nomic-embed-text",
@@ -76,8 +76,8 @@ const EMBEDDING_OPTIONS = [
     ramReq: "8GB+ RAM (270MB Model)",
     hardwareLabel: "Ollama Long-Context",
     dim: "768-dim (8192 context)",
-    desc: "100% on-device Ollama native pipeline. Supports massive document chunks up to 8192 tokens per vector."
-  }
+    desc: "100% on-device Ollama native pipeline. Supports massive document chunks up to 8192 tokens per vector.",
+  },
 ];
 
 export function KnowledgeBaseStudioPage() {
@@ -113,7 +113,9 @@ export function KnowledgeBaseStudioPage() {
 
   // RAG Query Chat State
   const [query, setQuery] = useState("");
-  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; text: string; sources?: any[] }>>([]);
+  const [chatMessages, setChatMessages] = useState<
+    Array<{ role: "user" | "assistant"; text: string; sources?: any[] }>
+  >([]);
   const [querying, setQuerying] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -194,7 +196,8 @@ export function KnowledgeBaseStudioPage() {
         ...prev,
         {
           role: "assistant",
-          text: "Response generated from local RAG context:\n" +
+          text:
+            "Response generated from local RAG context:\n" +
             "Based on the ingested document, the key parameters and findings show standard compliant operational metrics.",
         },
       ]);
@@ -230,24 +233,29 @@ export function KnowledgeBaseStudioPage() {
       className="min-h-screen bg-cover bg-center bg-no-repeat p-4 md:p-8 font-sans"
       style={{
         backgroundImage: `url('/assets/skytextured.jpg'), url('/skytextured.jpg')`,
-        backgroundColor: '#e6f0fa',
+        backgroundColor: "#e6f0fa",
       }}
     >
       <div className="mx-auto max-w-5xl space-y-6">
-
         {/* 1. TOP SYSTEM SPECS BADGE (Image 2 style) */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-black text-white px-5 py-3 rounded-2xl shadow-xl border-2 border-black">
           <div className="flex items-center gap-3 font-mono text-xs sm:text-sm font-bold">
             <span className="inline-flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-full border border-gray-800">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-emerald-400">{specs.gpu_name} ({specs.vram_gb} GB VRAM)</span>
+              <span className="text-emerald-400">
+                {specs.gpu_name} ({specs.vram_gb} GB VRAM)
+              </span>
             </span>
 
             <span className="hidden sm:inline-block text-gray-400">|</span>
-            <span>RAM: <span className="text-amber-300">{specs.ram_gb} GB</span></span>
+            <span>
+              RAM: <span className="text-amber-300">{specs.ram_gb} GB</span>
+            </span>
 
             <span className="hidden sm:inline-block text-gray-400">|</span>
-            <span>CPU: <span className="text-amber-300">{specs.cpu_threads} Threads</span></span>
+            <span>
+              CPU: <span className="text-amber-300">{specs.cpu_threads} Threads</span>
+            </span>
           </div>
 
           <span className="bg-[#ffe600] text-black font-black font-mono text-xs px-3 py-1 rounded-md uppercase tracking-wider border border-black shadow-[2px_2px_0px_#000]">
@@ -257,7 +265,6 @@ export function KnowledgeBaseStudioPage() {
 
         {/* 2. MAIN STUDIO CONTAINER CARD */}
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border-3 border-black shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-6 text-black">
-          
           {/* Header Title + Download Button */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-300 pb-5 gap-4">
             <div>
@@ -289,7 +296,6 @@ export function KnowledgeBaseStudioPage() {
 
           {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
             {/* TEXT LLM MODEL */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
@@ -302,7 +308,9 @@ export function KnowledgeBaseStudioPage() {
               >
                 {specs.installed_models && specs.installed_models.length > 0 ? (
                   specs.installed_models.map((m: string) => (
-                    <option key={m} value={m}>{m}</option>
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
                   ))
                 ) : (
                   <option value="llama3.2:3b">llama3.2:3b</option>
@@ -362,22 +370,26 @@ export function KnowledgeBaseStudioPage() {
               <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
                 {embeddingModel === "all-MiniLM-L6-v2" && (
                   <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold">
-                    ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB). Recommended for laptops, CPU mode & rapid indexing.
+                    ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB). Recommended
+                    for laptops, CPU mode & rapid indexing.
                   </span>
                 )}
                 {embeddingModel === "bge-small-en-v1.5" && (
                   <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-lg border border-sky-400 font-bold">
-                    ⚖️ <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high accuracy across standard documents.
+                    ⚖️ <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high
+                    accuracy across standard documents.
                   </span>
                 )}
                 {embeddingModel === "bge-base-en-v1.5" && (
                   <span className="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-lg border border-yellow-400 font-bold">
-                    🧠 <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense medical research, legal & technical books.
+                    🧠 <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense
+                    medical research, legal & technical books.
                   </span>
                 )}
                 {embeddingModel === "nomic-embed-text" && (
                   <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg border border-purple-400 font-bold">
-                    🚀 <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama service. Supports large chunks up to 8192 tokens.
+                    🚀 <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama
+                    service. Supports large chunks up to 8192 tokens.
                   </span>
                 )}
               </div>
@@ -403,7 +415,6 @@ export function KnowledgeBaseStudioPage() {
                 </label>
               </div>
             </div>
-
           </div>
 
           {/* 4. DOCUMENT DROPZONE (Image 2 style) */}
@@ -421,9 +432,7 @@ export function KnowledgeBaseStudioPage() {
               }}
               onClick={() => inputRef.current?.click()}
               className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${
-                drag
-                  ? "border-black bg-yellow-100"
-                  : "border-black bg-gray-50 hover:bg-yellow-50"
+                drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
               }`}
             >
               <input
@@ -471,11 +480,13 @@ export function KnowledgeBaseStudioPage() {
             <div className="flex items-center gap-4 font-mono text-xs font-bold">
               <span className="flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-gray-700" />
-                Indexed Vectors: <span className="text-black font-extrabold">{ragStats.total_vectors || 120}</span>
+                Indexed Vectors:{" "}
+                <span className="text-black font-extrabold">{ragStats.total_vectors || 120}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <HardDrive className="w-4 h-4 text-gray-700" />
-                Active Store: <span className="text-emerald-600 font-extrabold">FAISS Vector Index</span>
+                Active Store:{" "}
+                <span className="text-emerald-600 font-extrabold">FAISS Vector Index</span>
               </span>
             </div>
 
@@ -513,7 +524,9 @@ export function KnowledgeBaseStudioPage() {
                 <div className="text-center text-gray-500 py-10 space-y-2">
                   <Sparkles className="w-8 h-8 mx-auto text-gray-400" />
                   <p className="font-bold">Ask anything about your uploaded documents.</p>
-                  <p className="text-[11px]">Strict local context retrieval • No internet data leaks</p>
+                  <p className="text-[11px]">
+                    Strict local context retrieval • No internet data leaks
+                  </p>
                 </div>
               ) : (
                 chatMessages.map((msg, idx) => (
@@ -534,8 +547,12 @@ export function KnowledgeBaseStudioPage() {
                       <div className="mt-2 pt-2 border-t border-gray-300 text-[10px] space-y-1">
                         <div className="font-bold text-gray-600">Retrieved Sources:</div>
                         {msg.sources.map((src: any, sIdx: number) => (
-                          <div key={sIdx} className="bg-white p-1.5 rounded border border-gray-300 text-gray-800">
-                            📄 {src.filename || src.source || `Chunk #${sIdx + 1}`} (Relevance: {(src.score || 0.92).toFixed(2)})
+                          <div
+                            key={sIdx}
+                            className="bg-white p-1.5 rounded border border-gray-300 text-gray-800"
+                          >
+                            📄 {src.filename || src.source || `Chunk #${sIdx + 1}`} (Relevance:{" "}
+                            {(src.score || 0.92).toFixed(2)})
                           </div>
                         ))}
                       </div>
@@ -571,9 +588,7 @@ export function KnowledgeBaseStudioPage() {
               </button>
             </div>
           </div>
-
         </div>
-
       </div>
 
       {/* 6. OLLAMA MODEL DOWNLOAD MODAL */}
@@ -599,7 +614,19 @@ export function KnowledgeBaseStudioPage() {
               </div>
 
               <p className="text-xs text-gray-700 font-bold">
-                Enter model tag from Ollama library (e.g., <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">llama3.2:3b</code>, <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">moondream:latest</code>, <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">mistral:7b</code>):
+                Enter model tag from Ollama library (e.g.,{" "}
+                <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">
+                  llama3.2:3b
+                </code>
+                ,{" "}
+                <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">
+                  moondream:latest
+                </code>
+                ,{" "}
+                <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">
+                  mistral:7b
+                </code>
+                ):
               </p>
 
               <input
@@ -628,7 +655,11 @@ export function KnowledgeBaseStudioPage() {
                   disabled={pulling}
                   className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black text-xs px-5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer flex items-center gap-1.5"
                 >
-                  {pulling ? <Sparkles className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {pulling ? (
+                    <Sparkles className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
                   <span>Start Download</span>
                 </button>
               </div>
@@ -647,7 +678,6 @@ export function KnowledgeBaseStudioPage() {
           <div>Zero-Budget Local Multimodal RAG</div>
         </div>
       </footer>
-
     </div>
   );
 }

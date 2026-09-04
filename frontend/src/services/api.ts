@@ -1,13 +1,13 @@
-import axios from 'axios';
+import axios from "axios";
 import type {
   DatasetListResponse,
   AnomalyListResponse,
   AnomalyDetail,
   UploadResponse,
   Dataset,
-} from '../types/backend-types';
+} from "../types/backend-types";
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -20,16 +20,16 @@ export async function uploadDataset(
   file: File,
   name?: string,
   timeColumn?: string,
-  dimensions?: string
+  dimensions?: string,
 ): Promise<UploadResponse> {
   const formData = new FormData();
-  formData.append('file', file);
-  if (name) formData.append('name', name);
-  if (timeColumn) formData.append('time_column', timeColumn);
-  if (dimensions) formData.append('dimensions', dimensions);
+  formData.append("file", file);
+  if (name) formData.append("name", name);
+  if (timeColumn) formData.append("time_column", timeColumn);
+  if (dimensions) formData.append("dimensions", dimensions);
 
-  const { data } = await api.post('/datasets/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  const { data } = await api.post("/datasets/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return data;
 }
@@ -37,12 +37,12 @@ export async function uploadDataset(
 export async function getDatasets(
   page = 1,
   perPage = 20,
-  status?: string
+  status?: string,
 ): Promise<DatasetListResponse> {
   try {
     const params: Record<string, any> = { page, per_page: perPage };
     if (status) params.status = status;
-    const { data } = await api.get('/datasets', { params });
+    const { data } = await api.get("/datasets", { params });
     return data;
   } catch (err) {
     return { datasets: [], total: 0, page: 1, per_page: perPage } as any;
@@ -68,7 +68,7 @@ export async function getAnomalies(
     metric?: string;
     page?: number;
     per_page?: number;
-  }
+  },
 ): Promise<AnomalyListResponse> {
   try {
     const { data } = await api.get(`/datasets/${datasetId}/anomalies`, { params });
@@ -87,10 +87,10 @@ export async function getAnomalyDetail(anomalyId: string): Promise<AnomalyDetail
 
 export async function checkHealth(): Promise<any> {
   try {
-    const { data } = await api.get('/health');
+    const { data } = await api.get("/health");
     return data;
   } catch (err) {
-    return { status: 'offline', rag_enabled: false };
+    return { status: "offline", rag_enabled: false };
   }
 }
 
@@ -98,9 +98,9 @@ export async function checkHealth(): Promise<any> {
 
 export async function uploadRAGDocuments(files: File[]): Promise<any> {
   const formData = new FormData();
-  files.forEach((file) => formData.append('files', file));
-  const { data } = await api.post('/rag/documents', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  files.forEach((file) => formData.append("files", file));
+  const { data } = await api.post("/rag/documents", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
     timeout: 180000, // 3 minutes for document chunking + embedding generation
   });
   return data;
@@ -110,10 +110,10 @@ export async function queryRAG(
   query: string,
   topK = 5,
   minScore = 0.0,
-  model = "llama3.2:3b"
+  model = "llama3.2:3b",
 ): Promise<any> {
   const { data } = await api.post(
-    '/rag/query',
+    "/rag/query",
     {
       query,
       top_k: topK,
@@ -123,14 +123,14 @@ export async function queryRAG(
     },
     {
       timeout: 120000, // 2 minutes for vector search + Ollama LLM inference
-    }
+    },
   );
   return data;
 }
 
 export async function getRAGStats(): Promise<any> {
   try {
-    const { data } = await api.get('/rag/stats');
+    const { data } = await api.get("/rag/stats");
     return data;
   } catch (err) {
     return { total_vectors: 0, files: [] };
@@ -138,13 +138,13 @@ export async function getRAGStats(): Promise<any> {
 }
 
 export async function clearRAGKnowledgeBase(): Promise<any> {
-  const { data } = await api.post('/rag/clear');
+  const { data } = await api.post("/rag/clear");
   return data;
 }
 
 export async function getSystemSpecs(): Promise<any> {
   try {
-    const { data } = await api.get('/system/specs');
+    const { data } = await api.get("/system/specs");
     return data;
   } catch (err) {
     return {
@@ -161,9 +161,8 @@ export async function getSystemSpecs(): Promise<any> {
 }
 
 export async function pullModel(modelName: string): Promise<any> {
-  const { data } = await api.post('/system/pull-model', { model_name: modelName });
+  const { data } = await api.post("/system/pull-model", { model_name: modelName });
   return data;
 }
 
 export default api;
-
