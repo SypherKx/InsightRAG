@@ -238,9 +238,8 @@ if (-not (Test-Path $nodeModules)) {
 # 7. Launch Servers (Multi-threaded Python Orchestrator)
 cw ""
 Sep
-cw "  Launching InsightRAG Studio..." "Yellow"
-cw "    Backend API  ->  http://localhost:8000" "White"
-cw "    Frontend UI  ->  http://localhost:5173" "Green"
+cw "  ⚡ Launching InsightRAG Studio..." "Yellow"
+cw "  👉 Studio URL: http://localhost:5173/app/upload" "Cyan"
 Sep
 cw ""
 

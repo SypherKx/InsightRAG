@@ -186,22 +186,23 @@ def main():
     install_deps()
     check_frontend()
 
+    STUDIO_URL = "http://localhost:5173/app/upload"
+
     print(f"\n{'='*65}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| InsightRAG Studio is launching...                             |{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| Backend API  : http://localhost:8000                          |{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| Frontend UI  : http://localhost:5173                          |{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| Local-First  | Zero API Costs  | Hardware Accelerated         |{ANSI_RESET}")
+    print(f"{ANSI_BOLD}| ⚡ InsightRAG Studio — 100% Local On-Device AI                |{ANSI_RESET}")
+    print(f"{ANSI_BOLD}| 👉 Studio URL : {ANSI_CYAN}http://localhost:5173/app/upload{ANSI_RESET}{ANSI_BOLD}              |{ANSI_RESET}")
+    print(f"{ANSI_BOLD}| (Auto-opening in your browser once ready...)                  |{ANSI_RESET}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
     print(f"{'='*65}\n")
 
     # Start FastAPI backend in a background thread
     backend_thread = threading.Thread(target=run_backend, daemon=True)
     backend_thread.start()
-    print(f"[>] Backend API starting on http://localhost:8000 ...")
+    print(f"[>] Starting RAG Intelligence Engine...")
 
     # Start Vite dev server as a subprocess
-    print(f"[>] Frontend dev server starting on http://localhost:5173 ...")
+    print(f"[>] Starting Studio UI Server...")
     vite_proc = run_frontend_dev()
 
     # Stream Vite output so user can see startup logs
@@ -213,18 +214,25 @@ def main():
     threading.Thread(target=stream_vite, daemon=True).start()
 
     # Wait for both ports to be ready
-    print(f"[*] Waiting for services to be ready...")
+    print(f"[*] Initializing on-device vector index & models...")
     wait_for_port(8000, timeout=20)
     ready = wait_for_port(5173, timeout=30)
 
     if ready:
-        print(f"\n{ANSI_GREEN}[OK] InsightRAG Studio is LIVE! Launching Knowledge Base Studio...{ANSI_RESET}")
+        print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
+        print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
         try:
-            webbrowser.open("http://localhost:5173/app/upload")
+            if os.name == 'nt':
+                os.system(f'start "" "{STUDIO_URL}"')
+            else:
+                webbrowser.open(STUDIO_URL)
         except Exception:
-            pass
+            try:
+                webbrowser.open(STUDIO_URL)
+            except Exception:
+                pass
     else:
-        print(f"\n{ANSI_YELLOW}[!] Frontend may still be starting — open http://localhost:5173/app/upload manually.{ANSI_RESET}")
+        print(f"\n{ANSI_YELLOW}[!] Open Studio manually: {STUDIO_URL}{ANSI_RESET}")
 
     # Keep process alive
     try:
