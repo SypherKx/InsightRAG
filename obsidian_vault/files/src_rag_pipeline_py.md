@@ -34,7 +34,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\pipeline.py (269 lines)
+Module: src\rag\pipeline.py (273 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class RAGPipeline:, def __init__, def ingest_and_index, def query, def get_stats

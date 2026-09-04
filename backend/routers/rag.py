@@ -5,9 +5,9 @@ RAG router — Document upload and context retrieval.
 import logging
 import tempfile
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Response, Query
 
 from ..dependencies import get_rag_service
 from ..models.requests import RAGQueryRequest
@@ -33,8 +33,12 @@ async def clear_rag_knowledge_base():
 
 
 @router.post("/documents", response_model=RAGUploadResponse)
-async def upload_rag_documents(files: List[UploadFile] = File(...)):
-    """Upload documents to the RAG knowledge base."""
+async def upload_rag_documents(
+    files: List[UploadFile] = File(...),
+    start_page: Optional[int] = Form(None),
+    end_page: Optional[int] = Form(None),
+):
+    """Upload documents to the RAG knowledge base with optional page range."""
     rag_svc = get_rag_service()
 
     if not rag_svc.is_available:
@@ -56,7 +60,11 @@ async def upload_rag_documents(files: List[UploadFile] = File(...)):
             saved_paths.append(str(target_path))
 
         # Ingest documents into FAISS vector database
-        stats = rag_svc.ingest_documents(saved_paths)
+        stats = rag_svc.ingest_documents(
+            saved_paths,
+            start_page=start_page,
+            end_page=end_page
+        )
 
         return RAGUploadResponse(
             documents_ingested=stats.get("documents_ingested", 0),

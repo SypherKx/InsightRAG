@@ -49,13 +49,22 @@ class RAGService:
     def is_available(self) -> bool:
         return self.pipeline is not None
 
-    def ingest_documents(self, file_paths: List[str]) -> Dict[str, Any]:
-        """Ingest documents into RAG index."""
+    def ingest_documents(
+        self,
+        file_paths: List[str],
+        start_page: Optional[int] = None,
+        end_page: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Ingest documents into RAG index with optional page range."""
         if not self.is_available:
             return {"error": "RAG not available", "documents_ingested": 0}
 
         try:
-            stats = self.pipeline.ingest_and_index(file_paths)
+            stats = self.pipeline.ingest_and_index(
+                file_paths,
+                start_page=start_page,
+                end_page=end_page
+            )
             return stats
         except Exception as e:
             logger.error(f"RAG ingestion failed: {e}")

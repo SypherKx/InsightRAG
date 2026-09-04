@@ -113,6 +113,11 @@ export function KnowledgeBaseStudioPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [ragStats, setRagStats] = useState<any>({ total_vectors: 0, files: [] });
 
+  // Page Range Slicing State
+  const [usePageRange, setUsePageRange] = useState(false);
+  const [startPage, setStartPage] = useState<number | "">(1);
+  const [endPage, setEndPage] = useState<number | "">("");
+
   // Model Download Modal State
   const [showModal, setShowModal] = useState(false);
   const [customModel, setCustomModel] = useState("llama3.2:3b");
@@ -188,10 +193,16 @@ export function KnowledgeBaseStudioPage() {
     }, 150);
 
     try {
-      const res = await uploadRAGDocuments(fileList);
+      const sPage = usePageRange && typeof startPage === "number" && startPage > 0 ? startPage : undefined;
+      const ePage = usePageRange && typeof endPage === "number" && endPage > 0 ? endPage : undefined;
+
+      const res = await uploadRAGDocuments(fileList, sPage, ePage);
       clearInterval(interval);
       setUploadProgress(100);
-      setUploadStatusMsg(`✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s) (${res?.chunks_created || 0} chunks)!`);
+
+      const rangeNotice = (sPage || ePage) ? ` [Pages ${sPage || 1} to ${ePage || 'End'}]` : "";
+      setUploadStatusMsg(`✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`);
+
       setTimeout(() => {
         setUploading(false);
         setUploadProgress(0);
@@ -199,7 +210,7 @@ export function KnowledgeBaseStudioPage() {
       }, 600);
       setTimeout(() => {
         setUploadStatusMsg(null);
-      }, 5000);
+      }, 6000);
     } catch (err: any) {
       clearInterval(interval);
       setUploading(false);
@@ -567,6 +578,64 @@ export function KnowledgeBaseStudioPage() {
                   </span>
                 </label>
               </div>
+            </div>
+
+            {/* PAGE RANGE SLICING SELECTOR (OPTIONAL) */}
+            <div className="space-y-2 md:col-span-2 border-2 border-black rounded-2xl p-3.5 sm:p-4 bg-gray-50/80 shadow-[2px_2px_0px_#000]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="flex items-center gap-2 cursor-pointer font-mono text-xs font-black text-black">
+                  <input
+                    type="checkbox"
+                    checked={usePageRange}
+                    onChange={(e) => setUsePageRange(e.target.checked)}
+                    className="w-4 h-4 rounded accent-black cursor-pointer"
+                  />
+                  <span>📄 INGEST SPECIFIC PAGE RANGE ONLY (PDF & DOCS)</span>
+                </label>
+                <span className="bg-[#ffe600] text-black font-mono text-[10px] font-black px-2 py-0.5 rounded border border-black">
+                  {usePageRange ? "CUSTOM SLICE ACTIVE" : "ALL PAGES (DEFAULT)"}
+                </span>
+              </div>
+
+              {usePageRange && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs"
+                >
+                  <div className="space-y-1">
+                    <span className="font-bold text-gray-700 block text-[11px]">
+                      From Start Page (1-Indexed):
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={startPage}
+                      onChange={(e) => setStartPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
+                      placeholder="e.g. 1"
+                      className="w-full bg-white border-2 border-black rounded-xl p-2.5 font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="font-bold text-gray-700 block text-[11px]">
+                      To End Page (Optional - Leave blank for end):
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={endPage}
+                      onChange={(e) => setEndPage(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                      placeholder="e.g. 25"
+                      className="w-full bg-white border-2 border-black rounded-xl p-2.5 font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 text-[11px] text-gray-600 font-bold bg-white p-2.5 rounded-lg border border-gray-300">
+                    💡 Only pages from <strong>{startPage || 1}</strong> to <strong>{endPage || "End of Document"}</strong> will be processed & indexed into your vector store. Perfect for dense chapters, protocols, or specific research paper sections!
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
 

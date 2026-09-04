@@ -76,14 +76,18 @@ class DocumentIngester:
         }
 
     def ingest_file(self, file_path: Union[str, Path], org_id: str,
-                    document_type: Optional[str] = None) -> Optional[Document]:
+                    document_type: Optional[str] = None,
+                    start_page: Optional[int] = None,
+                    end_page: Optional[int] = None) -> Optional[Document]:
         """
-        Ingest a single file.
+        Ingest a single file with optional page range slicing.
 
         Args:
             file_path: Path to file
             org_id: Organization ID for multi-tenancy
             document_type: Type classification (auto-detected if None)
+            start_page: Optional 1-indexed starting page
+            end_page: Optional 1-indexed ending page
 
         Returns:
             Document object or None if failed
@@ -112,7 +116,9 @@ class DocumentIngester:
 
         try:
             # Extract text based on file type
-            if ext in self._loaded_extractors:
+            if ext == ".pdf":
+                content, metadata = self._extract_pdf(file_path, start_page=start_page, end_page=end_page)
+            elif ext in self._loaded_extractors:
                 content, metadata = self._loaded_extractors[ext](file_path)
             else:
                 logger.error(f"No extractor for extension: {ext}")
@@ -135,10 +141,13 @@ class DocumentIngester:
                     "file_size_bytes": file_path.stat().st_size,
                     "file_extension": ext,
                     "file_name": file_path.name,
+                    "start_page": start_page,
+                    "end_page": end_page,
                 }
             )
 
-            logger.info(f"Ingested {file_path} ({len(content)} chars, {metadata.get('page_count', 0)} pages)")
+            range_str = f" (Pages {start_page or 1}-{end_page or metadata.get('page_count', 1)})" if (start_page or end_page) else ""
+            logger.info(f"Ingested {file_path}{range_str} ({len(content)} chars, {metadata.get('page_count', 0)} total pages)")
             return doc
 
         except Exception as e:
@@ -220,12 +229,14 @@ class DocumentIngester:
         # Default
         return "other"
 
-    def _extract_pdf(self, file_path: Path) -> tuple[str, dict]:
+    def _extract_pdf(self, file_path: Path, start_page: Optional[int] = None, end_page: Optional[int] = None) -> tuple[str, dict]:
         """
-        Extract text from PDF file using PyMuPDF (fitz), pypdf, or PyPDF2.
+        Extract text from PDF file using PyMuPDF (fitz), pypdf, or PyPDF2 with optional page range.
 
         Args:
             file_path: PDF file path
+            start_page: 1-indexed start page
+            end_page: 1-indexed end page
 
         Returns:
             Tuple: (text_content, metadata)
@@ -242,17 +253,24 @@ class DocumentIngester:
         try:
             import fitz
             doc = fitz.open(str(file_path))
-            metadata["page_count"] = len(doc)
+            total_pages = len(doc)
+            metadata["page_count"] = total_pages
             if doc.metadata:
                 metadata["author"] = doc.metadata.get("author")
                 metadata["title"] = doc.metadata.get("title")
                 metadata["creation_date"] = doc.metadata.get("creationDate")
-            for page in doc:
+
+            s_idx = max(0, (start_page - 1)) if start_page else 0
+            e_idx = min(total_pages, end_page) if end_page else total_pages
+
+            for p_num in range(s_idx, e_idx):
+                page = doc[p_num]
                 text = page.get_text()
                 if text and text.strip():
-                    pages.append(text.strip())
+                    pages.append(f"[Page {p_num + 1}]\n" + text.strip())
             doc.close()
             if pages:
+                metadata["page_range"] = f"Pages {s_idx + 1}-{e_idx}"
                 return "\n\n".join(pages), metadata
         except ImportError:
             pass
@@ -264,12 +282,17 @@ class DocumentIngester:
             import PyPDF2
             with open(file_path, "rb") as f:
                 reader = PyPDF2.PdfReader(f)
-                metadata["page_count"] = len(reader.pages)
-                for page in reader.pages:
-                    text = page.extract_text()
+                total_pages = len(reader.pages)
+                metadata["page_count"] = total_pages
+                s_idx = max(0, (start_page - 1)) if start_page else 0
+                e_idx = min(total_pages, end_page) if end_page else total_pages
+
+                for p_num in range(s_idx, e_idx):
+                    text = reader.pages[p_num].extract_text()
                     if text and text.strip():
-                        pages.append(text.strip())
+                        pages.append(f"[Page {p_num + 1}]\n" + text.strip())
             if pages:
+                metadata["page_range"] = f"Pages {s_idx + 1}-{e_idx}"
                 return "\n\n".join(pages), metadata
         except ImportError:
             pass
@@ -280,13 +303,20 @@ class DocumentIngester:
         try:
             import pypdf
             reader = pypdf.PdfReader(str(file_path))
-            metadata["page_count"] = len(reader.pages)
-            for page in reader.pages:
-                text = page.extract_text()
+            total_pages = len(reader.pages)
+            metadata["page_count"] = total_pages
+            s_idx = max(0, (start_page - 1)) if start_page else 0
+            e_idx = min(total_pages, end_page) if end_page else total_pages
+
+            for p_num in range(s_idx, e_idx):
+                text = reader.pages[p_num].extract_text()
                 if text and text.strip():
-                    pages.append(text.strip())
+                    pages.append(f"[Page {p_num + 1}]\n" + text.strip())
             if pages:
+                metadata["page_range"] = f"Pages {s_idx + 1}-{e_idx}"
                 return "\n\n".join(pages), metadata
+        except ImportError:
+            pass
         except Exception as e:
             logger.warning(f"pypdf extraction failed for {file_path}: {e}")
 

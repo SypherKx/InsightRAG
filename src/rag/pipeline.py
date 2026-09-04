@@ -83,19 +83,17 @@ class RAGPipeline:
         logger.info(f"Pipeline initialized (dim={self.embedding_gen.dimension})")
 
     def ingest_and_index(self, sources: List[Union[str, Path]],
-                        document_type: Optional[str] = None) -> Dict[str, Any]:
+                        document_type: Optional[str] = None,
+                        start_page: Optional[int] = None,
+                        end_page: Optional[int] = None) -> Dict[str, Any]:
         """
-        Ingest documents and add them to the vector index.
-
-        Complete pipeline:
-        1. Load documents from files/directories
-        2. Chunk texts
-        3. Generate embeddings
-        4. Store in vector store
+        Ingest documents and add them to the vector index with optional page range.
 
         Args:
             sources: List of file paths or directory paths
             document_type: Override document type (auto-detected if None)
+            start_page: Optional 1-indexed start page
+            end_page: Optional 1-indexed end page
 
         Returns:
             Dict with stats: {'documents': N, 'chunks': M, 'errors': K}
@@ -113,7 +111,13 @@ class RAGPipeline:
             source_path = Path(source)
 
             if source_path.is_file():
-                doc = self.ingester.ingest_file(source_path, self.org_id, document_type)
+                doc = self.ingester.ingest_file(
+                    source_path,
+                    self.org_id,
+                    document_type,
+                    start_page=start_page,
+                    end_page=end_page
+                )
                 if doc:
                     all_documents.append(doc)
                 else:

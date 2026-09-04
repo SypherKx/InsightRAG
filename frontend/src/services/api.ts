@@ -96,9 +96,19 @@ export async function checkHealth(): Promise<any> {
 
 // ─── RAG Query & Upload ───
 
-export async function uploadRAGDocuments(files: File[]): Promise<any> {
+export async function uploadRAGDocuments(
+  files: File[],
+  startPage?: number,
+  endPage?: number
+): Promise<any> {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
+  if (startPage !== undefined && startPage !== null && !isNaN(startPage)) {
+    formData.append("start_page", startPage.toString());
+  }
+  if (endPage !== undefined && endPage !== null && !isNaN(endPage)) {
+    formData.append("end_page", endPage.toString());
+  }
   const { data } = await api.post("/rag/documents", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 180000, // 3 minutes for document chunking + embedding generation
