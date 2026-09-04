@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 export function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const cliCommand = `powershell -ExecutionPolicy Bypass -Command "& '$env:USERPROFILE\\OneDrive\\Desktop\\Insight-Forge-master\\Insight-Forge-master\\launch.ps1'"`;
+  const cliCommand = `powershell -ExecutionPolicy Bypass -File .\\launch.ps1`;
 
   const handleCopyCLI = () => {
     navigator.clipboard.writeText(cliCommand);
@@ -170,12 +170,9 @@ export function LandingPage() {
                 <span>{copied ? "COPIED!" : "COPY"}</span>
               </button>
             </div>
-            <div className="text-gray-500 text-[9px] sm:text-[10px] leading-relaxed break-all">
-              📁 First navigate to project folder:
-              <br />
-              <span className="text-gray-300 select-all font-sans">
-                cd "$env:USERPROFILE\OneDrive\Desktop\Insight-Forge-master\Insight-Forge-master"
-              </span>
+            <div className="text-gray-400 text-[10px] flex items-center justify-between font-mono pt-1 border-t border-gray-900">
+              <span>📁 Quick Run:</span>
+              <span className="text-gray-300 font-bold">cd InsightRAG ; .\launch.ps1</span>
             </div>
           </div>
 
