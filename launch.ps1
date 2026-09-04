@@ -235,7 +235,7 @@ if (-not (Test-Path $nodeModules)) {
     Write-Step "Checking frontend npm packages" "OK" "Green"
 }
 
-# 7. Launch Servers
+# 7. Launch Servers (Multi-threaded Python Orchestrator)
 cw ""
 Sep
 cw "  Launching InsightRAG Studio..." "Yellow"
@@ -244,98 +244,5 @@ cw "    Frontend UI  ->  http://localhost:5173" "Green"
 Sep
 cw ""
 
-# Stop existing processes on ports 8000 / 5173 if any
-$existing8000 = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
-if ($existing8000) {
-    Stop-Process -Id ($existing8000 | Select-Object -ExpandProperty OwningProcess) -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 1
-}
-$existing5173 = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
-if ($existing5173) {
-    Stop-Process -Id ($existing5173 | Select-Object -ExpandProperty OwningProcess) -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 1
-}
-
-# Start backend job
-$backendJob = Start-Job -Name "IF-Backend" -ScriptBlock {
-    param($root, $py)
-    Set-Location $root
-    $env:RAG_ENABLED = "true"
-    $env:OLLAMA_HOST = "http://127.0.0.1:11434"
-    & $py -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --log-level warning
-} -ArgumentList $ProjectRoot, $pyExe
-
-# Start frontend job
-$frontendJob = Start-Job -Name "IF-Frontend" -ScriptBlock {
-    param($root, $npm)
-    Set-Location (Join-Path $root "frontend")
-    & $npm run dev
-} -ArgumentList $ProjectRoot, $npmCmd
-
-cw "[>] Backend started (job $($backendJob.Id))" "DarkGray"
-cw "[>] Frontend started (job $($frontendJob.Id))" "DarkGray"
-cw ""
-
-# 8. Wait for Ports
-function Wait-For-Port {
-    param(
-        [Parameter(Mandatory=$true)][int]$Port,
-        [Parameter(Mandatory=$true)][string]$Label,
-        [int]$Timeout = 45
-    )
-    cw "[*] Waiting for $Label on port $Port..." "DarkGray" -NoNewline
-    $start = Get-Date
-    while ((Get-Date) - $start -lt [TimeSpan]::FromSeconds($Timeout)) {
-        try {
-            $tcp = [System.Net.Sockets.TcpClient]::new()
-            $tcp.Connect("127.0.0.1", $Port)
-            $tcp.Close()
-            Write-Host "`r[*] $Label is READY on http://localhost:$Port              " -ForegroundColor Green
-            return $true
-        } catch {
-            Start-Sleep -Milliseconds 400
-        }
-    }
-    Write-Host "`r[!] $Label did not start within ${Timeout}s - check output" -ForegroundColor Yellow
-    return $false
-}
-
-$bReady = Wait-For-Port -Port 8000 -Label "Backend API"
-$fReady = Wait-For-Port -Port 5173 -Label "Frontend UI"
-
-cw ""
-if ($fReady) {
-    Sep
-    cw "  InsightRAG Studio is LIVE!" "Green"
-    cw "  Launching Knowledge Base Studio in your browser..." "White"
-    Sep
-    cw ""
-    Start-Process "http://localhost:5173/app/upload"
-} else {
-    cw "[!] Frontend still starting - open http://localhost:5173/app/upload manually." "Yellow"
-}
-
-cw ""
-cw "  Press Ctrl+C to stop all servers." "DarkGray"
-cw ""
-
-# 9. Keep Alive & Monitor
-try {
-    while ($true) {
-        Receive-Job $backendJob -ErrorAction SilentlyContinue | Where-Object { $_ -match "ERROR|WARNING" } | ForEach-Object { cw "  [API] $_" "Red" }
-        Receive-Job $frontendJob -ErrorAction SilentlyContinue | Where-Object { $_ -match "error|warn" -and $_ -notmatch "deprecation" } | ForEach-Object { cw " [VITE] $_" "Yellow" }
-
-        if ((Get-Job -Id $backendJob.Id).State -eq "Failed") {
-            cw "[!] Backend crashed! Last output:" "Red"
-            Receive-Job $backendJob | Select-Object -Last 10 | ForEach-Object { cw "  $_" "Red" }
-            break
-        }
-        Start-Sleep -Seconds 2
-    }
-} finally {
-    cw ""
-    cw "[*] Shutting down InsightRAG Studio..." "Cyan"
-    Stop-Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
-    Remove-Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
-    cw "[*] All services stopped. Goodbye!" "Cyan"
-}
+$runnerScript = Join-Path $ProjectRoot "scripts\run_local.py"
+& $pyExe $runnerScript

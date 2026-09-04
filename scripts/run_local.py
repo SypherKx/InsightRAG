@@ -118,7 +118,31 @@ def install_deps():
             print(f"  {ANSI_YELLOW}- {pkg:<30} [ INSTALLING ]{ANSI_RESET}")
     if missing:
         subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
-    print(f"\n{ANSI_GREEN}[OK] All dependencies installed successfully!{ANSI_RESET}")
+def free_ports():
+    """Ensure ports 8000 and 5173 are free from zombie processes before startup."""
+    try:
+        import psutil
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                for con in proc.net_connections(kind='inet'):
+                    if con.laddr.port in (8000, 5173) and con.status == 'LISTEN':
+                        if proc.pid != os.getpid():
+                            proc.kill()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+def check_frontend():
+    frontend_dir = ROOT_DIR / "frontend"
+    node_modules = frontend_dir / "node_modules"
+    npm_cmd = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
+    if not node_modules.exists():
+        print(f"\n{ANSI_YELLOW}[*] Installing frontend packages (first run - ~30s)...{ANSI_RESET}")
+        subprocess.check_call([npm_cmd, "install"], cwd=str(frontend_dir))
+        print(f"{ANSI_GREEN}[OK] Frontend packages installed!{ANSI_RESET}")
+    else:
+        print_step("Checking frontend npm packages", "OK", ANSI_GREEN)
 
 def run_backend():
     """Run FastAPI backend on port 8000 in a background thread."""
@@ -126,14 +150,12 @@ def run_backend():
     os.environ["RAG_ENABLED"] = "true"
     os.environ["OLLAMA_HOST"] = "http://127.0.0.1:11434"
     import uvicorn
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, log_level="info", reload=False)
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, log_level="warning", reload=False)
 
 def run_frontend_dev():
     """Run Vite dev server for the frontend on port 5173."""
     frontend_dir = ROOT_DIR / "frontend"
-    npm_cmd = "npm"
-    if os.name == 'nt':
-        npm_cmd = "npm.cmd"
+    npm_cmd = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
     return subprocess.Popen(
         [npm_cmd, "run", "dev"],
         cwd=str(frontend_dir),
@@ -152,15 +174,17 @@ def wait_for_port(port, timeout=30):
             with socket.create_connection(("127.0.0.1", port), timeout=1):
                 return True
         except Exception:
-            time.sleep(0.5)
+            time.sleep(0.4)
     return False
 
 def main():
     print(BANNER)
     check_python()
+    free_ports()
     check_and_start_ollama()
     check_hardware()
     install_deps()
+    check_frontend()
 
     print(f"\n{'='*65}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
@@ -195,7 +219,10 @@ def main():
 
     if ready:
         print(f"\n{ANSI_GREEN}[OK] InsightRAG Studio is LIVE! Launching Knowledge Base Studio...{ANSI_RESET}")
-        webbrowser.open("http://localhost:5173/app/upload")
+        try:
+            webbrowser.open("http://localhost:5173/app/upload")
+        except Exception:
+            pass
     else:
         print(f"\n{ANSI_YELLOW}[!] Frontend may still be starting — open http://localhost:5173/app/upload manually.{ANSI_RESET}")
 
@@ -204,7 +231,10 @@ def main():
         vite_proc.wait()
     except KeyboardInterrupt:
         print(f"\n{ANSI_CYAN}[*] Shutting down InsightRAG Studio. Goodbye!{ANSI_RESET}")
-        vite_proc.terminate()
+        try:
+            vite_proc.terminate()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()
