@@ -71,10 +71,19 @@ if (-not $TargetDir) {
     }
 }
 
+# 2. Register Global Offline Command (Run 'insightrag' from anywhere without internet)
+try {
+    $cliPath = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\insightrag.cmd"
+    $cmdContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -File `"$TargetDir\launch.ps1`""
+    Set-Content -Path $cliPath -Value $cmdContent -Force -ErrorAction SilentlyContinue
+} catch {}
+
 Write-Host "[*] Project Location: $TargetDir" -ForegroundColor Green
+Write-Host "[*] Tip: You can now launch offline anytime by typing: insightrag" -ForegroundColor Yellow
 Write-Host "[*] Starting Engine & Web Studio..." -ForegroundColor Cyan
 Write-Host ""
 
 Set-Location $TargetDir
 powershell -ExecutionPolicy Bypass -File (Join-Path $TargetDir "launch.ps1")
+
 
