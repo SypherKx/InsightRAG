@@ -168,7 +168,7 @@ export function LandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400 font-mono pt-0.5">
-              <span>💡 Or double-click <strong className="text-white">run.bat</strong> in folder</span>
+              <span>💡 Paste &amp; run this in <strong className="text-white">PowerShell</strong></span>
               <span className="text-gray-500">Auto-launches browser on completion</span>
             </div>
           </div>
