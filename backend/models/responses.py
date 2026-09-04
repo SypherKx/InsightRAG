@@ -155,6 +155,7 @@ class RAGQueryResponse(BaseModel):
     answer: Optional[str] = None
     llm_model: Optional[str] = None
     used_llm: bool = False
+    visual_snippet: Optional[Dict[str, Any]] = None
 
 
 class RAGUploadResponse(BaseModel):

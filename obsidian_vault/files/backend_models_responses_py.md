@@ -30,7 +30,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\models\responses.py (163 lines)
+Module: backend\models\responses.py (164 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: class ColumnSchemaResponse, class DatasetResponse, class DatasetListResponse, class UploadResponse, class AnomalyResponse

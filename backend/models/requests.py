@@ -30,3 +30,5 @@ class RAGQueryRequest(BaseModel):
     filters: Dict[str, Any] = Field(default_factory=dict)
     model: Optional[str] = "llama3.2:3b"
     generate_answer: bool = True
+    processing_mode: Optional[str] = "local"
+    api_key: Optional[str] = None

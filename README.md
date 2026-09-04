@@ -20,15 +20,18 @@
 [![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?logo=ollama&logoColor=white)](https://ollama.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<br />
+<br />
+
+<img src="docs/assets/hero_banner.png" alt="InsightRAG AI Autonomous Multimodal RAG-in-a-Box Factory" width="100%" />
+
 </div>
 
 ---
 
 ## 📖 Overview
 
-**InsightRAG AI** is an autonomous, local-first multimodal Retrieval-Augmented Generation (RAG) factory engineered specifically for high-stakes **Healthcare & Medical** (clinical guidelines, PubMed research, diagnostic OCR) and **Education & Academia** (university curricula, textbooks, lecture slides).
-
-It turns messy PDFs, Word documents, scanned clinical charts, and lecture notes into a turnkey, private, anti-hallucination knowledge microservice in seconds — **with zero mandatory API bills and 100% on-device data privacy**.
+**InsightRAG AI** is an autonomous, local-first multimodal Retrieval-Augmented Generation (RAG) factory. It turns messy PDFs, Word documents, scanned forms, and images into a private, turnkey, anti-hallucination AI knowledge microservice in seconds — **with zero mandatory API bills and 100% on-device data privacy**.
 
 ---
 

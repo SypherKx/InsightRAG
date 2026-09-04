@@ -16,6 +16,7 @@ import {
   Layers,
   HardDrive,
   BookOpen,
+  ExternalLink
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -97,6 +98,8 @@ export function KnowledgeBaseStudioPage() {
   const [sessionLifetime, setSessionLifetime] = useState("3 Hours");
   const [embeddingModel, setEmbeddingModel] = useState("all-MiniLM-L6-v2");
   const [visionOCR, setVisionOCR] = useState(true);
+  const [processingMode, setProcessingMode] = useState("local");
+  const [cloudApiKey, setCloudApiKey] = useState("");
 
   // Upload States
   const [drag, setDrag] = useState(false);
@@ -182,13 +185,16 @@ export function KnowledgeBaseStudioPage() {
     setQuerying(true);
 
     try {
-      const res = await queryRAG(userQ, 5, 0.0, selectedLLM);
+      const isCloud = processingMode !== "local";
+      const modelToUse = isCloud ? processingMode : selectedLLM;
+      const res = await queryRAG(userQ, 5, 0.0, modelToUse, isCloud ? "cloud" : "local", cloudApiKey);
       setChatMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           text: res.answer || res.response || "No structured answer generated.",
           sources: res.sources || res.context_chunks || [],
+          visual_snippet: res.visual_snippet,
         },
       ]);
     } catch (err: any) {
@@ -296,15 +302,71 @@ export function KnowledgeBaseStudioPage() {
 
           {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* COMPUTE ARCHITECTURE (100% LOCAL VS ADVANCE TURBO CLOUD) */}
+            <div className="space-y-1.5 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                  COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
+                </label>
+                <span className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${
+                  processingMode === "local" ? "bg-emerald-400 text-black" : "bg-purple-400 text-black animate-pulse"
+                }`}>
+                  {processingMode === "local" ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)" : "⚡ CLOUD TURBO ACCELERATED"}
+                </span>
+              </div>
+              <select
+                value={processingMode}
+                onChange={(e) => setProcessingMode(e.target.value)}
+                className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+              >
+                <option value="local">
+                  💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
+                </option>
+                <option value="groq:llama-3.3-70b-versatile">
+                  ⚡ Advance Turbo Server (Groq Llama-3.3 70B • 500+ Page Fast Cloud Processing)
+                </option>
+                <option value="gemini:gemini-1.5-flash">
+                  🧠 High-Reasoning Cloud Server (Google Gemini 1.5 Flash • 1M Long Context)
+                </option>
+                <option value="openai:gpt-4o-mini">
+                  🚀 Enterprise Cloud Server (OpenAI GPT-4o-mini • High-Speed Multimodal)
+                </option>
+              </select>
+
+              {/* Dynamic Cloud Settings Box */}
+              {processingMode !== "local" ? (
+                <div className="p-3 bg-purple-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2 mt-2">
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
+                    <span className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-purple-600" />
+                      <span>⚡ Advance Cloud Mode Active — Large PDFs & books will process at lightning speed on cloud server.</span>
+                    </span>
+                  </div>
+                  <input
+                    type="password"
+                    value={cloudApiKey}
+                    onChange={(e) => setCloudApiKey(e.target.value)}
+                    placeholder="Enter Cloud API Key (Optional — leave blank to use preconfigured server key)"
+                    className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1">
+                  🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
+                </div>
+              )}
+            </div>
             {/* TEXT LLM MODEL */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                TEXT LLM MODEL
+                LOCAL LLM MODEL (OLLAMA)
               </label>
               <select
                 value={selectedLLM}
                 onChange={(e) => setSelectedLLM(e.target.value)}
-                className="w-full bg-white font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                disabled={processingMode !== "local"}
+                className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
               >
                 {specs.installed_models && specs.installed_models.length > 0 ? (
                   specs.installed_models.map((m: string) => (
@@ -512,8 +574,10 @@ export function KnowledgeBaseStudioPage() {
                 <span className="bg-emerald-400 text-black px-2 py-0.5 rounded border border-black">
                   ⚡ Embedding: {embeddingModel}
                 </span>
-                <span className="bg-black text-white px-2.5 py-0.5 rounded border border-black">
-                  LLM: {selectedLLM}
+                <span className={`px-2.5 py-0.5 rounded border border-black ${
+                  processingMode === "local" ? "bg-black text-white" : "bg-purple-600 text-white animate-pulse"
+                }`}>
+                  {processingMode === "local" ? `💻 Local: ${selectedLLM}` : `⚡ Cloud: ${processingMode.split(':')[0].toUpperCase()}`}
                 </span>
               </div>
             </div>
@@ -542,6 +606,39 @@ export function KnowledgeBaseStudioPage() {
                       {msg.role === "user" ? "You" : `InsightRAG (${selectedLLM})`}
                     </div>
                     <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+
+                    {/* Focused Diagram / Sub-region Visual Evidence Card */}
+                    {msg.visual_snippet && msg.visual_snippet.has_image && (
+                      <div className="mt-3 p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2">
+                        <div className="flex items-center justify-between font-mono text-[10px] font-bold text-black border-b border-gray-200 pb-1.5">
+                          <span className="flex items-center gap-1.5 text-black font-black">
+                            <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
+                            <span>📷 FOCUSED VISUAL / DIAGRAM REGION (PAGE {msg.visual_snippet.page})</span>
+                          </span>
+                          <span className="bg-[#ffe600] px-1.5 py-0.5 rounded border border-black text-[9px] font-mono font-bold">
+                            ROI Crop
+                          </span>
+                        </div>
+                        <div className="relative group overflow-hidden rounded-lg border border-black bg-gray-50 flex items-center justify-center p-1">
+                          <img
+                            src={`http://localhost:8000${msg.visual_snippet.crop_url}`}
+                            alt={msg.visual_snippet.caption || "Diagram snippet"}
+                            className="max-h-60 w-full object-contain cursor-pointer hover:scale-105 transition-transform duration-200 rounded"
+                            onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 font-medium pt-1">
+                          <span className="truncate max-w-[70%] font-bold text-gray-800">{msg.visual_snippet.caption}</span>
+                          <button
+                            onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                            className="text-black hover:text-blue-600 flex items-center gap-1 font-black cursor-pointer bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded border border-black"
+                          >
+                            <span>Open High-Res</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-300 text-[10px] space-y-1">
