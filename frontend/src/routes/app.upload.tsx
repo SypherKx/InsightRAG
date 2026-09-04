@@ -236,66 +236,80 @@ export function KnowledgeBaseStudioPage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center bg-no-repeat p-4 md:p-8 font-sans"
+      className="min-h-screen bg-cover bg-center bg-no-repeat p-3 sm:p-5 md:p-8 font-sans overflow-x-hidden flex flex-col justify-between"
       style={{
         backgroundImage: `url('/assets/skytextured.jpg'), url('/skytextured.jpg')`,
         backgroundColor: "#e6f0fa",
       }}
     >
-      <div className="mx-auto max-w-5xl space-y-6">
-        {/* 1. TOP SYSTEM SPECS BADGE (Image 2 style) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-black text-white px-5 py-3 rounded-2xl shadow-xl border-2 border-black">
-          <div className="flex items-center gap-3 font-mono text-xs sm:text-sm font-bold">
-            <span className="inline-flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-full border border-gray-800">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
+      <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 w-full">
+        {/* 1. TOP SYSTEM SPECS BADGE */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-black text-white p-3 sm:px-5 sm:py-3 rounded-2xl shadow-xl border-2 border-black font-mono text-xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-bold">
+            <span className="inline-flex items-center gap-1.5 bg-[#1a1a1a] px-2.5 py-1 rounded-full border border-gray-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="text-emerald-400">
-                {specs.gpu_name} ({specs.vram_gb} GB VRAM)
+                {specs.gpu_name} ({specs.vram_gb} GB)
               </span>
             </span>
 
-            <span className="hidden sm:inline-block text-gray-400">|</span>
+            <span className="hidden sm:inline-block text-gray-500">|</span>
             <span>
               RAM: <span className="text-amber-300">{specs.ram_gb} GB</span>
             </span>
 
-            <span className="hidden sm:inline-block text-gray-400">|</span>
+            <span className="hidden sm:inline-block text-gray-500">|</span>
             <span>
               CPU: <span className="text-amber-300">{specs.cpu_threads} Threads</span>
             </span>
           </div>
 
-          <span className="bg-[#ffe600] text-black font-black font-mono text-xs px-3 py-1 rounded-md uppercase tracking-wider border border-black shadow-[2px_2px_0px_#000]">
+          <span className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 py-1 rounded-md uppercase tracking-wider border border-black shadow-[2px_2px_0px_#000] shrink-0 self-end sm:self-auto">
             {specs.acceleration_mode}
           </span>
         </div>
 
         {/* 2. MAIN STUDIO CONTAINER CARD */}
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border-3 border-black shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-6 text-black">
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-3 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-5 sm:space-y-6 text-black">
           {/* Header Title + Download Button */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-300 pb-5 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-300 pb-4 sm:pb-5 gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black font-mono">
-                KNOWLEDGE BASE STUDIO
-              </h1>
-              <p className="text-xs font-mono text-gray-600 mt-1">
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/"
+                  className="sm:hidden bg-black text-white font-black font-mono text-[10px] px-2 py-0.5 rounded border border-black"
+                >
+                  ← Home
+                </Link>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-black font-mono">
+                  KNOWLEDGE BASE STUDIO
+                </h1>
+              </div>
+              <p className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1">
                 Zero-Budget Local Multimodal RAG Engine • 100% On-Device Privacy
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Link
+                to="/"
+                className="hidden sm:flex bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] items-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
+              >
+                Home
+              </Link>
               <Link
                 to="/docs"
-                className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center gap-1.5 transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                className="flex-1 sm:flex-none bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
               >
-                <BookOpen className="w-4 h-4 text-black" />
+                <BookOpen className="w-3.5 h-3.5 text-black" />
                 <span>Docs</span>
               </Link>
               <button
                 onClick={() => setShowModal(true)}
-                className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-4 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                className="flex-1 sm:flex-none bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
               >
-                <Download className="w-4 h-4 text-[#ffe600]" />
-                <span>+ Download Models</span>
+                <Download className="w-3.5 h-3.5 text-[#ffe600]" />
+                <span>+ Models</span>
               </button>
             </div>
           </div>
@@ -660,19 +674,19 @@ export function KnowledgeBaseStudioPage() {
             </div>
 
             {/* Input Bar */}
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
                 placeholder="Type your question about ingested documents..."
-                className="flex-1 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 focus:outline-none focus:bg-white"
+                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-2.5 sm:p-3 focus:outline-none focus:bg-white"
               />
               <button
                 onClick={handleSendQuery}
                 disabled={querying}
-                className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
               >
                 {querying ? (
                   <Sparkles className="w-4 h-4 animate-spin text-[#ffe600]" />
@@ -766,13 +780,13 @@ export function KnowledgeBaseStudioPage() {
       </AnimatePresence>
 
       {/* Bottom Footer */}
-      <footer className="w-full border-t-2 border-black bg-white/90 backdrop-blur-md py-3 px-6 mt-12 font-mono text-xs text-gray-600">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="w-full border-2 border-black bg-white/95 backdrop-blur-md py-4 px-4 sm:px-6 mt-8 font-mono text-[11px] sm:text-xs text-gray-600 rounded-2xl shadow-[3px_3px_0px_#000]">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
           <div className="font-bold text-black">⚡ InsightRAG AI — Knowledge Base Studio</div>
-          <div>
+          <div className="bg-gray-100 px-3 py-1 rounded-full border border-gray-300">
             Made by <span className="font-bold text-black">Karan Pratap Singh</span>
           </div>
-          <div>Zero-Budget Local Multimodal RAG</div>
+          <div className="text-gray-500">Zero-Budget Local Multimodal RAG</div>
         </div>
       </footer>
     </div>

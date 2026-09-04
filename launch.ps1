@@ -47,16 +47,15 @@ function Write-Step {
 Clear-Host
 Sep
 cw ""
-cw "  ___           _       _     _     ____      _    ____ " "Cyan"
-cw " |_ _|_ __  ___(_) __ _| |__ | |_  |  _ \    / \  / ___|" "Cyan"
-cw "  | || '_ \/ __| |/ _` | '_ \| __| | |_) |  / _ \| |  _ " "Cyan"
-cw "  | || | | \__ \ | (_| | | | | |_  |  _ <  / ___ \ |_| |" "Cyan"
-cw " |___|_| |_|___/_|\__, |_| |_|\__| |_| \_\/_/   \_\____|" "Cyan"
-cw "                  |___/                                 " "Cyan"
+cw " ___ _   _ ____ ___ ____ _   _ _____   ____      _    ____ " "Cyan"
+cw "|_ _| \ | / ___|_ _/ ___| | | |_   _| |  _ \    / \  / ___|" "Cyan"
+cw " | ||  \| \___ \| | |  _| |_| | | |   | |_) |  / _ \| |  _ " "Cyan"
+cw " | || |\  |___) | | |_| |  _  | | |   |  _ <  / ___ \ |_| |" "Cyan"
+cw "|___|_| \_|____/___|____|_| |_| |_|   |_| \_\/_/   \_\____|" "Cyan"
 cw ""
 Sep
-cw "   [ INSIGHT RAG ]  -  Autonomous Multimodal RAG Engine" "Yellow"
-cw "   Zero-Budget  |  100% Local  |  Hardware Accelerated" "DarkGray"
+cw "   [ INSIGHT RAG ]  -  Autonomous Multimodal Local RAG Engine" "Yellow"
+cw "   Zero-Budget  |  100% Local Compute  |  Hardware Accelerated" "DarkGray"
 Sep
 cw ""
 
