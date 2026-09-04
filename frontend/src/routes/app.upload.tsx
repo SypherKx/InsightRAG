@@ -15,7 +15,8 @@ import {
   X,
   Layers,
   HardDrive,
-  BookOpen
+  BookOpen,
+  ExternalLink
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -187,6 +188,7 @@ export function KnowledgeBaseStudioPage() {
           role: "assistant",
           text: res.answer || res.response || "No structured answer generated.",
           sources: res.sources || res.context_chunks || [],
+          visual_snippet: res.visual_snippet,
         },
       ]);
     } catch (err: any) {
@@ -529,6 +531,39 @@ export function KnowledgeBaseStudioPage() {
                       {msg.role === "user" ? "You" : `InsightRAG (${selectedLLM})`}
                     </div>
                     <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+
+                    {/* Focused Diagram / Sub-region Visual Evidence Card */}
+                    {msg.visual_snippet && msg.visual_snippet.has_image && (
+                      <div className="mt-3 p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2">
+                        <div className="flex items-center justify-between font-mono text-[10px] font-bold text-black border-b border-gray-200 pb-1.5">
+                          <span className="flex items-center gap-1.5 text-black font-black">
+                            <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
+                            <span>📷 FOCUSED VISUAL / DIAGRAM REGION (PAGE {msg.visual_snippet.page})</span>
+                          </span>
+                          <span className="bg-[#ffe600] px-1.5 py-0.5 rounded border border-black text-[9px] font-mono font-bold">
+                            ROI Crop
+                          </span>
+                        </div>
+                        <div className="relative group overflow-hidden rounded-lg border border-black bg-gray-50 flex items-center justify-center p-1">
+                          <img
+                            src={`http://localhost:8000${msg.visual_snippet.crop_url}`}
+                            alt={msg.visual_snippet.caption || "Diagram snippet"}
+                            className="max-h-60 w-full object-contain cursor-pointer hover:scale-105 transition-transform duration-200 rounded"
+                            onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 font-medium pt-1">
+                          <span className="truncate max-w-[70%] font-bold text-gray-800">{msg.visual_snippet.caption}</span>
+                          <button
+                            onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                            className="text-black hover:text-blue-600 flex items-center gap-1 font-black cursor-pointer bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded border border-black"
+                          >
+                            <span>Open High-Res</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-300 text-[10px] space-y-1">

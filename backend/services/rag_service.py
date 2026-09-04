@@ -183,6 +183,37 @@ class RAGService:
                             )
                         )
 
+            # Visual Snippet Extraction for Diagram / Region of Interest Cropping
+            visual_snippet = None
+            if results:
+                top_hit = results[0]
+                meta = top_hit.get("metadata", {})
+                doc_name = meta.get("file_name") or meta.get("source") or meta.get("document_name")
+                
+                # If not explicitly in metadata, check uploaded files in ./uploads
+                if not doc_name:
+                    uploads_dir = Path("./uploads")
+                    if uploads_dir.exists():
+                        files = [f.name for f in uploads_dir.iterdir() if f.is_file() and f.suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg", ".webp"]]
+                        if files:
+                            doc_name = files[0]
+
+                page_num = meta.get("page_number") or meta.get("page") or 1
+                
+                visual_triggers = ["diagram", "figure", "chart", "flowchart", "image", "photo", "structure", "circuit", "anatomy", "graph", "step", "part", "region", "section", "show", "draw"]
+                is_visual_query = any(w in query.lower() for w in visual_triggers) or any(w in top_hit.get("text", "").lower() for w in ["figure", "diagram", "fig.", "chart"])
+                
+                if doc_name and (is_visual_query or Path(doc_name).suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg", ".webp"]):
+                    crop_url = f"/api/v1/rag/crop?doc_name={doc_name}&page={page_num}"
+                    caption = f"Focused Visual Crop — Page {page_num} ({doc_name})"
+                    visual_snippet = {
+                        "has_image": True,
+                        "crop_url": crop_url,
+                        "doc_name": doc_name,
+                        "page": page_num,
+                        "caption": caption
+                    }
+
             return {
                 "results": results,
                 "query": query,
@@ -190,6 +221,7 @@ class RAGService:
                 "answer": answer,
                 "used_llm": used_llm,
                 "llm_model": llm_model,
+                "visual_snippet": visual_snippet,
             }
         except Exception as e:
             logger.error(f"RAG query failed: {e}")
