@@ -22,11 +22,11 @@ import {
 export const Route = createFileRoute("/docs")({
   head: () => ({
     meta: [
-      { title: "Documentation — InsightRAG AI Autonomous Multimodal RAG" },
+      { title: "InsightRAG" },
       {
         name: "description",
         content:
-          "Complete documentation for InsightRAG AI: 1-Line Quickstart, System Architecture, Hardware Auto-Tuning, Multimodal OCR, Privacy Guardrails, Standalone Export, and REST API Reference.",
+          "Complete documentation for InsightRAG: 1-Line Quickstart, System Architecture, Hardware Auto-Tuning, Multimodal OCR, Privacy Guardrails, Standalone Export, and REST API Reference.",
       },
     ],
   }),

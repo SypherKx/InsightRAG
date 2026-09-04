@@ -19,11 +19,11 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "InsightRAG AI — Healthcare & Education Autonomous Multimodal RAG" },
+      { title: "InsightRAG" },
       {
         name: "description",
         content:
-          "Turn clinical guidelines, medical records, research papers, and university curricula into a turnkey, anti-hallucination local AI knowledge studio with 100% on-device privacy.",
+          "Turn any documents, PDFs, diagrams, and images into a turnkey, anti-hallucination local AI knowledge studio with 100% on-device privacy.",
       },
     ],
   }),

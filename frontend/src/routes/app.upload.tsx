@@ -28,7 +28,7 @@ import {
 
 export const Route = createFileRoute("/app/upload")({
   head: () => ({
-    meta: [{ title: "Knowledge Base Studio — InsightRAG AI" }],
+    meta: [{ title: "InsightRAG" }],
   }),
   component: KnowledgeBaseStudioPage,
 });
