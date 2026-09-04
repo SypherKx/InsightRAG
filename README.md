@@ -21,9 +21,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <br />
-<br />
 
-<img src="docs/assets/hero_banner.png" alt="InsightRAG AI Autonomous Multimodal RAG-in-a-Box Factory" width="100%" />
+![InsightRAG AI — Autonomous Multimodal RAG-in-a-Box Factory](./docs/assets/insightrag_hero_banner.png)
 
 </div>
 
