@@ -52,19 +52,73 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
-    description="AI-powered Healthcare & Educational RAG Intelligence Platform",
+    description="Universal Multimodal AI RAG Intelligence Platform",
     version=settings.app_version,
     lifespan=lifespan,
 )
 
-# CORS
+# 1. Security Headers Middleware (OWASP Defense)
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Appends enterprise-grade HTTP security headers to all responses.
+    Defends against Clickjacking, MIME-sniffing, XSS, and DevTools/Inspect exploits.
+    """
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        
+        # Clickjacking Defense
+        response.headers["X-Frame-Options"] = "DENY"
+        # MIME-Type Sniffing Defense
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Cross-Site Scripting Filter
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        # Referrer Policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Permissions Policy
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
+        # Content Security Policy (allows local SPA, styles, fonts, and trusted LLM APIs)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
+            "img-src 'self' data: blob: https:; "
+            "connect-src 'self' http://localhost:* http://127.0.0.1:* https://api.groq.com https://generativelanguage.googleapis.com https://api.openai.com; "
+            "frame-ancestors 'none';"
+        )
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. CORS Policy
+cors_origins = settings.cors_origin_list
+allow_creds = True if cors_origins != ["*"] else False
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=allow_creds,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# 3. Global Exception Handler (Prevents Internal Stack Trace Leaks to DevTools/Inspect)
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled server error at {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "A secure internal error occurred. Please check server logs for details.",
+            "path": request.url.path
+        }
+    )
 
 # Register routers
 from .routers import health, datasets, anomalies, rag, system

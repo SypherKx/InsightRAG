@@ -394,7 +394,7 @@ class DocumentIngester:
             return self._extract_txt(file_path)
 
     def _extract_docx(self, file_path: Path) -> tuple[str, dict]:
-        """Extract text from DOCX file."""
+        """Extract text from DOCX file with decompression bomb defense."""
         try:
             import docx
             doc = docx.Document(str(file_path))
@@ -402,17 +402,21 @@ class DocumentIngester:
             content = "\n\n".join(paras)
             return content, {"file_type": "docx", "paragraphs_count": len(paras)}
         except Exception:
-            # Fallback using zipfile xml extraction
+            # Fallback using zipfile xml extraction with safe size checks
             import zipfile
             import xml.etree.ElementTree as ET
             with zipfile.ZipFile(file_path) as z:
+                # Zip bomb defense: check uncompressed size before reading
+                info = z.getinfo('word/document.xml')
+                if info.file_size > 50 * 1024 * 1024:  # Max 50MB XML uncompressed
+                    raise ValueError("DOCX document XML exceeds maximum safe size.")
                 xml_content = z.read('word/document.xml')
             tree = ET.fromstring(xml_content)
             texts = [node.text for node in tree.iter() if node.text]
             return " ".join(texts), {"file_type": "docx"}
 
     def _extract_image(self, file_path: Path) -> tuple[str, dict]:
-        """Extract text/metadata from image file."""
+        """Extract text/metadata from image file with decompression bomb defense."""
         metadata = {
             "file_type": "image",
             "file_size": file_path.stat().st_size,
@@ -422,17 +426,20 @@ class DocumentIngester:
         text = f"Visual Document & Diagram: {file_path.name}"
         try:
             from PIL import Image
+            # Protect against pixel flood / decompression bomb DoS
+            Image.MAX_IMAGE_PIXELS = 25_000_000
             with Image.open(file_path) as img:
                 metadata["width"] = img.width
                 metadata["height"] = img.height
                 metadata["format"] = img.format or file_path.suffix.lstrip(".")
                 text = f"Visual Diagram File: {file_path.name} (Image Resolution: {img.width}x{img.height} px)."
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not open image for metadata inspection: {e}")
 
         try:
             import pytesseract
             from PIL import Image
+            Image.MAX_IMAGE_PIXELS = 25_000_000
             ocr_text = pytesseract.image_to_string(Image.open(file_path)).strip()
             if ocr_text:
                 text += f"\n\nOCR Extracted Text Content:\n{ocr_text}"

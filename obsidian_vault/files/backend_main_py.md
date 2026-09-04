@@ -17,7 +17,10 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
+- `class SecurityHeadersMiddleware`
 - `async def lifespan`
+- `async def dispatch`
+- `async def global_exception_handler`
 - `async def serve_spa`
 - `async def root`
 
@@ -25,8 +28,8 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\main.py (132 lines)
+Module: backend\main.py (186 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
-Exports: async def lifespan, async def serve_spa, async def root
+Exports: class SecurityHeadersMiddleware, async def lifespan, async def dispatch, async def global_exception_handler, async def serve_spa
 ```

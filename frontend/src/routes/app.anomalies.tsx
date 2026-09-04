@@ -86,8 +86,8 @@ export function AnomaliesPage() {
   return (
     <>
       <PageHeader
-        title="Clinical & Academic Anomaly Signals (Vault Module)"
-        description="Scans your uploaded CSVs and medical time-series using Pettitt non-parametric change-point tests and Z-Score bounds."
+        title="Universal Data & Signal Anomalies"
+        description="Automated statistical root-cause analysis across any data stream using Pettitt change-point tests and Z-Score bounds."
       />
 
       <div className="p-6 md:p-8 space-y-6 bg-[#000000] min-h-screen text-white">
@@ -96,7 +96,7 @@ export function AnomaliesPage() {
           <div className="flex items-center justify-between">
             <div className="eyebrow-hashicorp text-[#f5a623] flex items-center gap-2">
               <AlertOctagon className="w-4 h-4 text-[#f5a623]" />
-              <span>VAULT CLINICAL SIGNAL ANOMALY DETECTOR</span>
+              <span>UNIVERSAL SIGNAL ANOMALY DETECTOR</span>
             </div>
             <span className="product-pill font-mono text-xs text-[#f5a623] border-[#f5a623]/30">
               Connected to Uploaded CSV Datasets

@@ -124,7 +124,7 @@ export function LandingPage() {
         <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 md:py-12 text-center space-y-4 sm:space-y-6 z-10 my-auto w-full">
           {/* Eyebrow Badge */}
           <div className="inline-block bg-black text-[#ffe600] font-mono font-black text-[10px] sm:text-xs px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] uppercase tracking-wider max-w-full">
-            CLINICAL & ACADEMIC MULTIMODAL RAG FACTORY
+            UNIVERSAL MULTIMODAL RAG & INTELLIGENCE FACTORY
           </div>
 
           {/* Display Headline */}
@@ -137,8 +137,8 @@ export function LandingPage() {
 
           {/* Subtitle */}
           <p className="max-w-2xl mx-auto text-black font-mono font-bold text-xs sm:text-sm md:text-base leading-relaxed bg-white/80 backdrop-blur-sm p-3 sm:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000]">
-            Turn complex clinical guidelines, diagnostic diagrams, PubMed research papers, and
-            university curricula into a turnkey, anti-hallucination AI knowledge studio in seconds.
+            Turn complex manuals, technical blueprints, research papers, diagrams, books, and enterprise
+            documents into a turnkey, anti-hallucination AI knowledge studio in seconds.
           </p>
 
           {/* Interactive Command Box with Multi-Platform Tabs */}
@@ -219,13 +219,13 @@ export function LandingPage() {
             }}
           >
             <span>
-              ⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY
-              CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS •
+              ⚡ UNIVERSAL MULTIMODAL RAG • TECHNICAL BLUEPRINTS & MANUALS • SCIENTIFIC RESEARCH PAPERS •
+              ENTERPRISE BOOKS & REPORTS • FOCUSED DIAGRAM & ROI OCR • 100% PRIVATE ON-DEVICE FAISS •
               ZERO DATA LEAKS • HARDWARE ACCELERATED
             </span>
             <span>
-              ⚡ CLINICAL GUIDELINES & MEDICAL RAG • PUBMED RESEARCH INTELLIGENCE • UNIVERSITY
-              CURRICULA & TEXTBOOKS • MULTIMODAL DIAGNOSTIC OCR • 100% PRIVATE ON-DEVICE FAISS •
+              ⚡ UNIVERSAL MULTIMODAL RAG • TECHNICAL BLUEPRINTS & MANUALS • SCIENTIFIC RESEARCH PAPERS •
+              ENTERPRISE BOOKS & REPORTS • FOCUSED DIAGRAM & ROI OCR • 100% PRIVATE ON-DEVICE FAISS •
               ZERO DATA LEAKS • HARDWARE ACCELERATED
             </span>
           </motion.div>
