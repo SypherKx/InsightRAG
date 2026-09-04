@@ -91,7 +91,6 @@ export function AnomaliesPage() {
       />
 
       <div className="p-6 md:p-8 space-y-6 bg-[#000000] min-h-screen text-white">
-
         {/* Module Identity Chip & Explanation Banner */}
         <div className="hashicorp-card p-6 border-[#f5a623]/30 space-y-3">
           <div className="flex items-center justify-between">
@@ -105,7 +104,15 @@ export function AnomaliesPage() {
           </div>
 
           <p className="body-hashicorp text-sm text-[#b2b6bd] leading-relaxed">
-            <strong className="text-white">What does this module do?</strong> When you upload a patient vital log or academic marks CSV in <code className="bg-[#242424] px-1.5 py-0.5 rounded text-white font-mono text-xs">Document Ingestion</code>, Vault scans the columns for mathematical outliers (e.g. ICU oxygen drop below 88%, heart rate spike &gt;140 bpm, or attendance dips). You can click <strong className="text-[#00bcff]">"Ask Ollama AI About This Anomaly"</strong> on any signal below to run local Llama 3.2 synthesis on it!
+            <strong className="text-white">What does this module do?</strong> When you upload a
+            patient vital log or academic marks CSV in{" "}
+            <code className="bg-[#242424] px-1.5 py-0.5 rounded text-white font-mono text-xs">
+              Document Ingestion
+            </code>
+            , Vault scans the columns for mathematical outliers (e.g. ICU oxygen drop below 88%,
+            heart rate spike &gt;140 bpm, or attendance dips). You can click{" "}
+            <strong className="text-[#00bcff]">"Ask Ollama AI About This Anomaly"</strong> on any
+            signal below to run local Llama 3.2 synthesis on it!
           </p>
         </div>
 
@@ -167,12 +174,17 @@ export function AnomaliesPage() {
         <div className="space-y-4">
           <div className="eyebrow-hashicorp text-[#f5a623] flex items-center justify-between">
             <span>DETECTED ANOMALY SIGNALS ({filtered.length})</span>
-            {loadingAnomalies && <span className="font-mono text-xs text-[#b2b6bd]">Scanning dataset...</span>}
+            {loadingAnomalies && (
+              <span className="font-mono text-xs text-[#b2b6bd]">Scanning dataset...</span>
+            )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             {filtered.map((a) => (
-              <div key={a.id} className="hashicorp-card p-6 space-y-4 border-[rgba(178,182,189,0.15)] flex flex-col justify-between">
+              <div
+                key={a.id}
+                className="hashicorp-card p-6 space-y-4 border-[rgba(178,182,189,0.15)] flex flex-col justify-between"
+              >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-[rgba(178,182,189,0.12)] pb-3">
                     <div className="flex items-center gap-2">
@@ -184,9 +196,7 @@ export function AnomaliesPage() {
                     </span>
                   </div>
 
-                  <p className="body-hashicorp text-sm text-[#b2b6bd]">
-                    {a.summary}
-                  </p>
+                  <p className="body-hashicorp text-sm text-[#b2b6bd]">{a.summary}</p>
 
                   <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-[#242424] p-3 rounded-md border border-[rgba(178,182,189,0.12)]">
                     <div>
@@ -195,7 +205,9 @@ export function AnomaliesPage() {
                     </div>
                     <div>
                       <span className="text-[#b2b6bd]">TIMESTAMPS:</span>{" "}
-                      <span className="text-white">{a.start_time} → {a.end_time}</span>
+                      <span className="text-white">
+                        {a.start_time} → {a.end_time}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -213,7 +225,6 @@ export function AnomaliesPage() {
             ))}
           </div>
         </div>
-
       </div>
     </>
   );

@@ -87,9 +87,20 @@ async def get_diagram_crop(
     Returns high-resolution PNG image bytes.
     """
     upload_dir = Path("./uploads")
-    file_path = upload_dir / Path(doc_name).name
+    safe_doc_name = Path(doc_name).name
 
-    if not file_path.exists():
+    if safe_doc_name != doc_name or safe_doc_name in {"", ".", ".."}:
+        raise HTTPException(status_code=400, detail="Invalid document path.")
+
+    try:
+        file_path = next(
+            (candidate for candidate in upload_dir.iterdir() if candidate.is_file() and candidate.name == safe_doc_name),
+            None,
+        )
+    except FileNotFoundError:
+        file_path = None
+
+    if file_path is None:
         raise HTTPException(status_code=404, detail=f"Document '{doc_name}' not found.")
 
     ext = file_path.suffix.lower()

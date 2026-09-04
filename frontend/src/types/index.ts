@@ -25,8 +25,16 @@ export interface Dataset {
   status: "analyzing" | "analyzed" | "failed";
 }
 
-export interface SeverityCount { severity: Severity; count: number; color: string }
-export interface TypeCount { type: string; count: number; color: string }
+export interface SeverityCount {
+  severity: Severity;
+  count: number;
+  color: string;
+}
+export interface TypeCount {
+  type: string;
+  count: number;
+  color: string;
+}
 
 export interface HealthStatus {
   api: "operational" | "degraded" | "down";

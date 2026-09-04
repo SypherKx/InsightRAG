@@ -71,7 +71,8 @@ function AboutPage() {
             Trustworthy, cited RAG AI for medicine & learning.
           </h1>
           <p className="body-hashicorp-lg text-[#b2b6bd] max-w-2xl mx-auto">
-            Dense FAISS vector document retrieval across clinical guidelines and course materials running 100% locally on your computer.
+            Dense FAISS vector document retrieval across clinical guidelines and course materials
+            running 100% locally on your computer.
           </p>
         </div>
       </section>
@@ -83,10 +84,7 @@ function AboutPage() {
             {pillars.map((p) => {
               const Icon = p.icon;
               return (
-                <div
-                  key={p.title}
-                  className="hashicorp-card p-6 flex flex-col justify-between"
-                >
+                <div key={p.title} className="hashicorp-card p-6 flex flex-col justify-between">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-[rgba(178,182,189,0.12)] pb-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#242424] text-[#844fba]">
@@ -142,7 +140,8 @@ function AboutPage() {
               Run Local RAG On Your Computer's Hardware.
             </h2>
             <p className="body-hashicorp text-sm text-[#b2b6bd] max-w-xl mx-auto">
-              Download the standalone executable to process PubMed PDFs and lecture syllabi 100% offline on your machine.
+              Download the standalone executable to process PubMed PDFs and lecture syllabi 100%
+              offline on your machine.
             </p>
             <div className="pt-2">
               <a

@@ -101,7 +101,12 @@ export function QueryPage() {
         if (res.results && res.results.length > 0) {
           const mapped = res.results.map((r: any, idx: number) => {
             const meta = r.metadata || {};
-            const docName = meta.title || meta.file_name || meta.source || r.document_id || `Document #${idx + 1}`;
+            const docName =
+              meta.title ||
+              meta.file_name ||
+              meta.source ||
+              r.document_id ||
+              `Document #${idx + 1}`;
             return {
               id: r.chunk_id || `chunk_${idx}`,
               title: docName,
@@ -115,7 +120,9 @@ export function QueryPage() {
         } else {
           setResults([]);
           if (!res.answer) {
-            setAiAnswer("No relevant excerpts found in your uploaded documents for this query. Upload more documents to expand your knowledge base.");
+            setAiAnswer(
+              "No relevant excerpts found in your uploaded documents for this query. Upload more documents to expand your knowledge base.",
+            );
           }
         }
       } else {
@@ -125,7 +132,9 @@ export function QueryPage() {
     } catch (err: any) {
       console.error("Query failed:", err);
       setResults([]);
-      setAiAnswer("Query failed. Please ensure the backend server is running and files are uploaded.");
+      setAiAnswer(
+        "Query failed. Please ensure the backend server is running and files are uploaded.",
+      );
     } finally {
       setLoading(false);
     }
@@ -146,7 +155,6 @@ export function QueryPage() {
 
       <div className="p-6 md:p-8 space-y-6 bg-[#000000] min-h-screen text-white">
         <div className="mx-auto max-w-4xl space-y-6">
-
           {/* Module Identity Chip */}
           <div className="flex items-center justify-between">
             <div className="eyebrow-hashicorp text-[#00bcff] flex items-center gap-2">
@@ -196,7 +204,9 @@ export function QueryPage() {
                 >
                   <FileCheck2 className="h-3.5 w-3.5 text-[#00bcff]" />
                   <span className="truncate max-w-[200px]">{file.name}</span>
-                  <span className="text-[10px] text-[#b2b6bd]">({formatFileSize(file.size_bytes)})</span>
+                  <span className="text-[10px] text-[#b2b6bd]">
+                    ({formatFileSize(file.size_bytes)})
+                  </span>
                 </div>
               ))}
             </div>
@@ -245,7 +255,9 @@ export function QueryPage() {
 
             {/* SAMPLE PROMPTS */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="eyebrow-hashicorp text-[#b2b6bd] text-[10px] mr-1">SUGGESTIONS:</span>
+              <span className="eyebrow-hashicorp text-[#b2b6bd] text-[10px] mr-1">
+                SUGGESTIONS:
+              </span>
               {samplePrompts.map((p, idx) => (
                 <button
                   key={idx}
@@ -264,7 +276,9 @@ export function QueryPage() {
           {/* 4. RESULTS SECTION */}
           {submitted && (
             <div className="eyebrow-hashicorp text-[#b2b6bd] flex items-center justify-between">
-              <span>QUERY: <span className="text-white font-semibold">"{submitted}"</span></span>
+              <span>
+                QUERY: <span className="text-white font-semibold">"{submitted}"</span>
+              </span>
               <span className="font-mono text-xs text-[#00bcff]">MODEL: {selectedModel}</span>
             </div>
           )}
@@ -272,12 +286,15 @@ export function QueryPage() {
           {loading ? (
             <div className="p-12 text-center text-[#b2b6bd] font-mono animate-pulse space-y-3 bg-[#141414] rounded-md border border-[rgba(178,182,189,0.2)]">
               <Sparkles className="h-7 w-7 text-[#00bcff] mx-auto animate-spin" />
-              <div className="text-sm text-white">Searching vector index & synthesizing response via Ollama...</div>
-              <div className="text-xs text-[#b2b6bd]">Retrieving cosine similarity matches from your files</div>
+              <div className="text-sm text-white">
+                Searching vector index & synthesizing response via Ollama...
+              </div>
+              <div className="text-xs text-[#b2b6bd]">
+                Retrieving cosine similarity matches from your files
+              </div>
             </div>
           ) : (
             <div className="space-y-6">
-
               {/* AI SYNTHESIZED ANSWER */}
               {aiAnswer && (
                 <motion.div
@@ -289,7 +306,9 @@ export function QueryPage() {
                     <div className="flex items-center justify-between border-b border-[rgba(178,182,189,0.12)] pb-3">
                       <div className="flex items-center gap-2">
                         <Bot className="h-5 w-5 text-[#00bcff]" />
-                        <span className="headline-hashicorp text-white text-base">AI Synthesized Answer</span>
+                        <span className="headline-hashicorp text-white text-base">
+                          AI Synthesized Answer
+                        </span>
                       </div>
                       <span className="product-pill font-mono text-xs text-[#00bcff]">
                         <Cpu className="h-3 w-3 mr-1 inline" /> {activeModel || selectedModel}
@@ -329,10 +348,13 @@ export function QueryPage() {
                         <div className="flex items-center justify-between border-b border-[rgba(178,182,189,0.12)] pb-3">
                           <div className="flex items-center gap-2 truncate pr-2">
                             <FileText className="h-4 w-4 text-[#00bcff] shrink-0" />
-                            <span className="headline-hashicorp text-white text-sm truncate">{r.title}</span>
+                            <span className="headline-hashicorp text-white text-sm truncate">
+                              {r.title}
+                            </span>
                           </div>
                           <span className="bg-[#00bcff]/20 text-[#00bcff] font-mono text-xs px-2.5 py-0.5 rounded-full font-bold">
-                            <CheckCircle2 className="h-3 w-3 mr-1 inline" /> {(r.score * 100).toFixed(1)}% Match
+                            <CheckCircle2 className="h-3 w-3 mr-1 inline" />{" "}
+                            {(r.score * 100).toFixed(1)}% Match
                           </span>
                         </div>
 
@@ -341,7 +363,9 @@ export function QueryPage() {
                         </p>
 
                         <div className="pt-2 flex items-center justify-between text-xs text-[#b2b6bd] border-t border-[rgba(178,182,189,0.12)]">
-                          <span className="font-mono text-[11px] truncate max-w-md">{r.source}</span>
+                          <span className="font-mono text-[11px] truncate max-w-md">
+                            {r.source}
+                          </span>
                           <span className="text-[11px] font-semibold text-[#00bcff] shrink-0">
                             FAISS Vector Chunk #{i + 1}
                           </span>
@@ -358,14 +382,13 @@ export function QueryPage() {
                   <AlertCircle className="h-8 w-8 text-[#b2b6bd] mx-auto opacity-70" />
                   <div className="headline-hashicorp text-white">No Matching Context Found</div>
                   <p className="body-hashicorp text-xs max-w-md mx-auto">
-                    Try refining your query or upload more documents to your knowledge base in Document Ingestion.
+                    Try refining your query or upload more documents to your knowledge base in
+                    Document Ingestion.
                   </p>
                 </div>
               )}
-
             </div>
           )}
-
         </div>
       </div>
     </>

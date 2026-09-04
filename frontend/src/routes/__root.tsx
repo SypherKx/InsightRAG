@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
 
@@ -35,9 +36,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)] text-[var(--ink)] px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-2xl font-serif font-normal text-[var(--ink)]">
-          An error occurred
-        </h1>
+        <h1 className="text-2xl font-serif font-normal text-[var(--ink)]">An error occurred</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Something went wrong while rendering the view.
         </p>
@@ -120,6 +119,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );

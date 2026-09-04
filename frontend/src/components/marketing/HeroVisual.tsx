@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sparkles, CheckCircle2, FileText, Activity, ArrowRight, ShieldCheck, Cpu } from "lucide-react";
+import {
+  Search,
+  Sparkles,
+  CheckCircle2,
+  FileText,
+  Activity,
+  ArrowRight,
+  ShieldCheck,
+  Cpu,
+} from "lucide-react";
 
 const sampleQueries = [
   {
@@ -10,7 +19,8 @@ const sampleQueries = [
     doc: "FDA Clinical Guidelines 2025.pdf",
     page: "Page 14, Sec 4.2",
     score: 99.4,
-    answer: "Administer 150 mg nirmatrelvir (one 150 mg tablet) and 100 mg ritonavir (one 100 mg tablet) together twice daily for 5 days.",
+    answer:
+      "Administer 150 mg nirmatrelvir (one 150 mg tablet) and 100 mg ritonavir (one 100 mg tablet) together twice daily for 5 days.",
     tag: "FDA GUIDELINE",
   },
   {
@@ -20,7 +30,8 @@ const sampleQueries = [
     doc: "PubMed_Article_38291.pdf",
     page: "Page 8, Table 3",
     score: 98.8,
-    answer: "Combination immunotherapy demonstrated a 42% improvement in 3-year event-free survival rate compared to standard chemotherapy.",
+    answer:
+      "Combination immunotherapy demonstrated a 42% improvement in 3-year event-free survival rate compared to standard chemotherapy.",
     tag: "PUBMED RESEARCH",
   },
   {
@@ -30,7 +41,8 @@ const sampleQueries = [
     doc: "Medical_Physiology_Textbook.pdf",
     page: "Chapter 7, Page 142",
     score: 97.5,
-    answer: "Phase 0 rapid depolarization is mediated by voltage-gated Fast Na+ channels. Phase 2 plateau is sustained by inward L-type Ca2+ current.",
+    answer:
+      "Phase 0 rapid depolarization is mediated by voltage-gated Fast Na+ channels. Phase 2 plateau is sustained by inward L-type Ca2+ current.",
     tag: "UNIVERSITY SYLLABUS",
   },
 ];
@@ -61,12 +73,16 @@ export function HeroVisual() {
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
           <div className="backdrop-blur-md bg-black/70 border border-white/20 px-3 py-1 rounded-full text-[11px] font-medium text-white flex items-center gap-1.5 shadow-md">
             <Sparkles className="h-3 w-3 text-[#c1fbd4]" />
-            <span className="font-mono text-[10px] uppercase tracking-wider">384-D FAISS VECTOR FORGE</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider">
+              384-D FAISS VECTOR FORGE
+            </span>
           </div>
 
           <div className="backdrop-blur-md bg-black/70 border border-white/20 px-3 py-1 rounded-full text-[11px] font-medium text-[#c1fbd4] flex items-center gap-1 shadow-md">
             <ShieldCheck className="h-3 w-3 text-[#c1fbd4]" />
-            <span className="font-mono text-[10px] uppercase tracking-wider">100% LOCAL PRIVACY</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider">
+              100% LOCAL PRIVACY
+            </span>
           </div>
         </div>
       </div>
@@ -76,7 +92,9 @@ export function HeroVisual() {
         {/* Sample Question Selector */}
         <div className="mb-2 flex items-center justify-between">
           <span className="eyebrow-cap text-[10px] text-[var(--muted)]">INTERACTIVE DEMO:</span>
-          <span className="text-[10px] font-mono text-[#c1fbd4] font-semibold">FAISS RAG ACTIVE</span>
+          <span className="text-[10px] font-mono text-[#c1fbd4] font-semibold">
+            FAISS RAG ACTIVE
+          </span>
         </div>
 
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -116,16 +134,16 @@ export function HeroVisual() {
             <div className="flex items-center justify-between border-b border-[var(--hairline)] pb-2">
               <div className="flex items-center gap-1.5 truncate">
                 <FileText className="h-3.5 w-3.5 text-[#c1fbd4] shrink-0" />
-                <span className="text-xs font-semibold text-[var(--ink)] truncate">{activeItem.doc}</span>
+                <span className="text-xs font-semibold text-[var(--ink)] truncate">
+                  {activeItem.doc}
+                </span>
               </div>
               <span className="text-[11px] font-mono font-bold text-[#c1fbd4] shrink-0">
                 {activeItem.score}% Match
               </span>
             </div>
 
-            <p className="text-xs text-[var(--body)] leading-relaxed">
-              "{activeItem.answer}"
-            </p>
+            <p className="text-xs text-[var(--body)] leading-relaxed">"{activeItem.answer}"</p>
           </motion.div>
         </AnimatePresence>
       </div>

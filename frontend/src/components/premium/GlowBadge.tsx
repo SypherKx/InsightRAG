@@ -7,16 +7,13 @@ interface GlowBadgeProps {
   className?: string;
 }
 
-export function GlowBadge({
-  children,
-  variant = "mint",
-  className,
-}: GlowBadgeProps) {
+export function GlowBadge({ children, variant = "mint", className }: GlowBadgeProps) {
   const variantStyles = {
     mint: "pill-tag-mint",
     shade: "pill-tag-shade",
     default: "pill-tag-mint",
-    darkOutline: "border border-white/20 bg-black/40 text-white rounded-full px-3 py-1 text-xs font-mono tracking-wider uppercase",
+    darkOutline:
+      "border border-white/20 bg-black/40 text-white rounded-full px-3 py-1 text-xs font-mono tracking-wider uppercase",
   };
 
   return (

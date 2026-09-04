@@ -29,14 +29,12 @@ export function SectionHeading({
       className={cn(
         "flex flex-col gap-3",
         align === "center" ? "items-center text-center max-w-3xl mx-auto" : "max-w-2xl",
-        className
+        className,
       )}
     >
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
       <h2 className="display-md text-[var(--ink)] font-normal">{title}</h2>
-      {description && (
-        <p className="body-md text-[var(--body)] text-pretty">{description}</p>
-      )}
+      {description && <p className="body-md text-[var(--body)] text-pretty">{description}</p>}
     </div>
   );
 }

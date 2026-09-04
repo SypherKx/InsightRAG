@@ -4,7 +4,18 @@ import { cn } from "@/lib/utils";
 interface GlassCardProps {
   children: ReactNode;
   className?: string;
-  variant?: "canvas" | "soft" | "dark" | "coral" | "forest" | "cream" | "peach" | "mint" | "yellow" | "violet" | "cyan";
+  variant?:
+    | "canvas"
+    | "soft"
+    | "dark"
+    | "coral"
+    | "forest"
+    | "cream"
+    | "peach"
+    | "mint"
+    | "yellow"
+    | "violet"
+    | "cyan";
   hover?: boolean;
 }
 
@@ -34,7 +45,7 @@ export function GlassCard({
         variantStyles[variant],
         "transition-all duration-200",
         hover && "hover:border-white/30 hover:shadow-md",
-        className
+        className,
       )}
     >
       {children}

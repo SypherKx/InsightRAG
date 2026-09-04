@@ -1,8 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export interface PremiumButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface PremiumButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?:
     | "primaryPill"
     | "outlineOnDark"
@@ -42,7 +41,7 @@ export function PremiumButton({
         "cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200",
         variantClasses[variant],
         sizeClasses[size],
-        className
+        className,
       )}
       {...props}
     >

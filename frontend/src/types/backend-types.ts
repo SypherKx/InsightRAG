@@ -126,18 +126,18 @@ export interface UploadResponse {
   message: string;
 }
 
-export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
+export type SeverityLevel = "critical" | "high" | "medium" | "low";
 
 export function getSeverityLevel(severity: number): SeverityLevel {
-  if (severity >= 0.7) return 'critical';
-  if (severity >= 0.4) return 'high';
-  if (severity >= 0.2) return 'medium';
-  return 'low';
+  if (severity >= 0.7) return "critical";
+  if (severity >= 0.4) return "high";
+  if (severity >= 0.2) return "medium";
+  return "low";
 }
 
 export function getSeverityColor(severity: number): string {
-  if (severity >= 0.7) return 'var(--color-critical)';
-  if (severity >= 0.4) return 'var(--color-high)';
-  if (severity >= 0.2) return 'var(--color-medium)';
-  return 'var(--color-low)';
+  if (severity >= 0.7) return "var(--color-critical)";
+  if (severity >= 0.4) return "var(--color-high)";
+  if (severity >= 0.2) return "var(--color-medium)";
+  return "var(--color-low)";
 }

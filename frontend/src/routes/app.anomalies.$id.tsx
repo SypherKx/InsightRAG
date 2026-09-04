@@ -1,7 +1,15 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft, Brain, CheckCircle2, GitBranch, Sparkles } from "lucide-react";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, ReferenceDot, Tooltip } from "recharts";
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  ReferenceDot,
+  Tooltip,
+} from "recharts";
 import { PageHeader } from "@/components/dashboard/DashboardShell";
 import { GlassCard } from "@/components/premium/GlassCard";
 import { GlowBadge } from "@/components/premium/GlowBadge";
@@ -68,7 +76,7 @@ function InsightPage() {
   const sevLevel = getSeverityLevel(a.severity);
 
   // Map drivers/contributions
-  const contributionsList = (rc?.primary_drivers || []).map(driver => ({
+  const contributionsList = (rc?.primary_drivers || []).map((driver) => ({
     factor: driver.segment,
     weight: driver.contribution / 100, // contribution is e.g. 45 for 45%
   }));
@@ -93,14 +101,17 @@ function InsightPage() {
       ];
 
   // Default fallback evidence
-  const evidenceList = exp?.evidence_citations && exp.evidence_citations.length > 0
-    ? exp.evidence_citations
-    : [
-        `Severity score: ${a.severity.toFixed(2)}`,
-        `Confidence level: ${a.confidence.toFixed(1)}%`,
-        `Observed value: ${a.value.toLocaleString()}`,
-        rc?.methods_used?.length ? `Analyzed via: ${rc.methods_used.join(", ")}` : "Checked by multi-detector ensemble",
-      ];
+  const evidenceList =
+    exp?.evidence_citations && exp.evidence_citations.length > 0
+      ? exp.evidence_citations
+      : [
+          `Severity score: ${a.severity.toFixed(2)}`,
+          `Confidence level: ${a.confidence.toFixed(1)}%`,
+          `Observed value: ${a.value.toLocaleString()}`,
+          rc?.methods_used?.length
+            ? `Analyzed via: ${rc.methods_used.join(", ")}`
+            : "Checked by multi-detector ensemble",
+        ];
 
   return (
     <>
@@ -108,7 +119,10 @@ function InsightPage() {
         title={a.metric}
         description={`Anomaly type: ${a.anomaly_type.toUpperCase()} | Severity: ${Math.round(a.severity * 100)}%`}
         action={
-          <Link to="/app/anomalies" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition">
+          <Link
+            to="/app/anomalies"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition"
+          >
             <ArrowLeft className="h-4 w-4" /> Back to explorer
           </Link>
         }
@@ -124,7 +138,9 @@ function InsightPage() {
               </div>
               <GlowBadge severity={sevLevel} />
             </div>
-            <p className="mt-1 text-xs text-zinc-500">Contribution scoring across detected dimensions</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Contribution scoring across detected dimensions
+            </p>
             {contributionsList.length > 0 ? (
               <ul className="mt-5 space-y-3">
                 {contributionsList.map((c, i) => (
@@ -136,13 +152,19 @@ function InsightPage() {
                   >
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-mono text-zinc-300">{c.factor}</span>
-                      <span className="font-mono text-indigo-300">{(c.weight * 100).toFixed(0)}%</span>
+                      <span className="font-mono text-indigo-300">
+                        {(c.weight * 100).toFixed(0)}%
+                      </span>
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${c.weight * 100}%` }}
-                        transition={{ duration: 1, delay: 0.1 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{
+                          duration: 1,
+                          delay: 0.1 + i * 0.08,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
                         className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_12px_rgba(99,102,241,0.6)]"
                       />
                     </div>
@@ -150,15 +172,17 @@ function InsightPage() {
                 ))}
               </ul>
             ) : (
-              <div className="mt-5 text-sm text-zinc-500 text-center py-4">No segment drivers identified. Analysis was run overall.</div>
+              <div className="mt-5 text-sm text-zinc-500 text-center py-4">
+                No segment drivers identified. Analysis was run overall.
+              </div>
             )}
           </GlassCard>
 
           <GlassCard className="p-6">
             <div className="text-sm font-medium text-white">Change-point timeline</div>
             <p className="mt-1 text-xs text-zinc-500">
-              {rc?.change_point 
-                ? `Detected shift (magnitude: ${Math.round(rc.change_point.change_magnitude * 100)}%) at detection window` 
+              {rc?.change_point
+                ? `Detected shift (magnitude: ${Math.round(rc.change_point.change_magnitude * 100)}%) at detection window`
                 : "Timeline distribution around detection point"}
             </p>
             <div className="mt-4 h-[200px]">
@@ -170,11 +194,38 @@ function InsightPage() {
                       <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="name" stroke="#52525b" fontSize={11} tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="name"
+                    stroke="#52525b"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <YAxis stroke="#52525b" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ background: "rgba(12,12,16,0.95)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 12 }} itemStyle={{ color: "#fafafa" }} />
-                  <Area type="monotone" dataKey="value" stroke="#f87171" strokeWidth={2} fill="url(#cp)" />
-                  <ReferenceDot x="Detection Point" y={rc?.change_point ? rc.change_point.before_mean : a.value} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "rgba(12,12,16,0.95)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 10,
+                      fontSize: 12,
+                    }}
+                    itemStyle={{ color: "#fafafa" }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#f87171"
+                    strokeWidth={2}
+                    fill="url(#cp)"
+                  />
+                  <ReferenceDot
+                    x="Detection Point"
+                    y={rc?.change_point ? rc.change_point.before_mean : a.value}
+                    r={6}
+                    fill="#ef4444"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -184,7 +235,10 @@ function InsightPage() {
             <div className="text-sm font-medium text-white">Evidence & Methodology</div>
             <ul className="mt-3 grid gap-2 text-xs text-zinc-400">
               {evidenceList.map((e, idx) => (
-                <li key={idx} className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.02] px-3 py-2 font-mono">
+                <li
+                  key={idx}
+                  className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.02] px-3 py-2 font-mono"
+                >
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> {e}
                 </li>
               ))}
@@ -203,7 +257,7 @@ function InsightPage() {
                 {exp?.llm_model || "forge-analyst-v3"} · conf {a.confidence.toFixed(0)}%
               </span>
             </div>
-            
+
             <div className="mt-4 space-y-3">
               <motion.p
                 initial={{ opacity: 0, y: 8 }}
@@ -227,11 +281,14 @@ function InsightPage() {
 
             {exp?.recommendations && exp.recommendations.length > 0 && (
               <div className="mt-5 border-t border-white/[0.06] pt-4">
-                <div className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">Recommendations</div>
+                <div className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">
+                  Recommendations
+                </div>
                 <ul className="mt-3 space-y-2 text-sm">
                   {exp.recommendations.map((r, idx) => (
                     <li key={idx} className="flex items-start gap-2.5 text-zinc-300">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]" /> {r}
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />{" "}
+                      {r}
                     </li>
                   ))}
                 </ul>
@@ -246,7 +303,10 @@ function InsightPage() {
               </div>
               <div className="mt-3 grid gap-2 text-xs text-zinc-400 font-mono">
                 {exp.evidence_citations.map((cite, idx) => (
-                  <div key={idx} className="rounded-md border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                  <div
+                    key={idx}
+                    className="rounded-md border border-white/[0.05] bg-white/[0.02] px-3 py-2"
+                  >
                     {cite}
                   </div>
                 ))}

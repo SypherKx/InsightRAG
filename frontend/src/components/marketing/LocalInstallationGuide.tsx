@@ -24,19 +24,18 @@ export const LocalInstallationGuide: React.FC = () => {
   };
 
   return (
-    <section className="bg-[#000000] text-white py-24 border-b border-[rgba(178,182,189,0.12)] relative" id="download-locally">
+    <section
+      className="bg-[#000000] text-white py-24 border-b border-[rgba(178,182,189,0.12)] relative"
+      id="download-locally"
+    >
       <div className="mx-auto max-w-5xl px-6 sm:px-8 space-y-12">
-        
         {/* Section Eyebrow Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="eyebrow-hashicorp">
-            LOCAL ENGINE DEPLOYMENT // STANDALONE PACKAGE
-          </div>
-          <h2 className="display-hashicorp-lg text-white">
-            Download InsightForge AI Desktop.
-          </h2>
+          <div className="eyebrow-hashicorp">LOCAL ENGINE DEPLOYMENT // STANDALONE PACKAGE</div>
+          <h2 className="display-hashicorp-lg text-white">Download InsightForge AI Desktop.</h2>
           <p className="body-hashicorp-lg max-w-xl mx-auto">
-            Zero cloud server dependency. Includes local FAISS vector storage, PyTorch embeddings, and automated Ollama model detection.
+            Zero cloud server dependency. Includes local FAISS vector storage, PyTorch embeddings,
+            and automated Ollama model detection.
           </p>
         </div>
 
@@ -52,11 +51,10 @@ export const LocalInstallationGuide: React.FC = () => {
             <span className="product-pill font-mono text-[11px]">
               WINDOWS X64 STANDALONE • VERSION 1.0
             </span>
-            <h3 className="headline-hashicorp text-white">
-              InsightForge-Desktop.exe
-            </h3>
+            <h3 className="headline-hashicorp text-white">InsightForge-Desktop.exe</h3>
             <p className="body-hashicorp max-w-lg mx-auto">
-              Runs 100% offline on your PC. Includes embedded FastAPI server with zero cloud data transmission.
+              Runs 100% offline on your PC. Includes embedded FastAPI server with zero cloud data
+              transmission.
             </p>
           </div>
 
@@ -101,7 +99,8 @@ export const LocalInstallationGuide: React.FC = () => {
             <div className="eyebrow-hashicorp text-[#844fba]">STEP 01</div>
             <h4 className="card-title font-semibold text-white">Direct Download</h4>
             <p className="body-hashicorp-sm">
-              Click the white download button to save <code className="text-[#844fba] font-mono text-xs">InsightForge-Desktop.exe</code>.
+              Click the white download button to save{" "}
+              <code className="text-[#844fba] font-mono text-xs">InsightForge-Desktop.exe</code>.
             </p>
           </div>
 
@@ -109,7 +108,8 @@ export const LocalInstallationGuide: React.FC = () => {
             <div className="eyebrow-hashicorp text-[#f5a623]">STEP 02</div>
             <h4 className="card-title font-semibold text-white">Double-Click Run</h4>
             <p className="body-hashicorp-sm">
-              Launch the standalone executable on Windows. Boots local Python backend & native desktop window.
+              Launch the standalone executable on Windows. Boots local Python backend & native
+              desktop window.
             </p>
           </div>
 
@@ -117,7 +117,9 @@ export const LocalInstallationGuide: React.FC = () => {
             <div className="eyebrow-hashicorp text-[#00bcff]">STEP 03</div>
             <h4 className="card-title font-semibold text-white">Upload & Query</h4>
             <p className="body-hashicorp-sm">
-              Lands directly on <code className="text-[#00bcff] font-mono text-xs">/app/upload</code> to drag & drop medical PDFs or lab CSV datasets.
+              Lands directly on{" "}
+              <code className="text-[#00bcff] font-mono text-xs">/app/upload</code> to drag & drop
+              medical PDFs or lab CSV datasets.
             </p>
           </div>
         </div>
@@ -128,7 +130,9 @@ export const LocalInstallationGuide: React.FC = () => {
             onClick={() => setShowCli(!showCli)}
             className="eyebrow-hashicorp text-[#b2b6bd] hover:text-white transition-colors cursor-pointer"
           >
-            {showCli ? "Hide developer terminal instructions" : "Looking for developer terminal commands?"}
+            {showCli
+              ? "Hide developer terminal instructions"
+              : "Looking for developer terminal commands?"}
           </button>
 
           {showCli && (
@@ -143,7 +147,6 @@ export const LocalInstallationGuide: React.FC = () => {
             </motion.div>
           )}
         </div>
-
       </div>
     </section>
   );
