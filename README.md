@@ -1,6 +1,10 @@
-# ⚡ InsightRAG AI — Autonomous Multimodal Local RAG Factory
-
 <div align="center">
+
+# ⚡ INSIGHT • RAG
+### 🧠 Autonomous Multimodal Local RAG-in-a-Box Factory
+**Zero-Budget • 100% On-Device Vector Privacy • Hardware Auto-Tuned • Multimodal Vision OCR**
+
+<br />
 
 ```
   ___           _       _     _     ____      _    ____ 
@@ -11,15 +15,25 @@
                   |___/                                 
 ```
 
-**Zero-Budget • 100% Local Compute • Hardware Auto-Tuned • Multimodal Vision OCR**
+<br />
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-7-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev)
-[![FAISS](https://img.shields.io/badge/FAISS-CPU%20VectorStore-blue.svg)](https://github.com/facebookresearch/faiss)
-[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?logo=ollama&logoColor=white)](https://ollama.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="#-1-line-quickstart"><b>⚡ Quickstart</b></a> •
+  <a href="#-key-capabilities"><b>🌟 Capabilities</b></a> •
+  <a href="#%EF%B8%8F-system-architecture"><b>🏗️ Architecture</b></a> •
+  <a href="#-visual-roi-diagram-cropping"><b>👁️ Visual ROI</b></a> •
+  <a href="#-advance-turbo-cloud-server-mode"><b>🚀 Turbo Mode</b></a> •
+  <a href="https://github.com/SypherKx/InsightRAG"><b>💻 GitHub Repo</b></a>
+</p>
 
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
+[![FAISS](https://img.shields.io/badge/FAISS-CPU%20VectorStore-blue.svg?style=for-the-badge)](https://github.com/facebookresearch/faiss)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-FEE75C.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+<br />
 <br />
 
 ![InsightRAG AI — Autonomous Multimodal RAG-in-a-Box Factory](./docs/assets/insightrag_hero_banner.png)
