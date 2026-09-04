@@ -69,9 +69,6 @@ export function LandingPage() {
               <a href="#capabilities" className="hover:underline text-black">
                 Capabilities
               </a>
-              <a href="#about" className="hover:underline text-black">
-                About
-              </a>
               <Link to="/docs" className="hover:underline text-black font-black">
                 Docs
               </Link>
@@ -306,51 +303,6 @@ export function LandingPage() {
 
             <div className="bg-white border-2 border-black rounded-xl p-2.5 sm:p-3 font-mono text-xs font-black text-black shadow-[2px_2px_0px_#000] text-center">
               FastAPI + ChromaDB + Batch
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 
-        ========================================================================
-        ABOUT US SECTION
-        ========================================================================
-      */}
-      <section id="about" className="border-t-4 border-white bg-black py-12 sm:py-16 md:py-20 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 items-center">
-          {/* Left Description Column */}
-          <div className="space-y-4 sm:space-y-6">
-            <h2 className="text-2xl sm:text-3xl font-black font-mono text-white uppercase tracking-wider">
-              ABOUT US
-            </h2>
-
-            <p className="font-mono text-xs sm:text-sm text-gray-300 font-bold leading-relaxed uppercase">
-              THE CREATION OF THE INSIGHTRAG ENGINE WAS DRIVEN BY THE NEED FOR PRIVATE, ZERO-COST,
-              AND UNCOMPROMISING LOCAL ARTIFICIAL INTELLIGENCE. WE BUILT A HIGH-PERFORMANCE
-              ARCHITECTURE CAPABLE OF PROCESSING MULTI-FORMAT DOCUMENTS, SCANNED MEDICAL RECORDS,
-              AND VISUAL MEDIA WITH STRICT ANTI-HALLUCINATION GUARDRAILS AND 1-CLICK STANDALONE
-              DEPLOYMENT.
-            </p>
-
-            <button
-              onClick={handleCopyCLI}
-              className="bg-white text-black hover:bg-[#ffe600] font-mono font-black text-xs px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border-2 border-white shadow-[3px_3px_0px_#fff] flex items-center gap-2 cursor-pointer transition-colors active:scale-95"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 text-black" />
-              ) : (
-                <Copy className="w-4 h-4 text-black" />
-              )}
-              <span>COPY CLI LAUNCH</span>
-            </button>
-          </div>
-
-          {/* Right Text Graphic Column */}
-          <div className="flex items-center justify-center py-4 sm:py-0">
-            <div className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black font-sans tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-400 to-gray-800 select-none text-center md:text-left">
-              INSIGHT
-              <br />
-              RAG
             </div>
           </div>
         </div>

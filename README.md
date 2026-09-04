@@ -1,8 +1,8 @@
 <div align="center">
 
 # ⚡ INSIGHT • RAG
-### 🧠 Autonomous Multimodal Local RAG-in-a-Box Factory
-**Zero-Budget • 100% On-Device Vector Privacy • Hardware Auto-Tuned • Multimodal Vision OCR**
+### 🧠 Universal Multimodal Document Intelligence & RAG Factory
+**Zero-Budget • 100% On-Device Vector Privacy • Hardware Auto-Tuned • Multimodal Vision & ROI Diagram Cropping**
 
 <br />
 
@@ -18,10 +18,9 @@
 
 <p align="center">
   <a href="#-1-line-quickstart"><b>⚡ Quickstart</b></a> •
-  <a href="#-key-capabilities"><b>🌟 Capabilities</b></a> •
+  <a href="#-key-capabilities--features"><b>🌟 Capabilities</b></a> •
+  <a href="#-enterprise-security-hardening"><b>🛡️ Security & Hardening</b></a> •
   <a href="#%EF%B8%8F-system-architecture"><b>🏗️ Architecture</b></a> •
-  <a href="#-visual-roi-diagram-cropping"><b>👁️ Visual ROI</b></a> •
-  <a href="#-advance-turbo-cloud-server-mode"><b>🚀 Turbo Mode</b></a> •
   <a href="https://github.com/SypherKx/InsightRAG"><b>💻 GitHub Repo</b></a>
 </p>
 
@@ -35,7 +34,7 @@
 <br />
 <br />
 
-![InsightRAG AI — Autonomous Multimodal RAG-in-a-Box Factory](./docs/assets/insightrag_hero_banner.png)
+![InsightRAG AI — Universal Multimodal RAG Factory](./docs/assets/insightrag_hero_banner.png)
 
 </div>
 
@@ -43,14 +42,14 @@
 
 ## 📖 Overview
 
-**InsightRAG AI** is an autonomous, local-first multimodal Retrieval-Augmented Generation (RAG) factory. It turns messy PDFs, Word documents, scanned forms, and images into a private, turnkey, anti-hallucination AI knowledge microservice in seconds — **with zero mandatory API bills and 100% on-device data privacy**.
+**InsightRAG AI** is an autonomous, universal multimodal Retrieval-Augmented Generation (RAG) platform. It converts complex PDF manuals, technical blueprints, scientific papers, textbooks, and enterprise data into an interactive, grounded AI knowledge studio in seconds — **with 100% on-device data privacy, zero mandatory API bills, and enterprise-grade security**.
 
 ---
 
 ## ⚡ 1-Line Quickstart
 
 ### 🪟 Windows (Universal 1-Line - Run from ANY Terminal / Directory)
-Open **PowerShell** (no need to `cd` or navigate to any folder) and paste:
+Open **PowerShell** (no need to `cd` or navigate to any folder) and run:
 
 ```powershell
 irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
@@ -61,7 +60,7 @@ If you downloaded/cloned the repository locally, simply double-click:
 👉 **`run.bat`** in the project folder!
 
 *What happens automatically in seconds:*
-1. 🔍 **Zero-Friction Detection**: Automatically finds or sets up the project.
+1. 🔍 **Zero-Friction Detection**: Automatically finds or sets up the project environment.
 2. ⚡ **Hardware Profiling**: Detects CPU cores, RAM, and NVIDIA CUDA GPU.
 3. 📦 **Self-Healing Dependencies**: Auto-verifies and installs Python + Node.js packages.
 4. 🤖 **Ollama Auto-Start**: Starts local AI engine in the background.
@@ -82,26 +81,45 @@ python scripts/run_local.py
 
 ---
 
-## 🌟 Key Capabilities
+## 🌟 Key Capabilities & Features
 
-### 1. 🧠 Speed-Tiered On-Device Embeddings
-Configure the exact speed vs. precision tradeoff tailored to your machine:
-* **⚡ `all-MiniLM-L6-v2` (Ultra-Fast 5x • 4GB+ RAM • 384-dim)**: Blazing fast CPU-friendly inference for laptops and quick tests.
-* **⚖️ `bge-small-en-v1.5` (Balanced 3x • 6GB+ RAM • 384-dim)**: Top retrieval accuracy for standard desktop PCs.
-* **🧠 `bge-base-en-v1.5` (SOTA High Precision • 8-16GB RAM/GPU • 768-dim)**: State-of-the-art dense semantic capture for clinical research & academic depth.
-* **🚀 `nomic-embed-text` (Ollama Native 8K • 8GB+ RAM • 768-dim)**: High-context 8,192 token window for large book chapters and clinical trials.
+### 1. 🎯 Targeted Visual ROI & Diagram Auto-Cropping
+* **Intelligent Sub-Region Isolation**: When asking for a specific diagram, flowchart, or component (e.g., *"show me the attention mechanism diagram"* or *"Figure 2 architecture"*), the engine scans PDF vector graphics (`fitz.get_drawings()`) and image bounding boxes.
+* **Focused High-Res PNG Rendering**: Instead of rendering a full blank page, it isolates and crops **only that specific diagram / sub-region** with crisp padding and embeds an interactive **📷 FOCUSED VISUAL EVIDENCE** card in chat.
 
-### 2. 👁️ Multimodal Vision & OCR
-* Ingests scanned clinical reports, lab printouts, whiteboard lecture notes, and textbook diagrams.
-* Extracts structured text and tabular information with automated image preprocessing.
+### 2. 💬 Multi-Turn Conversational Memory (ChatGPT Experience)
+* **Full Context Retention**: Seamlessly asks follow-up questions referencing previous answers, facts, and citations across multiple turns.
+* **Persistent Sessions**: Real-time auto-synchronization to `localStorage` preserves conversations and diagram evidence even after browser exits or PC reboots.
+* **Interactive Controls**: Features 1-click **Copy Answer**, auto-scroll toggling, and clean session clearing.
 
-### 3. 🛡️ Anti-Hallucination & Privacy Guardrails
-* **100% On-Device Vector Store**: Indexing with `faiss-cpu` ensures HIPAA and FERPA-compliant privacy with zero data leaving your machine.
-* **Strict Source Attributions**: Every LLM response is anchored to exact document passages, page numbers, and cosine similarity confidence scores.
-* **Hypothetical Document Embeddings (HyDE)**: Expands ambiguous queries to bridge vocabulary gaps between student questions and academic textbook text.
+### 3. 📑 Selective Page Range Slicing
+* **Precision Ingestion**: Upload 1,000+ page books or manuals and choose exact page ranges (e.g., *Page 45 to 80*) to slice and index only the target chapter.
+* **Zero Index Bloat**: Saves vector space and boosts retrieval speed.
 
-### 4. 📦 Standalone Knowledge Export
-* Export your indexed knowledge base as a standalone microservice bundle (`.zip`) that can run offline in air-gapped environments.
+### 4. ⚡ Dual Compute Architecture (Local Air-Gapped vs. Turbo Cloud)
+* **💻 100% Local Mode [DEFAULT]**: Powered by local Ollama (`llama3.2:3b`, `qwen2.5`) and `faiss-cpu`. Zero data leaves your machine.
+* **⚡ Advance Turbo Server**: Accelerated cloud processing using Groq (`llama-3.3-70b-versatile`), Google Gemini (`gemini-1.5-flash`), or OpenAI (`gpt-4o-mini`).
+
+### 5. 🧠 Speed-Tiered Dense Embeddings
+* **⚡ `all-MiniLM-L6-v2` (Ultra-Fast 5x • 384-dim)**: CPU-friendly embedding inference for fast laptops.
+* **⚖️ `bge-small-en-v1.5` (Balanced 3x • 384-dim)**: Top retrieval accuracy for standard desktop PCs.
+* **🧠 `bge-base-en-v1.5` (High Precision • 768-dim)**: SOTA dense semantic capture for research & technical depth.
+* **🚀 `nomic-embed-text` (Ollama Native 8K • 768-dim)**: High-context 8,192 token window for large book chapters.
+
+---
+
+## 🛡️ Enterprise Security Hardening
+
+InsightRAG AI is audited and hardened against all major web and LLM vulnerabilities:
+
+| Protection Area | Implementation Details |
+| :--- | :--- |
+| **OWASP Security Headers** | Built-in middleware appending `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy (CSP)`, `X-XSS-Protection`, `Referrer-Policy`, and `Permissions-Policy`. |
+| **Path Traversal & LFI Defense** | `sanitize_filename` & `validate_safe_path` prevent directory escape (`../` and `..\\` attacks) across all upload and crop endpoints. |
+| **Decompression Bomb Protection** | Pillow `Image.MAX_IMAGE_PIXELS = 25_000_000` and uncompressed XML byte-size limits on `.docx` prevent memory flooding DoS attacks. |
+| **Prompt Injection Isolation** | RAG context is encapsulated within strict `<document_context>` and `<user_query>` delimiters with hardened anti-jailbreak directives. |
+| **Information Disclosure Safety** | Global exception handler prevents internal server paths, database schemas, or tracebacks from leaking into network/DevTools inspect tabs. |
+| **Extension Whitelisting** | Strictly enforces whitelist validation (`.pdf`, `.txt`, `.md`, `.csv`, `.docx`, `.png`, `.jpg`, `.webp`) and rejects dangerous executables (`.exe`, `.sh`, `.php`, `.bat`). |
 
 ---
 
@@ -113,27 +131,29 @@ Configure the exact speed vs. precision tradeoff tailored to your machine:
 └────────────────────────────────────────────────────────────────────────┘
 
  [ Documents / Scans ] ──> [ Multimodal Ingestion ] ──> [ Overlapping Chunker ]
-   • Clinical PDFs           • OCR Vision Extraction      • 500 chars (50 ovlp)
-   • PubMed Studies          • Table & Text Normalizer    • Token-Aware Splitting
-   • Textbooks & Notes
+   • PDF Manuals & Books     • PyMuPDF Vector & ROI       • 500 chars (50 ovlp)
+   • Technical Diagrams      • Safe DOCX / Image Parser   • Token-Aware Splitting
+   • CSV / TXT / Markdown
                                                                  │
                                                                  ▼
  [ User Natural Query ]                                 [ Dense Embedding Engine ]
           │                                               • all-MiniLM-L6-v2 (384d)
           ▼                                               • bge-small / bge-base
- [ HyDE Query Expander ] ──> [ Cosine Similarity ] ───>   • nomic-embed-text (8k)
+ [ Multi-Turn Memory ] ──> [ Cosine Similarity ] ──────>  • nomic-embed-text (8k)
                                (FAISS IndexFlatIP)               │
                                        │                         ▼
                                        ▼                 [ Vector Knowledge Base ]
                              [ Grounded RAG Prompt ]       • 100% Local FAISS Store
-                                       │                   • Metadata Attribution
-                                       ▼
-                         [ Local LLM / Cloud Fallback ]
-                           • Ollama (llama3.2 / qwen)
-                           • Optional: Groq / Gemini / Claude
+                             • <document_context>          • Metadata Attribution
+                             • <user_query>
                                        │
                                        ▼
-                       [ Cited, Explainable Answer ]
+                         [ Local Ollama / Turbo Cloud ]
+                           • Local: llama3.2 / qwen2.5
+                           • Turbo: Groq 70B / Gemini / GPT-4o-mini
+                                       │
+                                       ▼
+                       [ Cited Answer + Visual ROI Card ]
 ```
 
 ---
@@ -143,22 +163,23 @@ Configure the exact speed vs. precision tradeoff tailored to your machine:
 ```
 InsightRAG/
 ├── backend/                      # FastAPI Backend & RAG Engine
-│   ├── main.py                   # App entrypoint & CORS middleware
+│   ├── main.py                   # App entrypoint, OWASP headers & CORS middleware
 │   ├── config.py                 # Pydantic configuration & model parameters
-│   ├── routers/                  # API routers (rag, dataset, anomalies, system)
+│   ├── routers/                  # API routers (rag, datasets, anomalies, system)
 │   ├── services/                 # RAG pipeline, embedding loader & Ollama manager
-│   └── storage/                  # SQLite database models & session management
+│   ├── storage/                  # SQLite database models & secure file store
+│   └── utils/                    # Security utilities (path validation, sanitization)
 │
 ├── frontend/                     # React 19 + Vite 7 Frontend Application
 │   ├── src/
 │   │   ├── routes/               # TanStack Router pages (/, /docs, /app/upload)
 │   │   ├── components/           # Neo-Brutalist design system & studio cards
 │   │   ├── services/             # Axios API client & WebSocket handlers
-│   │   └── styles.css            # Tailwind CSS styling & animations
+│   │   └── styles.css            # Styling, animations & typography
 │   └── package.json              # Frontend dependencies
 │
 ├── src/                          # Core analytical and RAG modules
-│   ├── detection/                # Vital anomaly detection algorithms
+│   ├── detection/                # Statistical change-point & anomaly detection
 │   ├── explainer/                # Prompt generators & context formatting
 │   ├── ingestion/                # Document cleaning & format parsers
 │   └── rag/                      # FAISS store, chunkers, & vector retriever
@@ -168,6 +189,8 @@ InsightRAG/
 │   └── generate_obsidian_vault.py# Obsidian knowledge graph generator
 │
 ├── launch.ps1                    # 1-Click PowerShell launcher for Windows
+├── install.ps1                   # Universal 1-line web installer
+├── run.bat                       # 1-Click Windows batch launcher
 └── README.md                     # Project documentation
 ```
 
@@ -177,18 +200,19 @@ InsightRAG/
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | Server health check and uptime status |
-| `POST` | `/api/v1/rag/upload` | Upload and vectorize PDF, DOCX, CSV, TXT files |
-| `POST` | `/api/v1/rag/query` | Perform grounded RAG query with source citations |
-| `GET` | `/api/v1/rag/documents` | List all active indexed knowledge documents |
-| `GET` | `/api/v1/system/hardware` | Retrieve CPU cores, RAM, and GPU profiling stats |
-| `GET` | `/api/v1/system/ollama-models`| List installed and running Ollama models |
+| `GET` | `/api/v1/health` | Server health check, uptime, and security headers status |
+| `POST` | `/api/v1/rag/documents` | Upload and vectorize documents with optional `start_page`/`end_page` |
+| `POST` | `/api/v1/rag/query` | Grounded multi-turn RAG query with citations & visual snippet |
+| `GET` | `/api/v1/rag/crop` | Targeted visual ROI diagram sub-region cropping endpoint |
+| `GET` | `/api/v1/rag/stats` | Retrieve indexed document vectors and file statistics |
+| `POST` | `/api/v1/rag/clear` | Securely purge all documents and vector indices |
+| `GET` | `/api/v1/system/hardware`| Hardware profiling (CPU cores, RAM, GPU acceleration) |
 
 ---
 
 ## 🛠️ Environment Configuration
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (optional):
 
 ```env
 # RAG Configuration
@@ -200,10 +224,10 @@ LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 LLM_MODEL=llama3.2:3b
 
-# Optional: Cloud Fallback Keys
+# Optional: Cloud Accelerated Keys
 GROQ_API_KEY=
-OPENAI_API_KEY=
 GEMINI_API_KEY=
+OPENAI_API_KEY=
 ```
 
 ---

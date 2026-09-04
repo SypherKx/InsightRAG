@@ -33,10 +33,9 @@ if ((Test-Path (Join-Path $currentDir "launch.ps1")) -and (Test-Path (Join-Path 
 if (-not $TargetDir) {
     $candidates = @(
         (Join-Path $HOME "InsightRAG"),
-        (Join-Path $HOME "OneDrive\Desktop\Insight-Forge-master\Insight-Forge-master"),
-        (Join-Path $HOME "Desktop\Insight-Forge-master\Insight-Forge-master"),
         (Join-Path $HOME "Desktop\InsightRAG"),
         (Join-Path $HOME "Downloads\InsightRAG"),
+        (Join-Path $HOME "Documents\InsightRAG"),
         "C:\InsightRAG"
     )
     foreach ($cand in $candidates) {
