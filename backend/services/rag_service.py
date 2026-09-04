@@ -64,14 +64,12 @@ class RAGService:
     def query(
         self, query: str, top_k: int = 5, min_score: float = 0.0,
         filters: Optional[Dict] = None, model: str = "llama3.2:3b",
-        generate_answer: bool = True, ollama_url: Optional[str] = None
+        generate_answer: bool = True, ollama_url: Optional[str] = None,
+        processing_mode: str = "local", api_key: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Query RAG for relevant context and synthesize answer using local Ollama model."""
+        """Query RAG for relevant context and synthesize answer using Local Ollama or Turbo Cloud Server."""
         if not self.is_available:
             return {"results": [], "error": "RAG not available", "answer": None}
-
-        # Lock model to llama3.2:3b regardless of what frontend sends
-        model = "llama3.2:3b"
 
         try:
             results = self.pipeline.query(
@@ -91,97 +89,162 @@ class RAGService:
                     context_texts = [f"[{i+1}] {r.get('text', '')}" for i, r in enumerate(results)]
                     context_str = "\n\n".join(context_texts)
                     prompt = (
-                        f"You are a helpful AI assistant. Answer the user's question using the provided document context below.\n\n"
-                        f"CONTEXT:\n{context_str}\n\n"
-                        f"QUESTION:\n{query}\n\n"
-                        f"ANSWER:"
+                        f"You are InsightRAG AI, a high-precision multimodal RAG assistant.\n"
+                        f"Answer the user's question clearly and accurately using the provided document context below. Cite sources where possible.\n\n"
+                        f"DOCUMENT CONTEXT:\n{context_str}\n\n"
+                        f"USER QUESTION:\n{query}\n\n"
+                        f"GROUNDED ANSWER:"
                     )
                 else:
-                    # General prompt fallback when no document chunks match
                     prompt = (
-                        f"You are InsightRAG AI, an expert local AI assistant for Healthcare & Education.\n"
+                        f"You are InsightRAG AI, an expert local AI assistant.\n"
                         f"Answer the user's query clearly and concisely:\n\n"
                         f"QUESTION: {query}\n\n"
                         f"ANSWER:"
                     )
 
-                try:
-                    from .ollama_manager import get_working_ollama_host, get_installed_models
-                    import asyncio
+                # =========================================================
+                # 1. ADVANCE TURBO CLOUD / SERVER ACCELERATED MODE
+                # =========================================================
+                is_cloud_mode = (processing_mode in ["cloud", "turbo", "advance"]) or model.startswith(("groq", "gemini", "openai", "claude"))
+                
+                if is_cloud_mode:
+                    try:
+                        # 1A. Groq High-Speed Cloud Inference
+                        if model.startswith("groq") or "groq" in processing_mode or not (model.startswith("gemini") or model.startswith("openai")):
+                            g_key = api_key or os.getenv("GROQ_API_KEY")
+                            g_model = model.split(":", 1)[1] if ":" in model else "llama-3.3-70b-versatile"
+                            
+                            if g_key:
+                                with httpx.Client(timeout=60.0) as client:
+                                    g_resp = client.post(
+                                        "https://api.groq.com/openai/v1/chat/completions",
+                                        headers={"Authorization": f"Bearer {g_key}", "Content-Type": "application/json"},
+                                        json={
+                                            "model": g_model,
+                                            "messages": [
+                                                {"role": "system", "content": "You are InsightRAG AI, a high-speed accurate RAG engine."},
+                                                {"role": "user", "content": prompt}
+                                            ],
+                                            "temperature": 0.2,
+                                        }
+                                    )
+                                    if g_resp.status_code == 200:
+                                        data = g_resp.json()
+                                        answer = data["choices"][0]["message"]["content"].strip()
+                                        used_llm = True
+                                        llm_model = f"⚡ Turbo Cloud ({g_model})"
 
-                    # Get working host and installed models using modular helper
-                    working_endpoint = ollama_url
-                    if not working_endpoint:
-                        try:
-                            working_endpoint = asyncio.run(get_working_ollama_host(auto_start=True))
-                        except Exception:
+                        # 1B. Google Gemini Cloud Inference
+                        if not answer and (model.startswith("gemini") or "gemini" in processing_mode):
+                            gem_key = api_key or os.getenv("GEMINI_API_KEY")
+                            if gem_key:
+                                with httpx.Client(timeout=60.0) as client:
+                                    gem_resp = client.post(
+                                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gem_key}",
+                                        json={"contents": [{"parts": [{"text": prompt}]}]}
+                                    )
+                                    if gem_resp.status_code == 200:
+                                        data = gem_resp.json()
+                                        answer = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                                        used_llm = True
+                                        llm_model = "⚡ Gemini 1.5 Flash (Cloud)"
+
+                        # 1C. OpenAI GPT Cloud Inference
+                        if not answer and (model.startswith("openai") or "openai" in processing_mode):
+                            oai_key = api_key or os.getenv("OPENAI_API_KEY")
+                            if oai_key:
+                                with httpx.Client(timeout=60.0) as client:
+                                    oai_resp = client.post(
+                                        "https://api.openai.com/v1/chat/completions",
+                                        headers={"Authorization": f"Bearer {oai_key}", "Content-Type": "application/json"},
+                                        json={
+                                            "model": "gpt-4o-mini",
+                                            "messages": [{"role": "user", "content": prompt}],
+                                            "temperature": 0.2
+                                        }
+                                    )
+                                    if oai_resp.status_code == 200:
+                                        data = oai_resp.json()
+                                        answer = data["choices"][0]["message"]["content"].strip()
+                                        used_llm = True
+                                        llm_model = "⚡ OpenAI GPT-4o-mini (Cloud)"
+                    except Exception as cloud_err:
+                        logger.warning(f"Cloud turbo processing failed ({cloud_err}), falling back to local...")
+
+                # =========================================================
+                # 2. 100% LOCAL ON-DEVICE MODE (OLLAMA ENGINE)
+                # =========================================================
+                if not answer:
+                    try:
+                        from .ollama_manager import get_working_ollama_host, get_installed_models
+                        import asyncio
+
+                        working_endpoint = ollama_url
+                        if not working_endpoint:
+                            try:
+                                working_endpoint = asyncio.run(get_working_ollama_host(auto_start=True))
+                            except Exception:
+                                working_endpoint = "http://127.0.0.1:11434"
+
+                        if not working_endpoint:
                             working_endpoint = "http://127.0.0.1:11434"
 
-                    if not working_endpoint:
-                        working_endpoint = "http://127.0.0.1:11434"
+                        try:
+                            installed_models = asyncio.run(get_installed_models())
+                        except Exception:
+                            installed_models = []
 
-                    try:
-                        installed_models = asyncio.run(get_installed_models())
-                    except Exception:
-                        installed_models = []
+                        local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
+                        candidate_models = [local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"]
+                        for inst in installed_models:
+                            if inst not in candidate_models:
+                                candidate_models.append(inst)
 
-                    # Build list of candidate models to try
-                    candidate_models = [model]
-                    base = model.split(":")[0] if ":" in model else model
-                    if base not in candidate_models:
-                        candidate_models.append(base)
-                    
-                    for inst in installed_models:
-                        if inst not in candidate_models:
-                            candidate_models.append(inst)
-
-                    with httpx.Client(timeout=120.0) as client:
-                        resp = None
-                        for cand in candidate_models:
-                            try:
-                                res = client.post(
-                                    f"{working_endpoint}/api/generate",
-                                    json={"model": cand, "prompt": prompt, "stream": False}
-                                )
-                                if res.status_code == 200:
-                                    resp = res
-                                    successful_model = cand
+                        with httpx.Client(timeout=120.0) as client:
+                            resp = None
+                            for cand in candidate_models:
+                                try:
+                                    res = client.post(
+                                        f"{working_endpoint}/api/generate",
+                                        json={"model": cand, "prompt": prompt, "stream": False}
+                                    )
+                                    if res.status_code == 200:
+                                        resp = res
+                                        successful_model = cand
+                                        break
+                                    elif res.status_code == 404:
+                                        logger.warning(f"Ollama model '{cand}' not found on endpoint {working_endpoint}")
+                                except httpx.ConnectError:
+                                    logger.warning(f"Cannot connect to Ollama at {working_endpoint}")
                                     break
-                                elif res.status_code == 404:
-                                    logger.warning(f"Ollama model '{cand}' not found on endpoint {working_endpoint}")
-                            except httpx.ConnectError:
-                                logger.warning(f"Cannot connect to Ollama at {working_endpoint}")
-                                break
-                            except Exception as req_err:
-                                logger.warning(f"Ollama request failed for model '{cand}': {req_err}")
+                                except Exception as req_err:
+                                    logger.warning(f"Ollama request failed for model '{cand}': {req_err}")
 
-                        if resp and resp.status_code == 200:
-                            data = resp.json()
-                            answer = data.get("response", "").strip()
-                            used_llm = True
-                            llm_model = successful_model
-                        elif results:
-                            # Fallback: synthesize a readable answer from FAISS passages
+                            if resp and resp.status_code == 200:
+                                data = resp.json()
+                                answer = data.get("response", "").strip()
+                                used_llm = True
+                                llm_model = f"💻 Local Ollama ({successful_model})"
+                            elif results:
+                                answer = (
+                                    f"💻 [Local Mode Active]\n\n"
+                                    f"Here are the top retrieved passages from your indexed documents:\n\n"
+                                    + "\n\n".join(
+                                        f"📄 [{i+1}] {r.get('text', '')[:500]}"
+                                        for i, r in enumerate(results[:3])
+                                    )
+                                )
+                    except Exception as ollama_err:
+                        logger.info(f"Local Ollama generation unavailable ({ollama_err}).")
+                        if results:
                             answer = (
-                                f"⚠ Ollama ({model}) is not available. Make sure Ollama is running "
-                                f"(ollama serve) and the model is pulled (ollama pull {model}).\n\n"
-                                f"Here are the most relevant passages from your documents:\n\n"
+                                f"📄 Relevant passages from your local documents:\n\n"
                                 + "\n\n".join(
-                                    f"📄 [{i+1}] {r.get('text', '')[:500]}"
+                                    f"[{i+1}] {r.get('text', '')[:500]}"
                                     for i, r in enumerate(results[:3])
                                 )
                             )
-                except Exception as ollama_err:
-                    logger.info(f"Ollama generation unavailable ({ollama_err}).")
-                    if results:
-                        answer = (
-                            f"⚠ Could not reach Ollama for LLM synthesis.\n\n"
-                            f"Here are the most relevant passages from your documents:\n\n"
-                            + "\n\n".join(
-                                f"📄 [{i+1}] {r.get('text', '')[:500]}"
-                                for i, r in enumerate(results[:3])
-                            )
-                        )
 
             # Visual Snippet Extraction for Diagram / Region of Interest Cropping
             visual_snippet = None

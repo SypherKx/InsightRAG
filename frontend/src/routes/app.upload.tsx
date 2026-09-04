@@ -98,6 +98,8 @@ export function KnowledgeBaseStudioPage() {
   const [sessionLifetime, setSessionLifetime] = useState("3 Hours");
   const [embeddingModel, setEmbeddingModel] = useState("all-MiniLM-L6-v2");
   const [visionOCR, setVisionOCR] = useState(true);
+  const [processingMode, setProcessingMode] = useState("local");
+  const [cloudApiKey, setCloudApiKey] = useState("");
 
   // Upload States
   const [drag, setDrag] = useState(false);
@@ -181,7 +183,9 @@ export function KnowledgeBaseStudioPage() {
     setQuerying(true);
 
     try {
-      const res = await queryRAG(userQ, 5, 0.0, selectedLLM);
+      const isCloud = processingMode !== "local";
+      const modelToUse = isCloud ? processingMode : selectedLLM;
+      const res = await queryRAG(userQ, 5, 0.0, modelToUse, isCloud ? "cloud" : "local", cloudApiKey);
       setChatMessages((prev) => [
         ...prev,
         {
@@ -292,15 +296,71 @@ export function KnowledgeBaseStudioPage() {
           {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
+            {/* COMPUTE ARCHITECTURE (100% LOCAL VS ADVANCE TURBO CLOUD) */}
+            <div className="space-y-1.5 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                  COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
+                </label>
+                <span className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${
+                  processingMode === "local" ? "bg-emerald-400 text-black" : "bg-purple-400 text-black animate-pulse"
+                }`}>
+                  {processingMode === "local" ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)" : "⚡ CLOUD TURBO ACCELERATED"}
+                </span>
+              </div>
+              <select
+                value={processingMode}
+                onChange={(e) => setProcessingMode(e.target.value)}
+                className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+              >
+                <option value="local">
+                  💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
+                </option>
+                <option value="groq:llama-3.3-70b-versatile">
+                  ⚡ Advance Turbo Server (Groq Llama-3.3 70B • 500+ Page Fast Cloud Processing)
+                </option>
+                <option value="gemini:gemini-1.5-flash">
+                  🧠 High-Reasoning Cloud Server (Google Gemini 1.5 Flash • 1M Long Context)
+                </option>
+                <option value="openai:gpt-4o-mini">
+                  🚀 Enterprise Cloud Server (OpenAI GPT-4o-mini • High-Speed Multimodal)
+                </option>
+              </select>
+
+              {/* Dynamic Cloud Settings Box */}
+              {processingMode !== "local" ? (
+                <div className="p-3 bg-purple-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2 mt-2">
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
+                    <span className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-purple-600" />
+                      <span>⚡ Advance Cloud Mode Active — Large PDFs & books will process at lightning speed on cloud server.</span>
+                    </span>
+                  </div>
+                  <input
+                    type="password"
+                    value={cloudApiKey}
+                    onChange={(e) => setCloudApiKey(e.target.value)}
+                    placeholder="Enter Cloud API Key (Optional — leave blank to use preconfigured server key)"
+                    className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1">
+                  🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
+                </div>
+              )}
+            </div>
+
             {/* TEXT LLM MODEL */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                TEXT LLM MODEL
+                LOCAL LLM MODEL (OLLAMA)
               </label>
               <select
                 value={selectedLLM}
                 onChange={(e) => setSelectedLLM(e.target.value)}
-                className="w-full bg-white font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                disabled={processingMode !== "local"}
+                className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
               >
                 {specs.installed_models && specs.installed_models.length > 0 ? (
                   specs.installed_models.map((m: string) => (
@@ -503,8 +563,10 @@ export function KnowledgeBaseStudioPage() {
                 <span className="bg-emerald-400 text-black px-2 py-0.5 rounded border border-black">
                   ⚡ Embedding: {embeddingModel}
                 </span>
-                <span className="bg-black text-white px-2.5 py-0.5 rounded border border-black">
-                  LLM: {selectedLLM}
+                <span className={`px-2.5 py-0.5 rounded border border-black ${
+                  processingMode === "local" ? "bg-black text-white" : "bg-purple-600 text-white animate-pulse"
+                }`}>
+                  {processingMode === "local" ? `💻 Local: ${selectedLLM}` : `⚡ Cloud: ${processingMode.split(':')[0].toUpperCase()}`}
                 </span>
               </div>
             </div>

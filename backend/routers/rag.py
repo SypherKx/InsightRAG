@@ -176,6 +176,8 @@ async def query_rag(request: RAGQueryRequest):
         filters=request.filters,
         model=request.model or "llama3.2:3b",
         generate_answer=request.generate_answer,
+        processing_mode=request.processing_mode or "local",
+        api_key=request.api_key,
     )
 
     answer = result.get("answer")
