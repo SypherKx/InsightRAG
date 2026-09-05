@@ -7,17 +7,16 @@
 $ErrorActionPreference = "SilentlyContinue"
 $ProgressPreference    = "SilentlyContinue"
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 Write-Host ""
-Write-Host "======================================================================" -ForegroundColor Cyan
-Write-Host " ___ _   _ ____ ___ ____ _   _ _____   ____      _    ____ " -ForegroundColor Cyan
-Write-Host "|_ _| \ | / ___|_ _/ ___| | | |_   _| |  _ \    / \  / ___|" -ForegroundColor Cyan
-Write-Host " | ||  \| \___ \| | |  _| |_| | | |   | |_) |  / _ \| |  _ " -ForegroundColor Cyan
-Write-Host " | || |\  |___) | | |_| |  _  | | |   |  _ <  / ___ \ |_| |" -ForegroundColor Cyan
-Write-Host "|___|_| \_|____/___|____|_| |_| |_|   |_| \_\/_/   \_\____|" -ForegroundColor Cyan
-Write-Host "======================================================================" -ForegroundColor Cyan
-Write-Host "  [ INSIGHT RAG ] - Autonomous Multimodal Local RAG Engine" -ForegroundColor Yellow
-Write-Host "  100% Local Compute | Hardware Auto-Tuned | Instant Browser Launch" -ForegroundColor DarkGray
-Write-Host "======================================================================" -ForegroundColor Cyan
+Write-Host "██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ " -ForegroundColor Cyan
+Write-Host "██║████╗  ██║██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝    ██╔══██╗ ██╔══██╗ ██╔════╝ " -ForegroundColor Cyan
+Write-Host "██║██╔██╗ ██║███████╗██║██║  ███╗███████║   ██║       ██████╔╝ ███████║ ██║  ███╗" -ForegroundColor Cyan
+Write-Host "██║██║╚██╗██║╚════██║██║██║   ██║██╔══██║   ██║       ██╔══██╗ ██╔══██║ ██║   ██║" -ForegroundColor Cyan
+Write-Host "██║██║ ╚████║███████║██║╚██████╔╝██║  ██║   ██║       ██║  ██║ ██║  ██║ ╚██████╔╝" -ForegroundColor Cyan
+Write-Host "╚═╝╚═╝  ╚═══╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝       ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝ " -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Smart Target Directory Detection

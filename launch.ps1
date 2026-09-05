@@ -43,20 +43,18 @@ function Write-Step {
     cw " ]" "White"
 }
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # Banner
 Clear-Host
-Sep
 cw ""
-cw " ___ _   _ ____ ___ ____ _   _ _____   ____      _    ____ " "Cyan"
-cw "|_ _| \ | / ___|_ _/ ___| | | |_   _| |  _ \    / \  / ___|" "Cyan"
-cw " | ||  \| \___ \| | |  _| |_| | | |   | |_) |  / _ \| |  _ " "Cyan"
-cw " | || |\  |___) | | |_| |  _  | | |   |  _ <  / ___ \ |_| |" "Cyan"
-cw "|___|_| \_|____/___|____|_| |_| |_|   |_| \_\/_/   \_\____|" "Cyan"
-cw ""
-Sep
-cw "   [ INSIGHT RAG ]  -  Autonomous Multimodal Local RAG Engine" "Yellow"
-cw "   Zero-Budget  |  100% Local Compute  |  Hardware Accelerated" "DarkGray"
-Sep
+cw "██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ " "Cyan"
+cw "██║████╗  ██║██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝    ██╔══██╗ ██╔══██╗ ██╔════╝ " "Cyan"
+cw "██║██╔██╗ ██║███████╗██║██║  ███╗███████║   ██║       ██████╔╝ ███████║ ██║  ███╗" "Cyan"
+cw "██║██║╚██╗██║╚════██║██║██║   ██║██╔══██║   ██║       ██╔══██╗ ██╔══██║ ██║   ██║" "Cyan"
+cw "██║██║ ╚████║███████║██║╚██████╔╝██║  ██║   ██║       ██║  ██║ ██║  ██║ ╚██████╔╝" "Cyan"
+cw "╚═╝╚═╝  ╚═══╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝       ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝ " "Cyan"
 cw ""
 
 # 1. Python Check
