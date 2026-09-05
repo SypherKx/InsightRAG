@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 #  InsightRAG AI  -  Global 1-Line Web Installer & Launcher
 #  Run from ANY PowerShell terminal (no cd or folder needed):
 #    irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
