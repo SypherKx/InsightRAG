@@ -174,19 +174,22 @@ def wait_for_port(port, timeout=30):
     return False
 
 def main():
-    print(BANNER)
-    check_python()
+    skip_checks = "--skip-checks" in sys.argv
+    if not skip_checks:
+        print(BANNER)
+        check_python()
+        check_and_start_ollama()
+        check_hardware()
+        install_deps()
+        check_frontend()
+
     free_ports()
-    check_and_start_ollama()
-    check_hardware()
-    install_deps()
-    check_frontend()
 
     STUDIO_URL = "http://localhost:5173/app/upload"
 
     print(f"\n{'='*65}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| ⚡ InsightRAG Studio — 100% Local On-Device AI                |{ANSI_RESET}")
+    print(f"{ANSI_BOLD}| ⚡ Insight Forge Studio — 100% Local On-Device AI             |{ANSI_RESET}")
     print(f"{ANSI_BOLD}| 👉 Studio URL : {ANSI_CYAN}http://localhost:5173/app/upload{ANSI_RESET}{ANSI_BOLD}              |{ANSI_RESET}")
     print(f"{ANSI_BOLD}| (Auto-opening in your browser once ready...)                  |{ANSI_RESET}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
@@ -215,7 +218,7 @@ def main():
     ready = wait_for_port(5173, timeout=30)
 
     if ready:
-        print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
+        print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] Insight Forge Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
         print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
         try:
             if os.name == 'nt':
@@ -234,7 +237,7 @@ def main():
     try:
         vite_proc.wait()
     except KeyboardInterrupt:
-        print(f"\n{ANSI_CYAN}[*] Shutting down InsightRAG Studio. Goodbye!{ANSI_RESET}")
+        print(f"\n{ANSI_CYAN}[*] Shutting down Insight Forge Studio. Goodbye!{ANSI_RESET}")
         try:
             vite_proc.terminate()
         except Exception:

@@ -1,8 +1,8 @@
 @echo off
-title InsightRAG Studio Launcher
+title Insight Forge Studio Launcher
 cd /d "%~dp0"
 echo ======================================================================
-echo  [ INSIGHT RAG ] - Launching 100%% Local Multimodal RAG Factory...
+echo  [ INSIGHT FORGE ] - Launching 100%% Local Multimodal AI Engine...
 echo ======================================================================
 echo.
 

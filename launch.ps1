@@ -43,8 +43,13 @@ function Write-Step {
     cw " ]" "White"
 }
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+# Force UTF-8 in Console to prevent â–ˆ corruption
+try {
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+    $null = chcp 65001
+} catch {}
 
 # Banner
 Clear-Host
@@ -236,10 +241,10 @@ if (-not (Test-Path $nodeModules)) {
 # 7. Launch Servers (Multi-threaded Python Orchestrator)
 cw ""
 Sep
-cw "  ⚡ Launching InsightRAG Studio..." "Yellow"
+cw "  ⚡ Launching Insight Forge Studio..." "Yellow"
 cw "  👉 Studio URL: http://localhost:5173/app/upload" "Cyan"
 Sep
 cw ""
 
 $runnerScript = Join-Path $ProjectRoot "scripts\run_local.py"
-& $pyExe $runnerScript
+& $pyExe $runnerScript --skip-checks

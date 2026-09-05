@@ -5,10 +5,14 @@
 # ============================================================
 
 $ErrorActionPreference = "SilentlyContinue"
-$ProgressPreference    = "SilentlyContinue"
+$ProgressPreference = "SilentlyContinue"
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+try {
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+    $null = chcp 65001
+} catch {}
 
 Write-Host ""
 Write-Host "██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ " -ForegroundColor Cyan
@@ -53,7 +57,8 @@ if (-not $TargetDir) {
         $gitCmd = Get-Command git -ErrorAction SilentlyContinue
         if ($gitCmd) {
             git clone https://github.com/SypherKx/InsightRAG.git $TargetDir
-        } else {
+        }
+        else {
             Write-Host "[*] Downloading InsightRAG bundle..." -ForegroundColor Yellow
             $zipPath = "$env:TEMP\InsightRAG.zip"
             Invoke-WebRequest -Uri "https://github.com/SypherKx/InsightRAG/archive/refs/heads/main.zip" -OutFile $zipPath -UseBasicParsing
@@ -62,7 +67,8 @@ if (-not $TargetDir) {
                 Rename-Item -Path (Join-Path $HOME "InsightRAG-main") -NewName "InsightRAG" -Force
             }
         }
-    } else {
+    }
+    else {
         Write-Host "[*] Updating existing installation in: $TargetDir" -ForegroundColor Yellow
         Push-Location $TargetDir
         git pull origin main 2>&1 | Out-Null
@@ -75,7 +81,8 @@ try {
     $cliPath = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\insightrag.cmd"
     $cmdContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -File `"$TargetDir\launch.ps1`""
     Set-Content -Path $cliPath -Value $cmdContent -Force -ErrorAction SilentlyContinue
-} catch {}
+}
+catch {}
 
 Write-Host "[*] Project Location: $TargetDir" -ForegroundColor Green
 Write-Host "[*] Tip: You can now launch offline anytime by typing: insightrag" -ForegroundColor Yellow
