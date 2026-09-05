@@ -44,26 +44,7 @@ function Write-Step {
     cw " ]" "White"
 }
 
-# Force UTF-8 console encoding before rendering Unicode banner
-try {
-    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
-    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-    $OutputEncoding = [System.Text.Encoding]::UTF8
-    $null = chcp 65001
-} catch {}
-
-# Banner
-Clear-Host
-cw ""
-cw "██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ " "Red"
-cw "██║████╗  ██║██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝    ██╔══██╗ ██╔══██╗ ██╔════╝ " "Red"
-cw "██║██╔██╗ ██║███████╗██║██║  ███╗███████║   ██║       ██████╔╝ ███████║ ██║  ███╗" "Red"
-cw "██║██║╚██╗██║╚════██║██║██║   ██║██╔══██║   ██║       ██╔══██╗ ██╔══██║ ██║   ██║" "Red"
-cw "██║██║ ╚████║███████║██║╚██████╔╝██║  ██║   ██║       ██║  ██║ ██║  ██║ ╚██████╔╝" "Red"
-cw "╚═╝╚═╝  ╚═══╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝       ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝ " "Red"
-cw ""
-
-# 1. Python Check
+# 1. Python Check (must happen first so we can use Python to print Unicode banner)
 $pyExe = $null
 $pyVers = $null
 foreach ($candidate in @("python", "python3", "py")) {
@@ -74,14 +55,17 @@ foreach ($candidate in @("python", "python3", "py")) {
         break
     }
 }
-if ($pyExe) {
-    Write-Step "Checking Python installation ($pyVers)" "OK" "Green"
-}
-else {
+if (-not $pyExe) {
     cw "[!] Python 3.10+ not found. Install from https://python.org then re-run." "Red"
     Read-Host "Press Enter to exit"
     exit 1
 }
+
+# Banner (rendered via Python — .py files are always read as UTF-8, unlike .ps1)
+Clear-Host
+& $pyExe (Join-Path $ProjectRoot "scripts\print_banner.py")
+
+Write-Step "Checking Python installation ($pyVers)" "OK" "Green"
 
 # 2. Node / npm Check
 $npmCmd = $null
