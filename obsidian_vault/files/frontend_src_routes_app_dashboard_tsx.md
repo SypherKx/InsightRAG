@@ -17,7 +17,7 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-- `export function DashboardPage`
+*Core logic module*
 
 ---
 
@@ -26,5 +26,5 @@ tags:
 Module: frontend\src\routes\app.dashboard.tsx (354 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export function DashboardPage
+Exports: System Execution
 ```

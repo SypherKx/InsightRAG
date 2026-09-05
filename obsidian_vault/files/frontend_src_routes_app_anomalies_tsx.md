@@ -17,7 +17,7 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-- `export function AnomaliesPage`
+*Core logic module*
 
 ---
 
@@ -26,5 +26,5 @@ tags:
 Module: frontend\src\routes\app.anomalies.tsx (231 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export function AnomaliesPage
+Exports: System Execution
 ```

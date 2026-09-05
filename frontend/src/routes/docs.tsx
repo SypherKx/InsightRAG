@@ -33,7 +33,7 @@ export const Route = createFileRoute("/docs")({
   component: DocsPage,
 });
 
-export function DocsPage() {
+function DocsPage() {
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("quickstart");
 

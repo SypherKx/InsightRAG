@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/anomalies")({
   component: AnomaliesPage,
 });
 
-export function AnomaliesPage() {
+function AnomaliesPage() {
   const navigate = useNavigate();
   const [datasetsList, setDatasetsList] = useState<any[]>(mockDatasets);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>("ds_01");

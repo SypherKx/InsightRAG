@@ -17,7 +17,7 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-- `export function QueryPage`
+*Core logic module*
 
 ---
 
@@ -26,5 +26,5 @@ tags:
 Module: frontend\src\routes\app.query.tsx (396 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export function QueryPage
+Exports: System Execution
 ```

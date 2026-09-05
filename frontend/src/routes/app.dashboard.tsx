@@ -32,7 +32,7 @@ export const Route = createFileRoute("/app/dashboard")({
   component: DashboardPage,
 });
 
-export function DashboardPage() {
+function DashboardPage() {
   const [datasetsList, setDatasetsList] = useState<any[]>([]);
   const [anomaliesList, setAnomaliesList] = useState<any[]>([]);
   const [totalVectors, setTotalVectors] = useState<number>(0);

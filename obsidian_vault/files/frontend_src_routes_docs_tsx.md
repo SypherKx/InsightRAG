@@ -17,7 +17,7 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-- `export function DocsPage`
+*Core logic module*
 
 ---
 
@@ -26,5 +26,5 @@ tags:
 Module: frontend\src\routes\docs.tsx (855 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: export function DocsPage
+Exports: System Execution
 ```

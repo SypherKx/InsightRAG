@@ -38,7 +38,7 @@ interface IndexedFile {
   extension: string;
 }
 
-export function QueryPage() {
+function QueryPage() {
   const [q, setQ] = useState("");
   const selectedModel = LOCAL_MODEL;
   const [submitted, setSubmitted] = useState("");

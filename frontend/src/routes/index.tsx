@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
-export function LandingPage() {
+function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const cliCommand = `irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex`;

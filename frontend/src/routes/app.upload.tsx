@@ -87,7 +87,7 @@ const EMBEDDING_OPTIONS = [
   },
 ];
 
-export function KnowledgeBaseStudioPage() {
+function KnowledgeBaseStudioPage() {
   // Hardware Specs State
   const [specs, setSpecs] = useState<any>({
     cpu_threads: 12,
