@@ -12,7 +12,8 @@ try {
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
     $OutputEncoding = [System.Text.Encoding]::UTF8
     $null = chcp 65001
-} catch {}
+}
+catch {}
 
 Write-Host ""
 Write-Host "██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ " -ForegroundColor Cyan

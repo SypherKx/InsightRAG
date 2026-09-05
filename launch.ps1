@@ -1,4 +1,4 @@
-﻿# ============================================================
+﻿﻿# ============================================================
 #
 #  InsightRAG AI  -  Autonomous Multimodal RAG Engine
 #  1-Click Local Launcher & Installer
