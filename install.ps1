@@ -7,13 +7,6 @@
 $ErrorActionPreference = "SilentlyContinue"
 $ProgressPreference    = "SilentlyContinue"
 
-Write-Host ""
-Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  INSIGHT RAG  -  Autonomous Multimodal RAG Engine" -ForegroundColor Cyan
-Write-Host "  Setting up local environment..." -ForegroundColor Cyan
-Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host ""
-
 # 1. Smart Target Directory Detection
 $TargetDir = $null
 
@@ -40,16 +33,15 @@ if (-not $TargetDir) {
     }
 }
 
-# If not found anywhere, clone or download into $HOME\InsightRAG
+# If not found or needs fresh setup
 if (-not $TargetDir) {
     $TargetDir = Join-Path $HOME "InsightRAG"
     if (-not (Test-Path $TargetDir)) {
-        Write-Host "[*] Setting up InsightRAG in: $TargetDir" -ForegroundColor Yellow
+        Write-Host "[*] Setting up InsightRAG..." -ForegroundColor Yellow
         $gitCmd = Get-Command git -ErrorAction SilentlyContinue
         if ($gitCmd) {
-            git clone https://github.com/SypherKx/InsightRAG.git $TargetDir
+            git clone https://github.com/SypherKx/InsightRAG.git $TargetDir 2>&1 | Out-Null
         } else {
-            Write-Host "[*] Downloading InsightRAG bundle..." -ForegroundColor Yellow
             $zipPath = "$env:TEMP\InsightRAG.zip"
             Invoke-WebRequest -Uri "https://github.com/SypherKx/InsightRAG/archive/refs/heads/main.zip" -OutFile $zipPath -UseBasicParsing
             Expand-Archive -Path $zipPath -DestinationPath $HOME -Force
@@ -58,24 +50,37 @@ if (-not $TargetDir) {
             }
         }
     } else {
-        Write-Host "[*] Updating existing installation in: $TargetDir" -ForegroundColor Yellow
+        # Update existing folder to latest code
+        Push-Location $TargetDir
+        if (Test-Path (Join-Path $TargetDir ".git")) {
+            git pull origin main 2>&1 | Out-Null
+        } else {
+            $zipPath = "$env:TEMP\InsightRAG.zip"
+            Invoke-WebRequest -Uri "https://github.com/SypherKx/InsightRAG/archive/refs/heads/main.zip" -OutFile $zipPath -UseBasicParsing
+            Expand-Archive -Path $zipPath -DestinationPath $env:TEMP -Force
+            if (Test-Path "$env:TEMP\InsightRAG-main") {
+                Copy-Item -Path "$env:TEMP\InsightRAG-main\*" -Destination $TargetDir -Recurse -Force
+                Remove-Item -Path "$env:TEMP\InsightRAG-main" -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        Pop-Location
+    }
+} else {
+    # If in local repo, pull latest if git is present
+    if (Test-Path (Join-Path $TargetDir ".git")) {
         Push-Location $TargetDir
         git pull origin main 2>&1 | Out-Null
         Pop-Location
     }
 }
 
-# 2. Register Global Offline Command (Run 'insightrag' from anywhere without internet)
+# 2. Register Global Offline Command (Run 'insightrag' from anywhere)
 try {
     $cliPath = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\insightrag.cmd"
     $cmdContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -File `"$TargetDir\launch.ps1`""
     Set-Content -Path $cliPath -Value $cmdContent -Force -ErrorAction SilentlyContinue
 } catch {}
 
-Write-Host "[*] Project Location: $TargetDir" -ForegroundColor Green
-Write-Host "[*] Tip: You can now launch offline anytime by typing: insightrag" -ForegroundColor Yellow
-Write-Host "[*] Starting Engine & Web Studio..." -ForegroundColor Cyan
-Write-Host ""
-
+# 3. Launch via launch.ps1
 Set-Location $TargetDir
 powershell -ExecutionPolicy Bypass -File (Join-Path $TargetDir "launch.ps1")
