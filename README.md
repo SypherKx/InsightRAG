@@ -52,7 +52,7 @@
 Open **PowerShell** (no need to `cd` or navigate to any folder) and run:
 
 ```powershell
-irm https://insightrag.tech/install.ps1 | iex
+irm https://www.insightrag.tech/install.ps1 | iex
 ```
 
 > [!TIP]

@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const cliCommand = `irm https://insightrag.tech/install.ps1 | iex`;
+  const cliCommand = `irm https://www.insightrag.tech/install.ps1 | iex`;
 
   const handleCopyCLI = () => {
     navigator.clipboard.writeText(cliCommand);

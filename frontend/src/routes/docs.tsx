@@ -260,7 +260,7 @@ function DocsPage() {
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `irm https://insightrag.tech/install.ps1 | iex`,
+                        `irm https://www.insightrag.tech/install.ps1 | iex`,
                         "ps1",
                       )
                     }
@@ -279,7 +279,7 @@ function DocsPage() {
                   <code># Paste in PowerShell (No folder navigation needed)</code>
                   <br />
                   <code className="text-white">
-                    irm https://insightrag.tech/install.ps1 | iex
+                    irm https://www.insightrag.tech/install.ps1 | iex
                   </code>
                 </div>
               </div>

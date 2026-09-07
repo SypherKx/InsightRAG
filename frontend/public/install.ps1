@@ -1,7 +1,7 @@
 # ============================================================
 #  InsightRAG AI  -  Global 1-Line Web Installer & Launcher
 #  Run from ANY PowerShell terminal (no cd or folder needed):
-#    irm https://insightrag.tech/install.ps1 | iex
+#    irm https://www.insightrag.tech/install.ps1 | iex
 # ============================================================
 
 $ErrorActionPreference = "SilentlyContinue"
