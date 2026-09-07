@@ -12,7 +12,7 @@ tags:
 
 ## 🔗 Connected Dependencies & Imported Modules
 - Main Subsystem Hub: [[02_RAG_Pipeline_Hub]]
-- *Standalone / Top-level Module*
+- Imported Module: [[files/src_rag_cache_py]]
 
 ---
 
@@ -32,7 +32,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\embeddings.py (208 lines)
+Module: src\rag\embeddings.py (222 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class EmbeddingConfig:, class EmbeddingGenerator:, def __init__, def _lazy_init, def dimension

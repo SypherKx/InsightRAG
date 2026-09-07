@@ -71,35 +71,71 @@ class TextChunker:
         tokens = re.findall(r'\b\w+\b|[^\w\s]', text)
         return len(tokens)
 
-    def _split_by_separators(self, text: str) -> List[str]:
+    def _split_by_separators(self, text: str) -> List[Tuple[str, str]]:
         """
-        Split text by preferred separators while preserving coherence.
-
-        Args:
-            text: Text to split
+        Split text into logical sections and structural segments.
+        Preserves active section headers.
 
         Returns:
-            List of text segments
+            List of (section_title, segment_text)
         """
-        # First try splitting by double newlines (paragraphs)
-        segments = re.split(r'\n\s*\n', text)
+        # Detect headers: '# Header', '## Subheader', 'Chapter X', 'Section Y'
+        header_pattern = re.compile(r'^(#{1,6}\s+.*|[A-Z0-9\.\s]{3,40}:|Chapter\s+\d+.*|Section\s+\d+.*)$', re.MULTILINE | re.IGNORECASE)
+        
+        lines = text.split('\n')
+        sections: List[Tuple[str, str]] = []
+        current_section_title = ""
+        current_section_lines: List[str] = []
 
-        # If segments are too large, split further
-        result = []
-        for segment in segments:
-            segment = segment.strip()
-            if not segment:
-                continue
-
-            token_count = self._count_tokens(segment)
-
-            if token_count <= self.config.chunk_size * 1.5:
-                result.append(segment)
+        for line in lines:
+            stripped = line.strip()
+            if header_pattern.match(stripped) and len(stripped) < 80:
+                if current_section_lines:
+                    sec_text = "\n".join(current_section_lines).strip()
+                    if sec_text:
+                        sections.append((current_section_title, sec_text))
+                    current_section_lines = []
+                current_section_title = stripped.lstrip('#').strip()
+                current_section_lines.append(line)
             else:
-                # Split long segments by single newlines or sentences
-                sub_segments = self._separator_pattern.split(segment)
-                sub_segments = [s.strip() for s in sub_segments if s.strip()]
-                result.extend(sub_segments)
+                current_section_lines.append(line)
+
+        if current_section_lines:
+            sec_text = "\n".join(current_section_lines).strip()
+            if sec_text:
+                sections.append((current_section_title, sec_text))
+
+        # If no explicit headers were detected, treat the entire document as standard paragraphs
+        if not sections:
+            sections = [("", text)]
+
+        # Now subdivide each section into coherent paragraph segments
+        result: List[Tuple[str, str]] = []
+        for sec_title, sec_text in sections:
+            paragraphs = re.split(r'\n\s*\n', sec_text)
+            for p in paragraphs:
+                p_clean = p.strip()
+                if not p_clean:
+                    continue
+                token_count = self._count_tokens(p_clean)
+                if token_count <= self.config.chunk_size * 1.5:
+                    result.append((sec_title, p_clean))
+                else:
+                    # Break large paragraphs along sentence boundaries
+                    sentences = re.split(r'(?<=[.!?])\s+', p_clean)
+                    cur_group = []
+                    cur_tokens = 0
+                    for s in sentences:
+                        stoks = self._count_tokens(s)
+                        if cur_tokens + stoks > self.config.chunk_size and cur_group:
+                            result.append((sec_title, " ".join(cur_group)))
+                            cur_group = [s]
+                            cur_tokens = stoks
+                        else:
+                            cur_group.append(s)
+                            cur_tokens += stoks
+                    if cur_group:
+                        result.append((sec_title, " ".join(cur_group)))
 
         return result
 
@@ -127,21 +163,23 @@ class TextChunker:
 
         chunks = []
         current_chunk = []
+        current_section = ""
         current_token_count = 0
         chunk_index = 0
 
-        for segment in segments:
+        for sec_title, segment in segments:
             segment_tokens = self._count_tokens(segment)
+            if not current_section and sec_title:
+                current_section = sec_title
 
             # If segment itself is larger than max chunk size, force split
             if segment_tokens > self.config.max_chunk_size:
                 logger.warning(f"Segment too large ({segment_tokens} tokens), force splitting")
-                # Split the segment by character limit as last resort
-                char_limit = self.config.chunk_size * 4  # Approx 4 chars per token
+                char_limit = self.config.chunk_size * 4
                 for i in range(0, len(segment), char_limit):
                     forced_segment = segment[i:i + char_limit]
                     if forced_segment.strip():
-                        segments.append(forced_segment)
+                        segments.append((sec_title, forced_segment))
                 continue
 
             # Would adding this segment exceed the chunk size?
@@ -154,6 +192,7 @@ class TextChunker:
                 chunks.append({
                     "chunk_index": chunk_index,
                     "text": chunk_text,
+                    "section": current_section,
                     "token_count": current_token_count,
                     "segment_count": len(current_chunk)
                 })
@@ -172,10 +211,13 @@ class TextChunker:
 
                 current_chunk = overlap_segments
                 current_token_count = overlap_tokens
+                current_section = sec_title
 
             # Add current segment
             current_chunk.append(segment)
             current_token_count += segment_tokens
+            if sec_title:
+                current_section = sec_title
 
         # Don't forget the last chunk
         if current_chunk:
@@ -186,6 +228,7 @@ class TextChunker:
             chunks.append({
                 "chunk_index": chunk_index,
                 "text": chunk_text,
+                "section": current_section,
                 "token_count": current_token_count,
                 "segment_count": len(current_chunk)
             })

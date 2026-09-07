@@ -65,44 +65,69 @@ class RAGRetriever:
         start_time = time.time()
 
         try:
-            # 1. Generate query embedding
-            logger.debug(f"Generating embedding for query: {query.query[:50]}...")
+            # 1. Generate query embedding (with LRU cache)
+            emb_start = time.time()
             query_embedding = self.embedding_gen.generate_single(query.query)
+            emb_time_ms = (time.time() - emb_start) * 1000
 
             # 2. Define filter function based on query filters
             filter_func = self._build_filter(query.filters) if query.filters else None
 
-            # 3. Perform search
+            # 3. Dense FAISS Search (Candidate Pool: top_k * 3)
             search_start = time.time()
-            raw_results = self.vector_store.search(
+            candidate_k = max(query.top_k * 3, 10)
+            dense_results = self.vector_store.search(
                 query_embedding,
-                k=query.top_k * 2,  # Request more to allow for filtering
+                k=candidate_k,
                 filter_func=filter_func
             )
-            search_time = time.time() - search_start
+            dense_time_ms = (time.time() - search_start) * 1000
 
-            # 4. Filter by minimum score and limit to top_k
-            filtered_results = [
-                r for r in raw_results
-                if r["similarity_score"] >= query.min_score
-            ][:query.top_k]
+            # 4. Lexical / Keyword Search (BM25-style token matching)
+            lex_start = time.time()
+            lexical_results = self._lexical_search(
+                query.query,
+                k=candidate_k,
+                filter_func=filter_func
+            )
+            lex_time_ms = (time.time() - lex_start) * 1000
 
-            # 5. Format results with proper ranks
+            # 5. Reciprocal Rank Fusion (RRF)
+            fused_candidates = self._reciprocal_rank_fusion(
+                dense_results,
+                lexical_results,
+                k=60
+            )
+
+            # 6. Lightweight Semantic Reranking
+            rerank_start = time.time()
+            reranked_results = self._rerank_candidates(
+                query.query,
+                fused_candidates,
+                top_k=query.top_k,
+                min_score=query.min_score
+            )
+            rerank_time_ms = (time.time() - rerank_start) * 1000
+
+            # 7. Format results with proper ranks
             retrieval_results = self._format_results(
-                filtered_results,
+                reranked_results,
                 load_documents=load_documents
             )
 
-            # 6. Build response
+            # 8. Build response
             query_time = (time.time() - start_time) * 1000
             response = RAGResponse(
                 query=query.query,
                 results=retrieval_results,
-                total_results=len(raw_results),
+                total_results=len(fused_candidates),
                 query_time_ms=query_time,
                 metadata={
-                    "embedding_time_ms": 0,  # Could track separately
-                    "search_time_ms": search_time * 1000,
+                    "embedding_time_ms": round(emb_time_ms, 2),
+                    "dense_search_time_ms": round(dense_time_ms, 2),
+                    "lexical_search_time_ms": round(lex_time_ms, 2),
+                    "rerank_time_ms": round(rerank_time_ms, 2),
+                    "hybrid_candidates_count": len(fused_candidates),
                     "filters_applied": query.filters if query.filters else None,
                     "top_k_requested": query.top_k,
                     "org_id": query.org_id
@@ -110,8 +135,8 @@ class RAGRetriever:
             )
 
             logger.info(
-                f"Retrieved {len(retrieval_results)} results "
-                f"({len(raw_results)} total, {query_time:.1f}ms)"
+                f"Retrieved {len(retrieval_results)} high-precision results "
+                f"from {len(fused_candidates)} hybrid candidates in {query_time:.1f}ms"
             )
 
             return response
@@ -119,6 +144,105 @@ class RAGRetriever:
         except Exception as e:
             logger.exception(f"Retrieval failed for query: {query.query}")
             raise
+
+    def _lexical_search(self, query_text: str, k: int = 10,
+                        filter_func: Optional[Callable] = None) -> List[Dict[str, Any]]:
+        """
+        Fast lexical / keyword search across stored document chunks.
+        Matches exact terms, numbers, acronyms, and codes.
+        """
+        import re
+        tokens = set(re.findall(r'[a-zA-Z0-9_\-\.]{2,}', query_text.lower()))
+        if not tokens:
+            return []
+
+        matches = []
+        vector_metadata = getattr(self.vector_store, "metadata", {})
+        for faiss_id, meta in vector_metadata.items():
+            if filter_func and not filter_func(meta):
+                continue
+
+            text = meta.get("text", "").lower()
+            if not text:
+                continue
+
+            # Compute term overlap score
+            matched_count = sum(1 for t in tokens if t in text)
+            if matched_count > 0:
+                score = matched_count / len(tokens)
+                matches.append({
+                    "faiss_id": faiss_id,
+                    "chunk_id": meta.get("chunk_id", str(faiss_id)),
+                    "document_id": meta.get("document_id", ""),
+                    "org_id": meta.get("org_id", ""),
+                    "text": meta.get("text", ""),
+                    "metadata": meta.get("metadata", {}),
+                    "similarity_score": score
+                })
+
+        matches.sort(key=lambda x: x["similarity_score"], reverse=True)
+        return matches[:k]
+
+    def _reciprocal_rank_fusion(self, dense_results: List[Dict],
+                               lexical_results: List[Dict],
+                               k: int = 60) -> List[Dict[str, Any]]:
+        """
+        Reciprocal Rank Fusion (RRF) to merge Dense + Lexical candidate rankings.
+        """
+        scores: Dict[str, float] = {}
+        item_map: Dict[str, Dict] = {}
+
+        # 1. Score Dense Ranks
+        for rank, item in enumerate(dense_results):
+            cid = item["chunk_id"]
+            item_map[cid] = item
+            scores[cid] = scores.get(cid, 0.0) + (1.0 / (k + rank + 1))
+
+        # 2. Score Lexical Ranks
+        for rank, item in enumerate(lexical_results):
+            cid = item["chunk_id"]
+            if cid not in item_map:
+                item_map[cid] = item
+            scores[cid] = scores.get(cid, 0.0) + (1.0 / (k + rank + 1))
+
+        # 3. Sort by combined RRF score
+        fused = []
+        for cid, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+            entry = item_map[cid].copy()
+            entry["rrf_score"] = score
+            fused.append(entry)
+
+        return fused
+
+    def _rerank_candidates(self, query_text: str, candidate_pool: List[Dict],
+                           top_k: int = 4, min_score: float = 0.0) -> List[Dict[str, Any]]:
+        """
+        Lightweight Semantic Cross-Reranker.
+        Computes direct relevance between query and chunk contents to eliminate irrelevant context.
+        """
+        if not candidate_pool:
+            return []
+
+        # If candidates <= top_k, return directly
+        if len(candidate_pool) <= top_k:
+            return candidate_pool
+
+        try:
+            # Batch encode candidate texts and calculate cosine similarities with query
+            cand_texts = [c["text"] for c in candidate_pool]
+            cand_embs = self.embedding_gen.generate(cand_texts)
+            q_emb = self.embedding_gen.generate_single(query_text)
+            sims = self.embedding_gen.compute_similarities(q_emb, cand_embs)
+
+            for i, c in enumerate(candidate_pool):
+                c["similarity_score"] = float(sims[i])
+
+            candidate_pool.sort(key=lambda x: x["similarity_score"], reverse=True)
+            filtered = [c for c in candidate_pool if c["similarity_score"] >= min_score]
+            return filtered[:top_k]
+        except Exception as e:
+            logger.warning(f"Reranking fallback to RRF order: {e}")
+            return candidate_pool[:top_k]
 
     def _build_filter(self, filters: Dict[str, Any]) -> Callable[[Dict], bool]:
         """

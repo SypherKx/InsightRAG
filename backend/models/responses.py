@@ -150,12 +150,14 @@ class HealthResponse(BaseModel):
 class RAGQueryResponse(BaseModel):
     results: List[Dict[str, Any]] = []
     query: str = ""
+    rewritten_query: Optional[str] = None
     total_results: int = 0
     query_time_ms: float = 0.0
     answer: Optional[str] = None
     llm_model: Optional[str] = None
     used_llm: bool = False
     visual_snippet: Optional[Dict[str, Any]] = None
+    metrics: Optional[Dict[str, Any]] = None
 
 
 class RAGUploadResponse(BaseModel):

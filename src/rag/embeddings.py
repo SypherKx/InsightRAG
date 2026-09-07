@@ -129,7 +129,7 @@ class EmbeddingGenerator:
 
     def generate_single(self, text: str) -> np.ndarray:
         """
-        Generate embedding for a single text.
+        Generate embedding for a single text (with LRU query cache).
 
         Args:
             text: Text to embed
@@ -140,7 +140,21 @@ class EmbeddingGenerator:
         if not text or not text.strip():
             raise ValueError("Empty text provided for embedding")
 
-        return self.generate([text])[0]
+        try:
+            from .cache import query_cache
+            cached = query_cache.get(text)
+            if cached is not None:
+                return cached
+        except Exception:
+            cached = None
+
+        emb = self.generate([text])[0]
+        try:
+            from .cache import query_cache
+            query_cache.set(text, emb)
+        except Exception:
+            pass
+        return emb
 
     def similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """
