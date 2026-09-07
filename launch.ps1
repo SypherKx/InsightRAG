@@ -44,203 +44,70 @@ function Write-Step {
     cw " ]" "White"
 }
 
-# 1. Python Check (must happen first so we can use Python to print Unicode banner)
+# 1. Python Check & Auto-Installation
 $pyExe = $null
 $pyVers = $null
-foreach ($candidate in @("python", "python3", "py")) {
-    $v = & $candidate --version 2>&1
-    if ($LASTEXITCODE -eq 0 -and $v -match "Python (\d+\.\d+)") {
-        $pyExe = $candidate
-        $pyVers = $Matches[1]
-        break
+
+function Find-Python {
+    $candidates = @("python", "python3", "py", "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe", "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe", "C:\Program Files\Python311\python.exe", "C:\Program Files\Python312\python.exe")
+    foreach ($cand in $candidates) {
+        if ($cand -like "*\*" -and -not (Test-Path $cand)) { continue }
+        $v = & $cand --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $v -match "Python (\d+\.\d+)") {
+            return @{ exe = $cand; version = $Matches[1] }
+        }
     }
-}
-if (-not $pyExe) {
-    cw "[!] Python 3.10+ not found. Install from https://python.org then re-run." "Red"
-    Read-Host "Press Enter to exit"
-    exit 1
+    return $null
 }
 
-# Banner (rendered via Python — .py files are always read as UTF-8, unlike .ps1)
-Clear-Host
-& $pyExe (Join-Path $ProjectRoot "scripts\print_banner.py")
-
-Write-Step "Checking Python installation ($pyVers)" "OK" "Green"
-
-# 2. Node / npm Check
-$npmCmd = $null
-$chkNpm = Get-Command npm -ErrorAction SilentlyContinue
-$chkNpmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
-if ($chkNpm) {
-    $npmCmd = "npm"
-}
-elseif ($chkNpmCmd) {
-    $npmCmd = "npm.cmd"
-}
-
-if ($npmCmd) {
-    $npmVers = & $npmCmd --version 2>&1
-    Write-Step "Checking Node.js / npm (v$npmVers)" "OK" "Green"
-}
-else {
-    cw "[*] npm not found. Attempting install via winget..." "Yellow"
-    winget install OpenJS.NodeJS.LTS --silent --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+$foundPy = Find-Python
+if ($foundPy) {
+    $pyExe = $foundPy.exe
+    $pyVers = $foundPy.version
+} else {
+    cw "[*] Python 3.10+ not found on your system." "Yellow"
+    cw "[*] Automatically downloading and installing Python 3.11 for you..." "Yellow"
+    
+    # Try via winget first
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    $installedViaWinget = $false
+    if ($wingetCmd) {
+        cw "  -> Installing via Windows Package Manager (winget)..." "DarkGray"
+        winget install Python.Python.3.11 --silent --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+        $installedViaWinget = $true
+    }
+    
+    # If winget failed or not present, download official installer
     $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
-    $npmCmd = if (Get-Command npm.cmd -ErrorAction SilentlyContinue) { "npm.cmd" } else { "npm" }
-    $npmVers = & $npmCmd --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Step "Node.js installed (v$npmVers)" "OK" "Green"
+    $foundPy = Find-Python
+    if (-not $foundPy) {
+        cw "  -> Downloading official Python 3.11 standalone installer..." "DarkGray"
+        $pyInstaller = "$env:TEMP\python-3.11.9-amd64.exe"
+        try {
+            Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe" -OutFile $pyInstaller -UseBasicParsing
+            cw "  -> Running silent installation (adding to PATH)..." "DarkGray"
+            Start-Process -FilePath $pyInstaller -ArgumentList "/quiet InstallAllUsers=0 PrependPath=1 Include_pip=1" -Wait
+        } catch {
+            cw "[!] Error downloading Python installer: $_" "Red"
+        }
     }
-    else {
-        cw "[!] Could not install Node.js. Please install from https://nodejs.org" "Red"
+
+    # Refresh environment PATH
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";$env:LOCALAPPDATA\Programs\Python\Python311;$env:LOCALAPPDATA\Programs\Python\Python311\Scripts;$env:LOCALAPPDATA\Programs\Python\Python312;$env:LOCALAPPDATA\Programs\Python\Python312\Scripts"
+    
+    $foundPy = Find-Python
+    if ($foundPy) {
+        $pyExe = $foundPy.exe
+        $pyVers = $foundPy.version
+        cw "[OK] Python ($pyVers) successfully installed!" "Green"
+    } else {
+        cw "[!] Python installation could not be completed automatically." "Red"
+        cw "    Please install Python 3.10+ from https://www.python.org/downloads/ (check 'Add python.exe to PATH') and re-run." "Yellow"
         Read-Host "Press Enter to exit"
         exit 1
     }
 }
 
-# 3. Ollama Check
-$ollamaRunning = $false
-try {
-    $r = Invoke-WebRequest -Uri "http://127.0.0.1:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-    if ($r.StatusCode -eq 200) {
-        Write-Step "Checking Ollama AI Engine installation" "OK" "Green"
-        Write-Step "Checking Ollama local service" "ACTIVE" "Green"
-        $ollamaRunning = $true
-    }
-}
-catch {
-    $ollamaCmd = Get-Command ollama -ErrorAction SilentlyContinue
-    $ollamaSrc = if ($ollamaCmd) { $ollamaCmd.Source } else { $null }
-    $ollamaExe = $null
-
-    $candidates = @(
-        $ollamaSrc,
-        "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe",
-        "C:\Program Files\Ollama\ollama.exe"
-    )
-    foreach ($p in $candidates) {
-        if ($p -and (Test-Path $p)) {
-            $ollamaExe = $p
-            break
-        }
-    }
-
-    if ($ollamaExe) {
-        Write-Step "Checking Ollama AI Engine installation" "OK" "Green"
-        Write-Step "Checking Ollama local service" "STARTING SERVICE" "Yellow"
-        Start-Process -FilePath $ollamaExe -ArgumentList "serve" -WindowStyle Hidden
-        Start-Sleep -Seconds 2
-        cw "[*] Ollama process launched in background." "Green"
-        $ollamaRunning = $true
-    }
-    else {
-        cw "[*] Ollama not found - downloading installer..." "Yellow"
-        $installer = "$env:TEMP\OllamaSetup.exe"
-        Invoke-WebRequest -Uri "https://ollama.com/download/OllamaSetup.exe" -OutFile $installer -UseBasicParsing
-        cw "[*] Installing Ollama silently..." "Yellow"
-        Start-Process -FilePath $installer -ArgumentList "/S" -Wait
-        $ollamaExe = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
-        if (Test-Path $ollamaExe) {
-            Start-Process -FilePath $ollamaExe -ArgumentList "serve" -WindowStyle Hidden
-            Start-Sleep -Seconds 2
-            Write-Step "Ollama installed and started" "OK" "Green"
-            $ollamaRunning = $true
-        }
-        else {
-            cw "[!] Ollama install skipped - continuing with local fallback." "Yellow"
-        }
-    }
-}
-
-# 4. Hardware Check
-$threads = [System.Environment]::ProcessorCount
-$gpuMode = "Standard Multi-Core CPU Mode ($threads Threads)"
-try {
-    $gpu = (& $pyExe -c "import torch; print(torch.cuda.get_device_name(0))" 2>&1)
-    if ($LASTEXITCODE -eq 0 -and $gpu -notmatch "Error" -and $gpu.Trim()) {
-        $gpuMode = "NVIDIA CUDA GPU [ $gpu ]"
-    }
-}
-catch {}
-Write-Step "Hardware Architecture: $gpuMode" "ACTIVE" "Green"
-cw ""
-
-# 5. Python Dependencies
-cw "[*] Downloading & checking dependencies with live status:" "Cyan"
-DashSep
-
-$pyPackages = @(
-    @{ import = "fastapi"; pip = "fastapi" },
-    @{ import = "uvicorn"; pip = "uvicorn[standard]" },
-    @{ import = "pydantic"; pip = "pydantic" },
-    @{ import = "httpx"; pip = "httpx" },
-    @{ import = "pandas"; pip = "pandas" },
-    @{ import = "numpy"; pip = "numpy" },
-    @{ import = "scipy"; pip = "scipy" },
-    @{ import = "chardet"; pip = "chardet" },
-    @{ import = "multipart"; pip = "python-multipart" },
-    @{ import = "psutil"; pip = "psutil" },
-    @{ import = "sqlalchemy"; pip = "sqlalchemy" },
-    @{ import = "PIL"; pip = "pillow" },
-    @{ import = "sentence_transformers"; pip = "sentence-transformers" },
-    @{ import = "faiss"; pip = "faiss-cpu" },
-    @{ import = "pypdf"; pip = "pypdf" },
-    @{ import = "docx"; pip = "python-docx" }
-)
-
-$toInstall = @()
-foreach ($pkg in $pyPackages) {
-    $chk = & $pyExe -c "import $($pkg.import)" 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $name = $pkg.pip.PadRight(30)
-        cw "  + $name  [ INSTALLED ]" "Green"
-    }
-    else {
-        $name = $pkg.pip.PadRight(30)
-        cw "  - $name  [ QUEUED ]" "Yellow"
-        $toInstall += $pkg.pip
-    }
-}
-
-if ($toInstall.Count -gt 0) {
-    cw ""
-    cw "  Installing $($toInstall.Count) package(s)..." "Yellow"
-    DashSep
-    & $pyExe -m pip install @toInstall 2>&1 | ForEach-Object {
-        if ($_ -match "^(Collecting|Downloading|Installing|Successfully)") {
-            cw "  $_" "DarkGray"
-        }
-    }
-    cw ""
-    cw "[OK] All Python packages installed!" "Green"
-}
-else {
-    cw ""
-    cw "[OK] All Python packages already installed!" "Green"
-}
-
-# 6. Frontend Dependencies
-$nodeModules = Join-Path $ProjectRoot "frontend\node_modules"
-if (-not (Test-Path $nodeModules)) {
-    cw ""
-    cw "[*] Installing frontend npm packages (first run - ~1 min)..." "Yellow"
-    DashSep
-    Push-Location (Join-Path $ProjectRoot "frontend")
-    & $npmCmd install 2>&1 | ForEach-Object { cw "  $_" "DarkGray" }
-    Pop-Location
-    cw "[OK] Frontend packages installed!" "Green"
-}
-else {
-    Write-Step "Checking frontend npm packages" "OK" "Green"
-}
-
-# 7. Launch Servers (Multi-threaded Python Orchestrator)
-cw ""
-Sep
-cw "  ⚡ Launching InsightRAG Studio..." "Yellow"
-cw "  👉 Studio URL: http://localhost:5173/app/upload" "Cyan"
-Sep
-cw ""
-
+# 3. Launch Python Orchestrator (handles banner, Ollama, packages, and servers)
 $runnerScript = Join-Path $ProjectRoot "scripts\run_local.py"
 & $pyExe $runnerScript

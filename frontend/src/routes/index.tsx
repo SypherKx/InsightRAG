@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const cliCommand = `irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex`;
+  const cliCommand = `irm https://insightrag.tech/install.ps1 | iex`;
 
   const handleCopyCLI = () => {
     navigator.clipboard.writeText(cliCommand);
@@ -59,7 +59,7 @@ function LandingPage() {
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
-              <span className="bg-black text-white font-black font-mono text-base sm:text-lg md:text-xl px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] italic tracking-tighter group-hover:bg-[#ffe600] group-hover:text-black transition-colors">
+              <span className="bg-[#ffe600] text-black font-black font-mono text-base sm:text-lg md:text-xl px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] italic tracking-tighter hover:bg-yellow-400 transition-colors">
                 InsightRAG
               </span>
             </Link>

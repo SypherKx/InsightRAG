@@ -52,7 +52,7 @@
 Open **PowerShell** (no need to `cd` or navigate to any folder) and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
+irm https://insightrag.tech/install.ps1 | iex
 ```
 
 > [!TIP]

@@ -115,7 +115,7 @@ function DocsPage() {
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="bg-black text-white font-black font-mono text-base sm:text-lg px-3 py-1 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] italic tracking-tighter"
+              className="bg-[#ffe600] text-black hover:bg-yellow-400 font-black font-mono text-base sm:text-lg px-3 py-1 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] italic tracking-tighter transition-colors"
             >
               InsightRAG
             </Link>
@@ -260,7 +260,7 @@ function DocsPage() {
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex`,
+                        `irm https://insightrag.tech/install.ps1 | iex`,
                         "ps1",
                       )
                     }
@@ -279,7 +279,7 @@ function DocsPage() {
                   <code># Paste in PowerShell (No folder navigation needed)</code>
                   <br />
                   <code className="text-white">
-                    irm https://raw.githubusercontent.com/SypherKx/InsightRAG/main/install.ps1 | iex
+                    irm https://insightrag.tech/install.ps1 | iex
                   </code>
                 </div>
               </div>

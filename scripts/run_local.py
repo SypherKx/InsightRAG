@@ -103,17 +103,36 @@ def check_hardware():
 def install_deps():
     print(f"\n{ANSI_BOLD}[*] Checking & downloading dependencies with live status:{ANSI_RESET}")
     print("-" * 65)
-    required = ["fastapi", "uvicorn", "pydantic", "httpx", "pandas", "numpy", "scipy", "chardet", "python-multipart", "psutil"]
+    packages = [
+        ("fastapi", "fastapi"),
+        ("uvicorn", "uvicorn[standard]"),
+        ("pydantic", "pydantic"),
+        ("httpx", "httpx"),
+        ("pandas", "pandas"),
+        ("numpy", "numpy"),
+        ("scipy", "scipy"),
+        ("chardet", "chardet"),
+        ("multipart", "python-multipart"),
+        ("psutil", "psutil"),
+        ("sqlalchemy", "sqlalchemy"),
+        ("PIL", "pillow"),
+        ("sentence_transformers", "sentence-transformers"),
+        ("faiss", "faiss-cpu"),
+        ("pypdf", "pypdf"),
+        ("docx", "python-docx"),
+    ]
     missing = []
-    for pkg in required:
+    for mod_name, pip_name in packages:
         try:
-            __import__(pkg.replace("-", "_"))
-            print(f"  {ANSI_GREEN}+ {pkg:<30} [ INSTALLED ]{ANSI_RESET}")
+            __import__(mod_name)
+            print(f"  {ANSI_GREEN}+ {pip_name:<30} [ INSTALLED ]{ANSI_RESET}")
         except ImportError:
-            missing.append(pkg)
-            print(f"  {ANSI_YELLOW}- {pkg:<30} [ INSTALLING ]{ANSI_RESET}")
+            missing.append(pip_name)
+            print(f"  {ANSI_YELLOW}- {pip_name:<30} [ INSTALLING ]{ANSI_RESET}")
     if missing:
+        print(f"\n{ANSI_YELLOW}[*] Installing {len(missing)} missing package(s)...{ANSI_RESET}")
         subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
+        print(f"{ANSI_GREEN}[OK] All Python packages successfully installed!{ANSI_RESET}")
 def free_ports():
     """Ensure ports 8000 and 5173 are free from zombie processes before startup."""
     try:
@@ -189,7 +208,7 @@ def main():
 
     print(f"\n{'='*65}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| ⚡ Insight Forge Studio — 100% Local On-Device AI             |{ANSI_RESET}")
+    print(f"{ANSI_BOLD}| ⚡ InsightRAG AI Studio — 100% Local On-Device AI             |{ANSI_RESET}")
     print(f"{ANSI_BOLD}| 👉 Studio URL : {ANSI_CYAN}http://localhost:5173/app/upload{ANSI_RESET}{ANSI_BOLD}              |{ANSI_RESET}")
     print(f"{ANSI_BOLD}| (Auto-opening in your browser once ready...)                  |{ANSI_RESET}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
@@ -218,7 +237,7 @@ def main():
     ready = wait_for_port(5173, timeout=30)
 
     if ready:
-        print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] Insight Forge Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
+        print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
         print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
         try:
             if os.name == 'nt':
@@ -237,7 +256,7 @@ def main():
     try:
         vite_proc.wait()
     except KeyboardInterrupt:
-        print(f"\n{ANSI_CYAN}[*] Shutting down Insight Forge Studio. Goodbye!{ANSI_RESET}")
+        print(f"\n{ANSI_CYAN}[*] Shutting down InsightRAG Studio. Goodbye!{ANSI_RESET}")
         try:
             vite_proc.terminate()
         except Exception:
