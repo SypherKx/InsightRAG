@@ -20,7 +20,8 @@ class QueryProcessor:
     VISUAL_KEYWORDS = {
         "diagram", "diagrams", "figure", "figures", "chart", "charts", "graph", "graphs",
         "plot", "image", "images", "visual", "visuals", "drawing", "circuit", "architecture",
-        "layout", "schematic", "blueprint", "illustration", "preview"
+        "layout", "schematic", "blueprint", "illustration", "preview", "photo", "photos",
+        "pic", "pics", "picture", "pictures", "snapshot", "crop", "screenshot", "snippet"
     }
 
     PRONOUNS = {"it", "its", "this", "that", "these", "those", "they", "them", "such", "the same"}
@@ -78,7 +79,8 @@ class QueryProcessor:
             return {"intent": "analytical", "top_k": 4, "is_visual": False, "target_page": None, "is_page_lookup": False}
             
         if re.search(r'\b(section|chapter|part|model|v\d+|\d+\.\d+)\b', q_lower):
-            return {"intent": "lookup", "top_k": 3, "is_visual": False, "target_page": None, "is_page_lookup": False}
+            has_view_verb = bool(re.search(r'\b(show|give|display|preview|crop|see|view|extract)\b', q_lower))
+            return {"intent": "lookup", "top_k": 4, "is_visual": is_visual or has_view_verb, "target_page": None, "is_page_lookup": False}
 
         return {"intent": "standard", "top_k": 4, "is_visual": False, "target_page": None, "is_page_lookup": False}
 

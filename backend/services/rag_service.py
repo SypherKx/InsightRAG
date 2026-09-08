@@ -222,12 +222,16 @@ class RAGService:
                         f"CRITICAL: The user asked about Page {target_page}. You MUST describe what is on Page {target_page} using ONLY the context below. Do NOT say you cannot determine or that context is missing. The context IS the page content. "
                         if target_page else ""
                     )
+                    visual_instruction = (
+                        "- When the user asks for a photo, image, picture, preview, or snapshot of a section or part of the document (e.g. 'photo of the project part'), DO NOT say 'there is no photo' or that you cannot provide images. Succinctly explain the content of that requested section/part, and note that the targeted visual crop snapshot is rendered below.\n"
+                    )
                     prompt = (
                         f"You are InsightRAG AI, a high-precision multimodal document intelligence assistant.\n"
                         f"Answer the user's question completely, accurately, and factually based on the provided document context below.\n"
                         f"The context contains page-by-page text content, structured markdown tables, and visual diagram/figure descriptions.\n"
                         f"- When citing data, numbers, or facts, reference the specific Page, Table, or Figure/Diagram.\n"
                         f"- Synthesize both the textual details and the visual diagram descriptions to give a clear, comprehensive answer.\n"
+                        f"{visual_instruction}"
                         f"{page_instruction}\n\n"
                         f"{history_str}"
                         f"DOCUMENT CONTEXT:\n{context_str}\n\n"
@@ -452,7 +456,7 @@ class RAGService:
                     import urllib.parse
                     encoded_query = urllib.parse.quote(query)
                     crop_url = f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}&query={encoded_query}"
-                    caption = f"Targeted Page {page_num} Preview ({doc_name})" if target_page else f"Targeted Diagram/Figure Part — Page {page_num} ({doc_name})"
+                    caption = f"Targeted Page {page_num} Preview ({doc_name})" if target_page else f"Focused Section / Diagram ROI — Page {page_num} ({doc_name})"
                     visual_snippet = {
                         "has_image": True,
                         "crop_url": crop_url,
@@ -540,7 +544,7 @@ class RAGService:
                     "crop_url": f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}&query={urllib.parse.quote(query)}",
                     "doc_name": doc_name,
                     "page": page_num,
-                    "caption": f"Targeted Page {page_num} Preview ({doc_name})" if target_page else f"Targeted Preview — Page {page_num} ({doc_name})"
+                    "caption": f"Targeted Page {page_num} Preview ({doc_name})" if target_page else f"Focused Section / Diagram ROI — Page {page_num} ({doc_name})"
                 }
 
         yield {
@@ -568,8 +572,12 @@ class RAGService:
                 f"CRITICAL: The user asked about Page {target_page}. Describe what is on Page {target_page} using the context below. Do NOT say you cannot determine. "
                 if target_page else ""
             )
+            visual_instruction = (
+                "NOTE: If the user asks for a photo, picture, image, preview, or visual snapshot of any section or part of the document (e.g., 'photo of the project part'), DO NOT say 'there is no photo' or that you cannot provide images. Succinctly explain what is in that section/part from the context, and note that the targeted visual snapshot is rendered below.\n"
+            )
             prompt = (
                 f"You are InsightRAG AI. Answer ONLY from document context below. Never say 'I cannot determine'.\n\n"
+                f"{visual_instruction}"
                 f"{page_instruction}"
                 f"{history_str}"
                 f"DOCUMENT CONTEXT:\n{chr(10).join(context_blocks)}\n\n"

@@ -129,12 +129,26 @@ async def get_diagram_crop(
     If query or diagram terms are present, automatically isolates the exact targeted figure/diagram bounding box.
     Returns high-resolution PNG image bytes.
     """
+    # Safely coerce query parameters
+    try:
+        f_x0 = float(x0) if not hasattr(x0, 'default') else 0.0
+        f_y0 = float(y0) if not hasattr(y0, 'default') else 0.0
+        f_x1 = float(x1) if not hasattr(x1, 'default') else 0.0
+        f_y1 = float(y1) if not hasattr(y1, 'default') else 0.0
+        f_padding = int(padding) if not hasattr(padding, 'default') else 35
+        f_dpi = int(dpi) if not hasattr(dpi, 'default') else 175
+        f_page = int(page) if not hasattr(page, 'default') else 1
+    except (ValueError, TypeError):
+        f_x0, f_y0, f_x1, f_y1, f_padding, f_dpi, f_page = 0.0, 0.0, 0.0, 0.0, 35, 175, 1
+
+    clean_query = str(query).strip() if (query is not None and not hasattr(query, 'default')) else ""
+
     from ..utils.security import sanitize_filename, validate_safe_path
 
     upload_dir = Path("./uploads")
     
     # 1. Sanitize input doc_name
-    safe_doc_name = sanitize_filename(doc_name)
+    safe_doc_name = sanitize_filename(str(doc_name))
     target_candidate = upload_dir / safe_doc_name
 
     # 2. Enforce strict directory containment
@@ -152,97 +166,161 @@ async def get_diagram_crop(
         try:
             import fitz  # PyMuPDF
             doc = fitz.open(str(safe_path))
-            page_idx = min(max(0, page - 1), len(doc) - 1)
+            page_idx = min(max(0, f_page - 1), len(doc) - 1)
             pdf_page = doc[page_idx]
 
             # Mode A: User supplied explicit bounding box coordinates
-            if x1 > x0 and y1 > y0:
+            if f_x1 > f_x0 and f_y1 > f_y0:
                 rect = fitz.Rect(
-                    max(0, x0 - padding),
-                    max(0, y0 - padding),
-                    min(pdf_page.rect.width, x1 + padding),
-                    min(pdf_page.rect.height, y1 + padding)
+                    max(0, f_x0 - f_padding),
+                    max(0, f_y0 - f_padding),
+                    min(pdf_page.rect.width, f_x1 + f_padding),
+                    min(pdf_page.rect.height, f_y1 + f_padding)
                 )
             else:
-                # Mode B: Intelligent Diagram / Figure Region Localization
+                # Mode B: Multi-tiered Intelligent Region of Interest (ROI) Localization
                 target_rect = None
                 
-                # 1. Collect all vector drawings on page
+                STOPWORDS = {
+                    'the', 'a', 'an', 'is', 'of', 'od', 'and', 'or', 'in', 'to', 'for', 'with',
+                    'diagram', 'diagrams', 'figure', 'figures', 'chart', 'charts', 'show', 'give',
+                    'me', 'what', 'how', 'part', 'image', 'images', 'photo', 'photos', 'picture',
+                    'pictures', 'pic', 'pics', 'preview', 'crop', 'snapshot', 'document', 'doc',
+                    'pdf', 'file', 'page', 'section', 'portion', 'content', 'view', 'display',
+                    'take', 'send', 'tell', 'about', 'write', 'extract', 'find', 'please', 'can',
+                    'you', 'there', 'this', 'that', 'from', 'here'
+                }
+                
+                import re
+                keywords = []
+                if clean_query:
+                    keywords = [w.lower() for w in re.findall(r'[a-zA-Z0-9]+', clean_query) if len(w) > 1 and w.lower() not in STOPWORDS]
+
+                # 1. Visual Elements check (Images & Vector Diagrams)
                 drawings = pdf_page.get_drawings()
-                drawing_rects = [d["rect"] for d in drawings if d.get("rect") and (d["rect"].width * d["rect"].height) > 600]
-
-                # 2. Collect all embedded images on page
+                drawing_rects = [d["rect"] for d in drawings if d.get("rect") and (d["rect"].width * d["rect"].height) > 1500 and d["rect"].height > 30 and d["rect"].width > 50]
                 image_infos = pdf_page.get_image_info(xrefs=True)
-                image_rects = [fitz.Rect(img["bbox"]) for img in image_infos if img.get("bbox") and (fitz.Rect(img["bbox"]).width * fitz.Rect(img["bbox"]).height) > 600]
-
+                image_rects = [fitz.Rect(img["bbox"]) for img in image_infos if img.get("bbox") and (fitz.Rect(img["bbox"]).width * fitz.Rect(img["bbox"]).height) > 1500]
                 all_visual_rects = drawing_rects + image_rects
 
-                # 3. If query provided, search for targeted figure/diagram keyword location
-                matched_hit_rects = []
-                if query:
-                    import re
-                    # Extract meaningful search terms (remove stopwords)
-                    stopwords = {"the", "a", "an", "is", "of", "and", "or", "in", "to", "for", "with", "diagram", "diagrams", "figure", "figures", "chart", "show", "give", "me", "what", "how", "part", "image", "draw", "preview"}
-                    keywords = [w for w in re.findall(r'[a-zA-Z0-9]+', query.lower()) if len(w) > 2 and w not in stopwords]
+                # Priority 1: Diagram / Figure / Chart / Table Localization
+                is_diagram_query = bool(clean_query and any(w in clean_query.lower() for w in ['diagram', 'figure', 'fig.', 'chart', 'circuit', 'graph', 'schematic', 'table']))
+                if is_diagram_query and all_visual_rects:
+                    caption_hits = []
+                    for kw in keywords[:3]:
+                        caption_hits.extend(pdf_page.search_for(kw))
+                    for cap in ['figure', 'fig.', 'diagram', 'chart', 'table', 'circuit']:
+                        caption_hits.extend(pdf_page.search_for(cap))
                     
-                    # Search for keywords and figure/diagram captions
-                    for kw in keywords[:4]:
-                        hits = pdf_page.search_for(kw)
-                        matched_hit_rects.extend(hits)
-                    
-                    # Also search for explicit Figure / Diagram captions
-                    for caption_term in ["figure", "fig.", "diagram", "table", "illustration", "circuit"]:
-                        matched_hit_rects.extend(pdf_page.search_for(caption_term))
+                    if caption_hits:
+                        best_vis = None
+                        min_dist = float('inf')
+                        for hit in caption_hits:
+                            for v in all_visual_rects:
+                                dist = ((hit.x0 - v.x0)**2 + (hit.y0 - v.y0)**2)**0.5
+                                if dist < min_dist:
+                                    min_dist = dist
+                                    best_vis = v
+                        if best_vis and min_dist < 400:
+                            target_rect = fitz.Rect(
+                                max(0, best_vis.x0 - f_padding),
+                                max(0, best_vis.y0 - f_padding),
+                                min(pdf_page.rect.width, best_vis.x1 + f_padding),
+                                min(pdf_page.rect.height, best_vis.y1 + f_padding)
+                            )
+                    if target_rect is None and all_visual_rects:
+                        target_rect = max(all_visual_rects, key=lambda r: r.width * r.height)
 
-                # 4. If search hits found, find the closest visual element (drawing or image)
-                if matched_hit_rects and all_visual_rects:
-                    best_visual = None
-                    min_dist = float("inf")
-                    for hit in matched_hit_rects:
-                        for vrect in all_visual_rects:
-                            # Distance between hit center and visual rect center
-                            dist = ((hit.x0 - vrect.x0)**2 + (hit.y0 - vrect.y0)**2)**0.5
-                            if dist < min_dist:
-                                min_dist = dist
-                                best_visual = vrect
-                    if best_visual and min_dist < 400:
-                        # Include caption in the crop bounding box
+                # Priority 2: Intelligent Document Section / Heading Bounding Box
+                # (Resumes, Reports, Scientific Papers, Layout-driven PDFs)
+                if target_rect is None and keywords:
+                    blocks = [b for b in pdf_page.get_text("blocks") if b[6] == 0 and b[4].strip()]
+                    
+                    SECTION_TERMS = {
+                        'project', 'projects', 'experience', 'education', 'skill', 'skills', 
+                        'competencies', 'summary', 'certification', 'certifications', 
+                        'publication', 'publications', 'reference', 'objective', 'work', 
+                        'background', 'methodology', 'results', 'discussion', 'conclusion', 
+                        'abstract', 'overview', 'interests', 'achievements', 'awards'
+                    }
+                    
+                    headings = []
+                    for i, b in enumerate(blocks):
+                        txt = b[4].strip()
+                        lines = [l.strip() for l in txt.split('\n') if l.strip()]
+                        clean_txt = re.sub(r'[^a-zA-Z0-9\s]', '', txt).strip()
+                        words_in_b = [w.lower() for w in clean_txt.split()]
+                        
+                        is_heading = False
+                        if len(lines) <= 2 and len(txt) <= 80:
+                            if clean_txt.isupper() and len(clean_txt) >= 3:
+                                is_heading = True
+                            elif any(t in words_in_b for t in SECTION_TERMS):
+                                is_heading = True
+                        if is_heading:
+                            headings.append((i, b, txt))
+                            
+                    # Check if any query keyword matches a section heading
+                    matched_h_idx = None
+                    for kw in keywords:
+                        for idx, (b_idx, b, txt) in enumerate(headings):
+                            txt_lower = txt.lower()
+                            if kw in txt_lower or any(kw == w for w in re.findall(r'\b\w+\b', txt_lower)):
+                                matched_h_idx = idx
+                                break
+                        if matched_h_idx is not None:
+                            break
+                            
+                    if matched_h_idx is not None:
+                        curr_b_idx, curr_b, curr_txt = headings[matched_h_idx]
+                        start_y = curr_b[1]  # y0 of heading
+                        
+                        # Section boundary extends to the start of the next section heading
+                        if matched_h_idx + 1 < len(headings):
+                            next_b_idx, next_b, next_txt = headings[matched_h_idx + 1]
+                            end_y = next_b[1]
+                        else:
+                            end_y = blocks[-1][3]
+                            
                         target_rect = fitz.Rect(
-                            min(best_visual.x0, min(h.x0 for h in matched_hit_rects if abs(h.y0 - best_visual.y0) < 300)),
-                            min(best_visual.y0, min(h.y0 for h in matched_hit_rects if abs(h.y0 - best_visual.y0) < 300)),
-                            max(best_visual.x1, max(h.x1 for h in matched_hit_rects if abs(h.y0 - best_visual.y0) < 300)),
-                            max(best_visual.y1, max(h.y1 for h in matched_hit_rects if abs(h.y0 - best_visual.y0) < 300))
+                            max(0, pdf_page.rect.x0 + 15),
+                            max(0, start_y - 12),
+                            min(pdf_page.rect.width, pdf_page.rect.width - 15),
+                            min(pdf_page.rect.height, end_y - 2)
                         )
-                    elif best_visual:
-                        target_rect = best_visual
-                elif matched_hit_rects and not all_visual_rects:
-                    # Focus crop around the matched text/paragraph region
-                    min_x = min(h.x0 for h in matched_hit_rects)
-                    min_y = min(h.y0 for h in matched_hit_rects)
-                    max_x = max(h.x1 for h in matched_hit_rects)
-                    max_y = max(h.y1 for h in matched_hit_rects)
-                    target_rect = fitz.Rect(
-                        max(0, min_x - 30),
-                        max(0, min_y - 60),
-                        min(pdf_page.rect.width, max_x + 30),
-                        min(pdf_page.rect.height, max_y + 180)
-                    )
-                elif all_visual_rects:
-                    # Pick largest visual element on the page
+
+                # Priority 3: Targeted Paragraph / Sub-block Match
+                # (For specific project titles, keywords, technologies, or topics)
+                if target_rect is None and keywords:
+                    blocks = [b for b in pdf_page.get_text("blocks") if b[6] == 0 and b[4].strip()]
+                    best_block = None
+                    max_score = 0
+                    for b in blocks:
+                        b_text = b[4].lower()
+                        score = sum(3 if f' {kw} ' in f' {b_text} ' else (1 if kw in b_text else 0) for kw in keywords)
+                        if score > max_score:
+                            max_score = score
+                            best_block = b
+                            
+                    if best_block and max_score > 0:
+                        target_rect = fitz.Rect(
+                            max(0, pdf_page.rect.x0 + 15),
+                            max(0, best_block[1] - 18),
+                            min(pdf_page.rect.width, pdf_page.rect.width - 15),
+                            min(pdf_page.rect.height, best_block[3] + 18)
+                        )
+
+                # Priority 4: Largest visual graphic on page
+                if target_rect is None and all_visual_rects:
                     target_rect = max(all_visual_rects, key=lambda r: r.width * r.height)
 
-                # Fallback to full page if no sub-region detected
+                # Fallback to full page if no specific section was targeted
                 if target_rect is None or (target_rect.width < 50 or target_rect.height < 50):
                     rect = pdf_page.rect
                 else:
-                    rect = fitz.Rect(
-                        max(0, target_rect.x0 - padding),
-                        max(0, target_rect.y0 - padding),
-                        min(pdf_page.rect.width, target_rect.x1 + padding),
-                        min(pdf_page.rect.height, target_rect.y1 + padding)
-                    )
+                    rect = target_rect
 
-            pix = pdf_page.get_pixmap(clip=rect, dpi=dpi)
+            pix = pdf_page.get_pixmap(clip=rect, dpi=f_dpi)
             img_bytes = pix.tobytes("png")
             doc.close()
             return Response(content=img_bytes, media_type="image/png")
@@ -251,7 +329,7 @@ async def get_diagram_crop(
             from PIL import Image, ImageDraw
             img = Image.new("RGB", (400, 200), color=(255, 240, 240))
             draw = ImageDraw.Draw(img)
-            draw.text((20, 90), f"Diagram Preview (Page {page})", fill=(0, 0, 0))
+            draw.text((20, 90), f"Diagram Preview (Page {f_page})", fill=(0, 0, 0))
             buf = io.BytesIO()
             img.save(buf, format="PNG")
             return Response(content=buf.getvalue(), media_type="image/png")

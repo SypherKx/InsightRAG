@@ -27,7 +27,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\query_processor.py (168 lines)
+Module: src\rag\query_processor.py (170 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class QueryProcessor:, def extract_target_page, def classify_intent, def rewrite_conversational_query, def compress_conversation_history
