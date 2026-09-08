@@ -56,27 +56,27 @@ function LandingPage() {
       >
         {/* Top Navbar */}
         <header className="p-3 sm:p-5 md:p-6 max-w-7xl mx-auto w-full z-30">
-          <div className="flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-4 relative">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group">
+            <Link to="/" className="flex items-center gap-2 group z-10">
               <span className="bg-[#ffe600] text-black font-black font-mono text-base sm:text-lg md:text-xl px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] italic tracking-tighter hover:bg-yellow-400 transition-colors">
                 InsightRAG
               </span>
             </Link>
 
-            {/* Desktop / Tablet Navigation Pill */}
-            <nav className="hidden sm:flex items-center gap-3 md:gap-6 bg-white/95 backdrop-blur-md px-4 md:px-6 py-1.5 md:py-2 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] font-mono text-[11px] md:text-xs font-bold text-black">
-              <a href="#capabilities" className="hover:underline text-black">
+            {/* Desktop / Tablet Navigation Pill — Centered */}
+            <nav className="hidden sm:flex items-center gap-1 md:gap-1.5 bg-white/95 backdrop-blur-md px-2 md:px-3 py-1.5 md:py-2 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] font-mono text-[11px] md:text-xs font-bold text-black absolute left-1/2 -translate-x-1/2 z-20">
+              <a href="#capabilities" className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black">
                 Capabilities
               </a>
-              <Link to="/docs" className="hover:underline text-black font-black">
+              <Link to="/docs" className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black font-black">
                 Docs
               </Link>
               <a
                 href="https://github.com/SypherKx/InsightRAG"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:underline flex items-center gap-1 text-black"
+                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 flex items-center gap-1 text-black"
               >
                 <Code className="w-3.5 h-3.5" />
                 <span>GitHub</span>
@@ -84,7 +84,7 @@ function LandingPage() {
             </nav>
 
             {/* Top Right Action Button */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 z-10">
               <button
                 onClick={handleCopyCLI}
                 className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
