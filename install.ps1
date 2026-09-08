@@ -13,7 +13,7 @@ function Write-Highlight {
 }
 
 Write-Highlight "`n============================================================" "Cyan"
-Write-Highlight " ⚡ InsightRAG AI - Smart Installer & Auto-Updater" "Green"
+Write-Highlight " * InsightRAG AI - Smart Installer & Auto-Updater" "Green"
 Write-Highlight "============================================================`n" "Cyan"
 
 # 1. Smart Target Directory Detection
@@ -77,7 +77,7 @@ function Update-From-Zip {
             }
             Remove-Item -Path $extractTemp -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
-            Write-Host "[✓] All project files successfully updated to latest version!" -ForegroundColor Green
+            Write-Host "[+] All project files successfully updated to latest version!" -ForegroundColor Green
         }
     } catch {
         Write-Host "[!] Warning: Could not update via zip: $_" -ForegroundColor Red
@@ -109,10 +109,10 @@ if ($isFreshInstall) {
             if ($localRev -and $remoteRev -and ($localRev -ne $remoteRev)) {
                 Write-Host "  -> Newer version found on GitHub! Updating repository..." -ForegroundColor Yellow
                 git reset --hard origin/main 2>&1 | Out-Null
-                Write-Host "[✓] Repository successfully updated to latest commit!" -ForegroundColor Green
+                Write-Host "[+] Repository successfully updated to latest commit!" -ForegroundColor Green
             } else {
                 git reset --hard origin/main 2>&1 | Out-Null
-                Write-Host "[✓] Already running the latest version from GitHub." -ForegroundColor Green
+                Write-Host "[+] Already running the latest version from GitHub." -ForegroundColor Green
             }
             $updatedViaGit = $true
             Pop-Location

@@ -58,7 +58,7 @@ if ($Update) {
             git rebase --abort 2>&1 | Out-Null
             git fetch origin main 2>&1 | Out-Null
             git reset --hard origin/main 2>&1 | Out-Null
-            cw "[✓] Project updated to latest version!" "Green"
+            cw "[+] Project updated to latest version!" "Green"
         } catch {}
     }
 }
