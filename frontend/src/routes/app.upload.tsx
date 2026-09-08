@@ -343,7 +343,11 @@ function KnowledgeBaseStudioPage() {
       setUploading(false);
       setUploadProgress(0);
       setActiveView("upload");
-      setUploadStatusMsg(`⚠️ Upload error: ${err?.response?.data?.detail || err?.message || "Failed to process files"}`);
+      const isNetErr = err?.message?.includes("Network Error") || err?.code === "ERR_NETWORK";
+      const errMsg = isNetErr
+        ? "Backend connection failed. Please ensure the backend is running via run.bat or insightrag."
+        : (err?.response?.data?.detail || err?.message || "Failed to process files");
+      setUploadStatusMsg(`⚠️ Upload error: ${errMsg}`);
       loadSpecsAndStats();
     }
   };

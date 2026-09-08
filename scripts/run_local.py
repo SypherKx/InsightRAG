@@ -247,12 +247,13 @@ def check_frontend():
         print_step("Checking frontend npm packages", "OK", ANSI_GREEN)
 
 def run_backend():
-    """Run FastAPI backend on port 8000 in a background thread."""
+    """Run FastAPI backend on port 8000 (127.0.0.1) in a background thread."""
     os.chdir(str(ROOT_DIR))
     os.environ["RAG_ENABLED"] = "true"
     os.environ["OLLAMA_HOST"] = "http://127.0.0.1:11434"
     import uvicorn
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, log_level="warning", reload=False)
+    # Bind to 127.0.0.1 to guarantee local loopback without Windows Defender Firewall blocking popups
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, log_level="warning", reload=False)
 
 def run_frontend_dev():
     """Run Vite dev server for the frontend on port 5173."""
