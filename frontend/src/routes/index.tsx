@@ -125,8 +125,11 @@ function LandingPage() {
           </div>
 
           {/* Display Headline */}
-          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black font-sans text-black tracking-tight leading-[1.08] sm:leading-[1.05] drop-shadow-[0_2px_0_rgba(255,255,255,0.8)] sm:drop-shadow-[0_4px_0_rgba(255,255,255,0.8)] px-1">
-            Autonomous Multimodal <br className="hidden xs:inline" />
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black font-sans tracking-tight leading-[1.08] sm:leading-[1.05] px-1">
+            <span className="text-[#ffe600] drop-shadow-[2px_2px_0px_#000] sm:drop-shadow-[4px_4px_0px_#000] [-webkit-text-stroke:1.5px_#000] sm:[-webkit-text-stroke:2.5px_#000] inline-block">
+              Autonomous Multimodal
+            </span>{" "}
+            <br className="hidden xs:inline" />
             <span className="bg-[#ffe600] text-black px-2 py-0.5 rounded border-2 border-black inline-block shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] mt-1 text-2xl xs:text-3xl sm:text-5xl md:text-6xl lg:text-7xl">
               RAG-in-a-Box Factory
             </span>
