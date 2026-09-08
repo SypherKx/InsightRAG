@@ -3,6 +3,8 @@ RAG Service — Manages document ingestion and retrieval.
 """
 
 import sys
+import os
+import time
 import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -212,16 +214,18 @@ class RAGService:
                         p_num = r_meta.get("page_number") or r_meta.get("page")
                         p_str = f"Page {p_num}" if p_num else "Excerpt"
                         f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                        context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{r.get('text', '').strip()}")
+                        # Trim chunk text to 600 chars to keep prompt lean and fast
+                        chunk_text = r.get('text', '').strip()[:600]
+                        context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
                     context_str = "\n\n".join(context_blocks)
                     page_instruction = (
-                        f"The user specifically asked about Page {target_page}. Give details specifically from Page {target_page} and describe what is present on that page. "
+                        f"CRITICAL: The user asked about Page {target_page}. You MUST describe what is on Page {target_page} using ONLY the context below. Do NOT say you cannot determine or that context is missing. The context IS the page content. "
                         if target_page else ""
                     )
                     prompt = (
-                        f"You are InsightRAG AI, a fast, grounded multimodal assistant. Answer concisely and accurately using the context below. "
+                        f"You are InsightRAG AI. Answer ONLY from the document context below. Never say 'I cannot determine' or 'not available'. "
                         f"{page_instruction}"
-                        f"If diagrams or figures are referenced, explain them clearly as visual previews render beneath your response.\n\n"
+                        f"If diagrams or figures exist, describe them.\n\n"
                         f"{history_str}"
                         f"DOCUMENT CONTEXT:\n{context_str}\n\n"
                         f"QUESTION: {query}\n"
@@ -344,6 +348,7 @@ class RAGService:
                             if inst not in candidate_models:
                                 candidate_models.append(inst)
 
+                        _cpu_threads = max(1, (os.cpu_count() or 4) - 1)
                         with httpx.Client(timeout=120.0) as client:
                             resp = None
                             successful_model = candidate_models[0]
@@ -355,7 +360,15 @@ class RAGService:
                                             "model": cand,
                                             "prompt": prompt,
                                             "stream": False,
-                                            "options": {"num_ctx": 2048, "temperature": 0.2}
+                                            "keep_alive": "30m",
+                                            "options": {
+                                                "num_ctx": 1536,
+                                                "temperature": 0.1,
+                                                "num_predict": 350,
+                                                "num_thread": _cpu_threads,
+                                                "top_k": 25,
+                                                "top_p": 0.85,
+                                            }
                                         }
                                     )
                                     if res.status_code == 200:
@@ -538,7 +551,7 @@ class RAGService:
             }
         }
 
-        # Build prompt
+        # Build prompt (trimmed context for speed)
         if results:
             context_blocks = []
             for i, r in enumerate(results[:4]):
@@ -546,13 +559,14 @@ class RAGService:
                 p_num = r_meta.get("page_number") or r_meta.get("page")
                 p_str = f"Page {p_num}" if p_num else "Excerpt"
                 f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{r.get('text', '').strip()}")
+                chunk_text = r.get('text', '').strip()[:600]
+                context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
             page_instruction = (
-                f"The user specifically asked about Page {target_page}. Give details specifically from Page {target_page} and describe what is present on that page. "
+                f"CRITICAL: The user asked about Page {target_page}. Describe what is on Page {target_page} using the context below. Do NOT say you cannot determine. "
                 if target_page else ""
             )
             prompt = (
-                f"You are InsightRAG AI, a fast, grounded multimodal assistant. Answer concisely and accurately using the context below:\n\n"
+                f"You are InsightRAG AI. Answer ONLY from document context below. Never say 'I cannot determine'.\n\n"
                 f"{page_instruction}"
                 f"{history_str}"
                 f"DOCUMENT CONTEXT:\n{chr(10).join(context_blocks)}\n\n"
@@ -577,7 +591,20 @@ class RAGService:
                 async with aclient.stream(
                     "POST",
                     f"{working_endpoint}/api/generate",
-                    json={"model": local_model, "prompt": prompt, "stream": True, "options": {"num_ctx": 2048, "temperature": 0.2}}
+                    json={
+                        "model": local_model,
+                        "prompt": prompt,
+                        "stream": True,
+                        "keep_alive": "30m",
+                        "options": {
+                            "num_ctx": 1536,
+                            "temperature": 0.1,
+                            "num_predict": 350,
+                            "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
+                            "top_k": 25,
+                            "top_p": 0.85,
+                        }
+                    }
                 ) as resp:
                     if resp.status_code == 200:
                         async for line in resp.aiter_lines():

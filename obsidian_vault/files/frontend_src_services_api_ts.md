@@ -17,14 +17,14 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-*Core logic module*
+- `export interface StreamCallbacks {`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\services\api.ts (209 lines)
+Module: frontend\src\services\api.ts (298 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: System Execution
+Exports: export interface StreamCallbacks {
 ```

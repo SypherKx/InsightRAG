@@ -26,6 +26,7 @@ import {
 import {
   uploadRAGDocuments,
   queryRAG,
+  streamRAGQuery,
   getRAGStats,
   clearRAGKnowledgeBase,
   deleteRAGDocument,
@@ -338,40 +339,130 @@ function KnowledgeBaseStudioPage() {
     setChatMessages((prev) => [...prev, userMsg]);
     setQuerying(true);
 
-    try {
-      const isCloud = processingMode !== "local";
-      const modelToUse = isCloud ? processingMode : selectedLLM;
-      const res = await queryRAG(
-        textToSend,
-        5,
-        0.0,
-        modelToUse,
-        isCloud ? "cloud" : "local",
-        cloudApiKey,
-        historyPayload
-      );
+    const isCloud = processingMode !== "local";
+    const modelToUse = isCloud ? processingMode : selectedLLM;
 
-      const assistantMsg = {
-        role: "assistant" as const,
-        text: res.answer || res.response || "No structured answer generated.",
-        sources: res.sources || res.results || res.context_chunks || [],
-        visual_snippet: res.visual_snippet,
-        model: res.llm_model || modelToUse,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
-
-      setChatMessages((prev) => [...prev, assistantMsg]);
-    } catch (err: any) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
+    // For cloud mode, use blocking queryRAG. For local, use SSE streaming for instant tokens.
+    if (isCloud) {
+      try {
+        const res = await queryRAG(
+          textToSend, 5, 0.0, modelToUse, "cloud", cloudApiKey, historyPayload
+        );
+        setChatMessages((prev) => [...prev, {
           role: "assistant" as const,
-          text: `⚠️ Query encountered an issue: ${
-            err?.response?.data?.detail || err?.message || "Ollama service was unreachable or taking too long."
-          }\n\n💡 Your conversation history has been preserved. Check that Ollama or your selected model is ready and try again.`,
+          text: res.answer || res.response || "No answer generated.",
+          sources: res.sources || res.results || [],
+          visual_snippet: res.visual_snippet,
+          model: res.llm_model || modelToUse,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
+        }]);
+      } catch (err: any) {
+        setChatMessages((prev) => [...prev, {
+          role: "assistant" as const,
+          text: `⚠️ Cloud query failed: ${err?.response?.data?.detail || err?.message || "Error"}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        }]);
+      } finally {
+        setQuerying(false);
+      }
+      return;
+    }
+
+    // ─── SSE STREAMING for Local Mode ───
+    // Create a placeholder assistant message that gets updated token-by-token
+    const streamMsgIndex = { current: -1 };
+    let streamedText = "";
+    let streamSources: any[] = [];
+    let streamVisual: any = null;
+    let streamModel = modelToUse;
+
+    // Add empty assistant message placeholder
+    setChatMessages((prev) => {
+      streamMsgIndex.current = prev.length;
+      return [...prev, {
+        role: "assistant" as const,
+        text: "▍",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      }];
+    });
+
+    try {
+      await streamRAGQuery(
+        textToSend, 5, 0.0, modelToUse, "local", cloudApiKey, historyPayload,
+        {
+          onToken: (token: string) => {
+            streamedText += token;
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  text: streamedText + "▍",
+                };
+              }
+              return updated;
+            });
+          },
+          onMetadata: (data: any) => {
+            streamSources = data.results || [];
+            streamVisual = data.visual_snippet || null;
+            // Update sources immediately so visual preview appears early
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  sources: streamSources,
+                  visual_snippet: streamVisual,
+                };
+              }
+              return updated;
+            });
+          },
+          onDone: (data: any) => {
+            streamModel = data.llm_model || modelToUse;
+            // Finalize: remove cursor, set final text
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  text: streamedText || "No answer generated.",
+                  sources: streamSources,
+                  visual_snippet: streamVisual,
+                  model: streamModel,
+                };
+              }
+              return updated;
+            });
+          },
+          onError: (error: string) => {
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  text: `⚠️ Stream error: ${error}\n\n💡 Check that Ollama is running and try again.`,
+                };
+              }
+              return updated;
+            });
+          },
+        }
+      );
+    } catch (err: any) {
+      setChatMessages((prev) => {
+        const updated = [...prev];
+        if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+          updated[streamMsgIndex.current] = {
+            ...updated[streamMsgIndex.current],
+            text: streamedText
+              ? streamedText
+              : `⚠️ Connection error: ${err?.message || "Ollama unreachable"}`,
+          };
+        }
+        return updated;
+      });
     } finally {
       setQuerying(false);
     }

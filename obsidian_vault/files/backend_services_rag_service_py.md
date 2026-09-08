@@ -33,7 +33,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\services\rag_service.py (680 lines)
+Module: backend\services\rag_service.py (707 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: class RAGService:, def __init__, def set_hardware_mode, def _safe_terminal_print, def get_hardware_mode
