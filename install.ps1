@@ -100,19 +100,18 @@ if ($isFreshInstall) {
     if ((Test-Path (Join-Path $TargetDir ".git")) -and $gitCmd) {
         try {
             Push-Location $TargetDir
+            # Abort any in-progress merge or rebase and clean conflict state
+            git merge --abort 2>&1 | Out-Null
+            git rebase --abort 2>&1 | Out-Null
             git fetch origin main 2>&1 | Out-Null
             $localRev = git rev-parse HEAD 2>$null
             $remoteRev = git rev-parse origin/main 2>$null
             if ($localRev -and $remoteRev -and ($localRev -ne $remoteRev)) {
                 Write-Host "  -> Newer version found on GitHub! Updating repository..." -ForegroundColor Yellow
-                git stash 2>&1 | Out-Null
-                git pull origin main --rebase 2>&1 | Out-Null
-                if ($LASTEXITCODE -ne 0) {
-                    git reset --hard origin/main 2>&1 | Out-Null
-                }
-                git stash pop 2>&1 | Out-Null
+                git reset --hard origin/main 2>&1 | Out-Null
                 Write-Host "[✓] Repository successfully updated to latest commit!" -ForegroundColor Green
             } else {
+                git reset --hard origin/main 2>&1 | Out-Null
                 Write-Host "[✓] Already running the latest version from GitHub." -ForegroundColor Green
             }
             $updatedViaGit = $true
