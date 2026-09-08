@@ -53,11 +53,20 @@ class EmbeddingGenerator:
 
         try:
             from sentence_transformers import SentenceTransformer
-            logger.info(f"Loading embedding model: {self.config.model_name}")
-            self._model = SentenceTransformer(
-                self.config.model_name,
-                device=self.config.device
-            )
+            try:
+                # Prefer 100% offline cached files first (Instant, zero internet required)
+                self._model = SentenceTransformer(
+                    self.config.model_name,
+                    device=self.config.device,
+                    local_files_only=True
+                )
+            except Exception:
+                # First run fallback: download from Hub if not yet in cache
+                self._model = SentenceTransformer(
+                    self.config.model_name,
+                    device=self.config.device,
+                    local_files_only=False
+                )
             test_emb = self._model.encode(["test"], convert_to_numpy=True)
             self._dimension = test_emb.shape[1]
             self._initialized = True

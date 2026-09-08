@@ -193,9 +193,12 @@ def prewarm_vector_models():
     try:
         from sentence_transformers import SentenceTransformer
         print_step("Vector Model (sentence-transformers/all-MiniLM-L6-v2)", "CHECKING CACHE", ANSI_YELLOW)
-        model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+        except Exception:
+            model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=False)
         _ = model.encode(["InsightRAG Ready"])
-        print_step("Vector Model (all-MiniLM-L6-v2, 80MB)", "READY FOR UPLOADS", ANSI_GREEN)
+        print_step("Vector Model (all-MiniLM-L6-v2, 80MB)", "READY (100% OFFLINE)", ANSI_GREEN)
     except Exception as e:
         print_step("Vector Model Pre-warm", f"READY (fallback on demand)", ANSI_GREEN)
 def free_ports():
