@@ -69,6 +69,26 @@ class EmbeddingGenerator:
             self._model = None
             self._initialized = True
 
+    def set_device(self, device: str) -> str:
+        """
+        Dynamically switch embedding generator execution device between 'cuda' (GPU) and 'cpu'.
+        """
+        self.config.device = device
+        if self._model is not None:
+            try:
+                import torch
+                if device == "cuda" and not torch.cuda.is_available():
+                    logger.warning("CUDA not available in PyTorch. Retaining CPU device.")
+                    self.config.device = "cpu"
+                    return "cpu"
+                self._model = self._model.to(device)
+                logger.info(f"SentenceTransformer moved to {device.upper()}")
+                return device
+            except Exception as e:
+                logger.warning(f"Could not move model to {device}: {e}")
+                return "cpu"
+        return device
+
     @property
     def dimension(self) -> int:
         """Get embedding dimension."""

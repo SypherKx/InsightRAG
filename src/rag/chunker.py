@@ -273,14 +273,15 @@ class TextChunker:
 
     def chunk_documents(self, documents: List[dict], text_key: str = "content") -> List[dict]:
         """
-        Chunk multiple documents.
+        Chunk multiple documents with full page-awareness.
+        Preserves exact page_number in each chunk metadata.
 
         Args:
             documents: List of document dicts with at least 'id' and text content
             text_key: Key containing text content in each document
 
         Returns:
-            Flat list of all chunks from all documents
+            Flat list of all page-indexed chunks from all documents
         """
         all_chunks = []
 
@@ -289,21 +290,110 @@ class TextChunker:
             title = doc.get("title", "")
             source_path = doc.get("source_path", "")
             doc_meta = doc.get("metadata", {})
-            prefix = f"Title: {title}" if title else ""
+            file_name = doc_meta.get("file_name", title or "Document")
 
+            # Check if structured pages_data is available (from PDF / paginated extractors)
+            pages_data = doc_meta.get("pages_data", [])
+
+            if pages_data and isinstance(pages_data, list):
+                # Chunk page-by-page to guarantee zero cross-page leakage and 100% accurate page attribution
+                doc_chunks = []
+                for p_idx, page_info in enumerate(pages_data):
+                    page_num = page_info.get("page_number", p_idx + 1)
+                    page_text = page_info.get("text", "").strip()
+                    if not page_text:
+                        continue
+                    
+                    page_prefix = f"[{file_name} | Page {page_num}]"
+                    p_chunks = self.chunk_text(page_text, f"{doc_id}_p{page_num}", chunk_prefix=page_prefix)
+                    
+                    for c in p_chunks:
+                        c["page_number"] = page_num
+                        c["page"] = page_num
+                        c["has_images"] = page_info.get("has_images", False)
+                        c["has_drawings"] = page_info.get("has_drawings", False)
+                        c["title"] = title
+                        c["source_path"] = source_path
+                        
+                        chunk_meta = dict(doc_meta)
+                        chunk_meta["page_number"] = page_num
+                        chunk_meta["page"] = page_num
+                        chunk_meta["has_images"] = page_info.get("has_images", False)
+                        chunk_meta["has_drawings"] = page_info.get("has_drawings", False)
+                        chunk_meta["file_name"] = file_name
+                        c["doc_metadata"] = chunk_meta
+                        doc_chunks.append(c)
+                        
+                # Re-index chunks sequentially for this document
+                for i, c in enumerate(doc_chunks):
+                    c["chunk_index"] = i
+                    c["chunk_id"] = f"{doc_id}_chunk_{i}"
+                    c["document_id"] = doc_id
+                all_chunks.extend(doc_chunks)
+                logger.info(f"Page-aware chunking for {file_name}: {len(doc_chunks)} chunks across {len(pages_data)} pages")
+                continue
+
+            # Fallback for plain text, markdown, or documents without explicit pages_data
             text = doc.get(text_key, "")
             if not text:
                 logger.warning(f"Document {doc_id} has no text content")
                 continue
 
+            # Check if text has [Page X] tags
+            import re
+            page_sections = re.split(r'\[Page\s+(\d+)\]\s*\n', text)
+            if len(page_sections) > 1:
+                # Format: [preamble, page_1_num, page_1_text, page_2_num, page_2_text, ...]
+                doc_chunks = []
+                idx = 1
+                while idx < len(page_sections):
+                    try:
+                        p_num = int(page_sections[idx])
+                        p_text = page_sections[idx + 1].strip()
+                    except (ValueError, IndexError):
+                        idx += 2
+                        continue
+                    
+                    if p_text:
+                        p_prefix = f"[{file_name} | Page {p_num}]"
+                        p_chunks = self.chunk_text(p_text, f"{doc_id}_p{p_num}", chunk_prefix=p_prefix)
+                        for c in p_chunks:
+                            c["page_number"] = p_num
+                            c["page"] = p_num
+                            c["title"] = title
+                            c["source_path"] = source_path
+                            chunk_meta = dict(doc_meta)
+                            chunk_meta["page_number"] = p_num
+                            chunk_meta["page"] = p_num
+                            chunk_meta["file_name"] = file_name
+                            c["doc_metadata"] = chunk_meta
+                            doc_chunks.append(c)
+                    idx += 2
+
+                for i, c in enumerate(doc_chunks):
+                    c["chunk_index"] = i
+                    c["chunk_id"] = f"{doc_id}_chunk_{i}"
+                    c["document_id"] = doc_id
+                all_chunks.extend(doc_chunks)
+                logger.info(f"Tag-aware chunking for {file_name}: {len(doc_chunks)} chunks")
+                continue
+
+            # Default single-page document chunking
+            prefix = f"[{file_name} | Page 1]" if file_name else ""
             chunks = self.chunk_text(text, doc_id, prefix)
             for c in chunks:
                 c["title"] = title
                 c["source_path"] = source_path
-                c["doc_metadata"] = doc_meta
+                c["page_number"] = 1
+                c["page"] = 1
+                chunk_meta = dict(doc_meta)
+                chunk_meta["page_number"] = 1
+                chunk_meta["page"] = 1
+                chunk_meta["file_name"] = file_name
+                c["doc_metadata"] = chunk_meta
             all_chunks.extend(chunks)
 
-        logger.info(f"Total: {len(all_chunks)} chunks from {len(documents)} documents")
+        logger.info(f"Total: {len(all_chunks)} page-aware chunks from {len(documents)} documents")
         return all_chunks
 
 

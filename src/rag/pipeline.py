@@ -152,6 +152,7 @@ class RAGPipeline:
         chunk_objects = []
         for chunk_dict in chunks_data:
             doc_meta = chunk_dict.get("doc_metadata") or {}
+            page_num = chunk_dict.get("page_number") or doc_meta.get("page_number", 1)
             chunk_obj = DocumentChunk(
                 id=chunk_dict["chunk_id"],
                 document_id=chunk_dict["document_id"],
@@ -159,11 +160,16 @@ class RAGPipeline:
                 chunk_index=chunk_dict["chunk_index"],
                 text=chunk_dict["text"],
                 metadata={
-                    "token_count": chunk_dict["token_count"],
-                    "segment_count": chunk_dict["segment_count"],
+                    **doc_meta,
+                    "token_count": chunk_dict.get("token_count", 0),
+                    "segment_count": chunk_dict.get("segment_count", 0),
                     "title": chunk_dict.get("title") or doc_meta.get("file_name", ""),
                     "source": chunk_dict.get("source_path") or doc_meta.get("file_name", ""),
-                    **doc_meta
+                    "file_name": doc_meta.get("file_name", chunk_dict.get("title", "")),
+                    "page_number": int(page_num),
+                    "page": int(page_num),
+                    "has_images": chunk_dict.get("has_images", doc_meta.get("has_images", False)),
+                    "has_drawings": chunk_dict.get("has_drawings", doc_meta.get("has_drawings", False)),
                 }
             )
             chunk_objects.append(chunk_obj)

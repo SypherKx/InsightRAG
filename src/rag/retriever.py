@@ -99,6 +99,35 @@ class RAGRetriever:
                 k=60
             )
 
+            # 5.1 Page-Aware Candidate Injection:
+            # If user query specifically asks for a page (e.g., 'page 42', 'pg 5'),
+            # ensure all chunks from that page are guaranteed in the candidate pool.
+            import re
+            pm = re.search(r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', query.query, re.IGNORECASE)
+            target_page = int(pm.group(1)) if pm else (query.filters.get("page_number") if query.filters else None)
+
+            if target_page is not None:
+                existing_cids = {c["chunk_id"] for c in fused_candidates}
+                page_candidates = []
+                for fid, meta_item in getattr(self.vector_store, "metadata", {}).items():
+                    m = meta_item.get("metadata", {})
+                    p_val = m.get("page_number") or m.get("page")
+                    if p_val is not None and int(p_val) == int(target_page):
+                        cid = meta_item.get("chunk_id", str(fid))
+                        if cid not in existing_cids:
+                            page_candidates.append({
+                                "faiss_id": fid,
+                                "chunk_id": cid,
+                                "document_id": meta_item.get("document_id", ""),
+                                "org_id": meta_item.get("org_id", ""),
+                                "text": meta_item.get("text", ""),
+                                "metadata": m,
+                                "similarity_score": 1.0,
+                                "rrf_score": 1.0,
+                            })
+                if page_candidates:
+                    fused_candidates = page_candidates + fused_candidates
+
             # 6. Lightweight Semantic Reranking
             rerank_start = time.time()
             reranked_results = self._rerank_candidates(
@@ -234,8 +263,17 @@ class RAGRetriever:
             q_emb = self.embedding_gen.generate_single(query_text)
             sims = self.embedding_gen.compute_similarities(q_emb, cand_embs)
 
+            import re
+            pm = re.search(r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', query_text, re.IGNORECASE)
+            t_page = int(pm.group(1)) if pm else None
+
             for i, c in enumerate(candidate_pool):
-                c["similarity_score"] = float(sims[i])
+                base_score = float(sims[i])
+                c_meta = c.get("metadata", {})
+                c_page = c_meta.get("page_number") or c_meta.get("page")
+                if t_page is not None and c_page is not None and int(c_page) == t_page:
+                    base_score += 2.0  # Dominant boost for exact page requested
+                c["similarity_score"] = base_score
 
             candidate_pool.sort(key=lambda x: x["similarity_score"], reverse=True)
             filtered = [c for c in candidate_pool if c["similarity_score"] >= min_score]

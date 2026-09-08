@@ -21,6 +21,7 @@ tags:
 - `class EmbeddingGenerator:`
 - `def __init__`
 - `def _lazy_init`
+- `def set_device`
 - `def dimension`
 - `def generate`
 - `def generate_single`
@@ -32,8 +33,8 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\embeddings.py (222 lines)
+Module: src\rag\embeddings.py (242 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
-Exports: class EmbeddingConfig:, class EmbeddingGenerator:, def __init__, def _lazy_init, def dimension
+Exports: class EmbeddingConfig:, class EmbeddingGenerator:, def __init__, def _lazy_init, def set_device
 ```

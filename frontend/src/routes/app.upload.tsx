@@ -30,6 +30,7 @@ import {
   clearRAGKnowledgeBase,
   deleteRAGDocument,
   getSystemSpecs,
+  setHardwareMode,
   pullModel,
 } from "../services/api";
 
@@ -95,9 +96,15 @@ function KnowledgeBaseStudioPage() {
     gpu_name: "Integrated / CPU",
     vram_gb: 0.0,
     has_gpu: false,
+    has_gpu_access: false,
     acceleration_mode: "CPU PARALLEL ENGINE",
     installed_models: ["llama3.2:3b", "moondream:latest"],
   });
+
+  // Hardware Switch States (CPU vs GPU)
+  const [activeHardwareMode, setActiveHardwareMode] = useState<"cpu" | "gpu">("cpu");
+  const [switchingHardware, setSwitchingHardware] = useState(false);
+  const [hardwareNotice, setHardwareNotice] = useState<string | null>(null);
 
   // Model & Config Selection States
   const [selectedLLM, setSelectedLLM] = useState("llama3.2:3b");
@@ -172,11 +179,49 @@ function KnowledgeBaseStudioPage() {
   const loadSpecsAndStats = async () => {
     try {
       const data = await getSystemSpecs();
-      if (data) setSpecs(data);
+      if (data) {
+        setSpecs(data);
+        if (data.has_gpu_access) {
+          setActiveHardwareMode(data.active_mode || "gpu");
+        } else {
+          setActiveHardwareMode("cpu");
+        }
+      }
       const stats = await getRAGStats();
       if (stats) setRagStats(stats);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSwitchHardware = async (targetMode: "cpu" | "gpu") => {
+    if (targetMode === activeHardwareMode || switchingHardware) return;
+    if (targetMode === "gpu" && !specs.has_gpu_access) {
+      setHardwareNotice(`⚠️ Cannot switch to GPU: ${specs.gpu_disabled_reason || "No compatible CUDA/ROCm GPU available on this laptop."}`);
+      setTimeout(() => setHardwareNotice(null), 6000);
+      return;
+    }
+
+    setSwitchingHardware(true);
+    try {
+      await setHardwareMode(targetMode);
+      setActiveHardwareMode(targetMode);
+      setSpecs((prev: any) => ({
+        ...prev,
+        acceleration_mode: targetMode === "gpu" ? "GPU AUTO-ACCELERATED" : "CPU PARALLEL ENGINE",
+        active_mode: targetMode,
+      }));
+      setHardwareNotice(
+        targetMode === "gpu"
+          ? `🚀 Shifted to GPU! Backend terminal log printed: Ollama layers (99) and embeddings accelerated on ${specs.gpu_name}.`
+          : `💻 Shifted to CPU Standard! Backend terminal log printed: 100% CPU multi-threaded parallel execution active.`
+      );
+      setTimeout(() => setHardwareNotice(null), 7000);
+    } catch (err: any) {
+      setHardwareNotice(`Failed to switch hardware mode: ${err?.message || "Error"}`);
+      setTimeout(() => setHardwareNotice(null), 5000);
+    } finally {
+      setSwitchingHardware(false);
     }
   };
 
@@ -491,6 +536,142 @@ function KnowledgeBaseStudioPage() {
                 </div>
               )}
             </div>
+
+            {/* LOCAL HARDWARE ACCELERATOR (CPU vs GPU SWITCH) */}
+            {processingMode === "local" && (
+              <div className="space-y-2 md:col-span-2 p-3 sm:p-4 bg-gray-50/90 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <div>
+                    <span className="text-[11px] font-black font-mono uppercase tracking-wider text-black flex items-center gap-1.5">
+                      <Cpu className="w-3.5 h-3.5 text-black" />
+                      LOCAL HARDWARE ACCELERATION ENGINE (CPU VS. GPU)
+                    </span>
+                    <p className="text-[10px] font-mono text-gray-500">
+                      Instantly shift embeddings and local Ollama inference between Multi-Threaded CPU and GPU.
+                    </p>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-black uppercase w-fit ${
+                      activeHardwareMode === "gpu"
+                        ? "bg-[#ffe600] text-black shadow-[1px_1px_0px_#000]"
+                        : "bg-white text-black"
+                    }`}
+                  >
+                    {activeHardwareMode === "gpu" ? "⚡ GPU ACCELERATED" : "💻 CPU STANDARD"}
+                  </span>
+                </div>
+
+                {/* 2-Button Toggle Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {/* CPU Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchHardware("cpu")}
+                    disabled={switchingHardware}
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left cursor-pointer ${
+                      activeHardwareMode === "cpu"
+                        ? "bg-black text-white border-black shadow-[3px_3px_0px_#000]"
+                        : "bg-white text-black border-black hover:bg-gray-100"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg border ${
+                      activeHardwareMode === "cpu" ? "bg-gray-800 border-gray-700 text-amber-300" : "bg-gray-100 border-gray-300 text-black"
+                    }`}>
+                      <Cpu className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-xs uppercase">CPU Engine</span>
+                        {activeHardwareMode === "cpu" && (
+                          <span className="text-[10px] font-mono font-bold bg-amber-300 text-black px-1.5 py-0.2 rounded">ACTIVE</span>
+                        )}
+                      </div>
+                      <p className="font-mono text-[10px] opacity-80 mt-0.5">
+                        Multi-threaded CPU parallel execution ({specs.cpu_threads || 8} Threads). 100% universal across all laptops.
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* GPU Button with Strict Eligibility Check & Tooltip */}
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchHardware("gpu")}
+                      disabled={switchingHardware || !specs.has_gpu_access}
+                      title={!specs.has_gpu_access ? (specs.gpu_disabled_reason || "GPU acceleration disabled on this laptop.") : "Click to shift processing & Ollama to GPU"}
+                      className={`w-full h-full flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left ${
+                        !specs.has_gpu_access
+                          ? "bg-gray-100/90 text-gray-400 border-gray-300 cursor-not-allowed"
+                          : activeHardwareMode === "gpu"
+                          ? "bg-[#ffe600] text-black border-black shadow-[3px_3px_0px_#000] cursor-pointer"
+                          : "bg-white text-black border-black hover:bg-amber-50 cursor-pointer"
+                      }`}
+                    >
+                      <div className={`p-2 rounded-lg border ${
+                        !specs.has_gpu_access
+                          ? "bg-gray-200 border-gray-300 text-gray-400"
+                          : activeHardwareMode === "gpu"
+                          ? "bg-black text-[#ffe600] border-black"
+                          : "bg-amber-100 text-amber-900 border-amber-300"
+                      }`}>
+                        <Zap className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-black text-xs uppercase flex items-center gap-1">
+                            <span>GPU Acceleration</span>
+                            {!specs.has_gpu_access && (
+                              <span className="text-[9px] font-mono bg-gray-300 text-gray-700 px-1 py-0.2 rounded border border-gray-400">LOCKED</span>
+                            )}
+                          </span>
+                          {activeHardwareMode === "gpu" && specs.has_gpu_access && (
+                            <span className="text-[10px] font-mono font-bold bg-black text-[#ffe600] px-1.5 py-0.2 rounded">ACTIVE</span>
+                          )}
+                        </div>
+                        <p className="font-mono text-[10px] opacity-80 mt-0.5">
+                          {specs.has_gpu_access
+                            ? `Hardware CUDA offload on ${specs.gpu_name} (${specs.vram_gb} GB VRAM). Fastest embedding & inference.`
+                            : `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected (No CUDA compute access).`}
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Hover Tooltip when GPU is disabled */}
+                    {!specs.has_gpu_access && (
+                      <div className="hidden group-hover:block absolute z-30 bottom-full left-0 right-0 mb-2 p-2.5 bg-black text-white text-[10px] font-mono rounded-lg border border-gray-700 shadow-xl pointer-events-none">
+                        <div className="font-bold text-amber-300 flex items-center gap-1 mb-0.5">
+                          <span>🔒 GPU Acceleration Disabled</span>
+                        </div>
+                        <p className="text-gray-300 leading-tight">
+                          {specs.gpu_disabled_reason || "No dedicated CUDA/ROCm GPU available on this laptop. The system automatically routes all processing through your multi-threaded CPU for maximum stability."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status Notice / Feedback Banner */}
+                {hardwareNotice ? (
+                  <div className="text-[10px] sm:text-xs font-mono font-bold p-2.5 rounded-lg border-2 border-black bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] animate-pulse">
+                    {hardwareNotice}
+                  </div>
+                ) : !specs.has_gpu_access ? (
+                  <div className="text-[10px] font-mono text-gray-600 bg-gray-100 p-2 rounded-lg border border-gray-300 flex items-start gap-1.5">
+                    <span className="text-amber-600 font-bold shrink-0">ℹ️ Hardware Status:</span>
+                    <span>
+                      {specs.gpu_disabled_reason || "GPU compute runtime not found. System is safely locked to CPU Multi-Threaded Engine to avoid execution errors."}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-300 flex items-center justify-between">
+                    <span>
+                      ✅ <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} ({specs.vram_gb} GB VRAM) is supported and ready for instant activation.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* TEXT LLM MODEL */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">

@@ -7,7 +7,17 @@ import type {
   Dataset,
 } from "../types/backend-types";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const host = window.location.hostname;
+    const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+    return `${protocol}//${host}:8000/api/v1`;
+  }
+  return "http://localhost:8000/api/v1";
+};
+
+const API_BASE = getApiBase();
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -183,6 +193,16 @@ export async function getSystemSpecs(): Promise<any> {
 
 export async function pullModel(modelName: string): Promise<any> {
   const { data } = await api.post("/system/pull-model", { model_name: modelName });
+  return data;
+}
+
+export async function setHardwareMode(mode: "gpu" | "cpu"): Promise<any> {
+  const { data } = await api.post("/system/hardware-mode", { mode });
+  return data;
+}
+
+export async function getHardwareMode(): Promise<any> {
+  const { data } = await api.get("/system/hardware-mode");
   return data;
 }
 

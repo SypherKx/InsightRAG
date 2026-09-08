@@ -214,10 +214,17 @@ async def stream_pull_model(model_name: str = DEFAULT_MODEL) -> AsyncGenerator[s
         yield json.dumps({"status": "error", "message": str(e)}) + "\n"
 
 
+_ACTIVE_HARDWARE_MODE: str = "cpu"
+
+
 def get_system_hardware_specs() -> Dict[str, Any]:
-    """Retrieve detailed hardware specs including CPU threads, RAM (GB), and CUDA/GPU status."""
+    """
+    Retrieve detailed hardware specs including CPU threads, RAM (GB),
+    and verified GPU compute access (CUDA / ROCm) with reasons for UI toggles.
+    """
     import psutil
     import platform
+    global _ACTIVE_HARDWARE_MODE
     
     cpu_threads = os.cpu_count() or 8
     try:
@@ -228,28 +235,85 @@ def get_system_hardware_specs() -> Dict[str, Any]:
 
     gpu_name = "Integrated / CPU"
     vram_gb = 0.0
-    has_gpu = False
-    acceleration_mode = "CPU PARALLEL ENGINE"
+    has_gpu_access = False
+    cuda_available = False
+    gpu_reason = "No dedicated GPU detected. Operating on CPU parallel multi-threaded engine."
+    hardware_adapter_name = ""
 
+    # 1. First check if a physical graphics adapter exists on Windows
+    if platform.system() == "Windows":
+        try:
+            import subprocess
+            out = subprocess.check_output(
+                ["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"],
+                text=True, stderr=subprocess.DEVNULL, timeout=2.0
+            ).strip()
+            if out:
+                adapters = [line.strip() for line in out.splitlines() if line.strip()]
+                if adapters:
+                    hardware_adapter_name = adapters[0]
+                    gpu_name = hardware_adapter_name
+        except Exception:
+            pass
+
+    # 2. Verify actual compute acceleration capability (PyTorch CUDA)
     try:
         import torch
-        if torch.cuda.is_available():
-            has_gpu = True
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            cuda_available = True
+            has_gpu_access = True
             gpu_name = torch.cuda.get_device_name(0)
             vram_bytes = torch.cuda.get_device_properties(0).total_memory
             vram_gb = round(vram_bytes / (1024 ** 3), 1)
-            acceleration_mode = "GPU AUTO-ACCELERATED"
-    except Exception:
-        pass
+            gpu_reason = f"High-speed CUDA compute active on {gpu_name} ({vram_gb} GB VRAM)."
+        else:
+            if hardware_adapter_name:
+                if any(x in hardware_adapter_name.lower() for x in ["nvidia", "geforce", "rtx", "gtx"]):
+                    gpu_reason = f"NVIDIA GPU ({hardware_adapter_name}) detected, but PyTorch CUDA compute libraries are not installed. Reinstall torch with CUDA support to enable."
+                else:
+                    gpu_reason = f"{hardware_adapter_name} detected, but lacks CUDA compute runtime. GPU switch disabled to avoid crashes."
+            else:
+                gpu_reason = "No compatible CUDA/ROCm GPU compute device detected on this laptop."
+    except Exception as e:
+        gpu_reason = f"GPU compute detection error: {e}"
+
+    if not has_gpu_access and _ACTIVE_HARDWARE_MODE == "gpu":
+        _ACTIVE_HARDWARE_MODE = "cpu"
 
     return {
         "cpu_threads": cpu_threads,
         "ram_gb": ram_gb,
         "gpu_name": gpu_name,
         "vram_gb": vram_gb,
-        "has_gpu": has_gpu,
-        "acceleration_mode": acceleration_mode,
+        "has_gpu": has_gpu_access,
+        "has_gpu_access": has_gpu_access,
+        "cuda_available": cuda_available,
+        "hardware_adapter_name": hardware_adapter_name or gpu_name,
+        "gpu_disabled_reason": gpu_reason if not has_gpu_access else "",
+        "acceleration_mode": "GPU AUTO-ACCELERATED" if (_ACTIVE_HARDWARE_MODE == "gpu" and has_gpu_access) else "CPU PARALLEL ENGINE",
+        "active_mode": _ACTIVE_HARDWARE_MODE if has_gpu_access else "cpu",
         "os": platform.system(),
         "arch": platform.machine(),
     }
+
+
+def set_active_hardware_mode(mode: str) -> Dict[str, Any]:
+    """Update global hardware mode."""
+    global _ACTIVE_HARDWARE_MODE
+    mode = mode.lower().strip()
+    specs = get_system_hardware_specs()
+    if mode == "gpu" and not specs.get("has_gpu_access", False):
+        _ACTIVE_HARDWARE_MODE = "cpu"
+        return {
+            "success": False,
+            "mode": "cpu",
+            "message": specs.get("gpu_disabled_reason", "GPU compute not available.")
+        }
+    _ACTIVE_HARDWARE_MODE = mode
+    return {
+        "success": True,
+        "mode": _ACTIVE_HARDWARE_MODE,
+        "message": f"Active mode set to {_ACTIVE_HARDWARE_MODE.upper()}"
+    }
+
 

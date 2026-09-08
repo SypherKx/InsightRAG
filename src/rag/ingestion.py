@@ -242,11 +242,13 @@ class DocumentIngester:
             Tuple: (text_content, metadata)
         """
         pages = []
+        pages_data = []
         metadata = {
             "page_count": 0,
             "author": None,
             "title": None,
             "creation_date": None,
+            "pages_data": [],
         }
 
         # 1. Try PyMuPDF (fitz) - fastest & highest fidelity
@@ -265,12 +267,42 @@ class DocumentIngester:
 
             for p_num in range(s_idx, e_idx):
                 page = doc[p_num]
-                text = page.get_text()
-                if text and text.strip():
-                    pages.append(f"[Page {p_num + 1}]\n" + text.strip())
+                text = page.get_text() or ""
+                text_clean = text.strip()
+                
+                # Check for visual elements (drawings or embedded images)
+                has_drawings = False
+                has_images = False
+                try:
+                    drawings = page.get_drawings()
+                    has_drawings = bool(drawings and len(drawings) > 0)
+                except Exception:
+                    pass
+                try:
+                    images = page.get_images()
+                    has_images = bool(images and len(images) > 0)
+                except Exception:
+                    pass
+
+                # If text is empty but page has visual diagrams, add a synthetic marker
+                if not text_clean and (has_drawings or has_images):
+                    text_clean = f"[Diagram / Visual Illustration on Page {p_num + 1}]"
+
+                if text_clean:
+                    page_entry_text = f"[Page {p_num + 1}]\n" + text_clean
+                    pages.append(page_entry_text)
+                    pages_data.append({
+                        "page_number": p_num + 1,
+                        "text": text_clean,
+                        "has_images": has_images,
+                        "has_drawings": has_drawings,
+                        "char_count": len(text_clean),
+                    })
+
             doc.close()
             if pages:
                 metadata["page_range"] = f"Pages {s_idx + 1}-{e_idx}"
+                metadata["pages_data"] = pages_data
                 return "\n\n".join(pages), metadata
         except ImportError:
             pass
@@ -288,11 +320,20 @@ class DocumentIngester:
                 e_idx = min(total_pages, end_page) if end_page else total_pages
 
                 for p_num in range(s_idx, e_idx):
-                    text = reader.pages[p_num].extract_text()
-                    if text and text.strip():
-                        pages.append(f"[Page {p_num + 1}]\n" + text.strip())
+                    text = reader.pages[p_num].extract_text() or ""
+                    text_clean = text.strip()
+                    if text_clean:
+                        pages.append(f"[Page {p_num + 1}]\n" + text_clean)
+                        pages_data.append({
+                            "page_number": p_num + 1,
+                            "text": text_clean,
+                            "has_images": False,
+                            "has_drawings": False,
+                            "char_count": len(text_clean),
+                        })
             if pages:
                 metadata["page_range"] = f"Pages {s_idx + 1}-{e_idx}"
+                metadata["pages_data"] = pages_data
                 return "\n\n".join(pages), metadata
         except ImportError:
             pass
@@ -309,11 +350,20 @@ class DocumentIngester:
             e_idx = min(total_pages, end_page) if end_page else total_pages
 
             for p_num in range(s_idx, e_idx):
-                text = reader.pages[p_num].extract_text()
-                if text and text.strip():
-                    pages.append(f"[Page {p_num + 1}]\n" + text.strip())
+                text = reader.pages[p_num].extract_text() or ""
+                text_clean = text.strip()
+                if text_clean:
+                    pages.append(f"[Page {p_num + 1}]\n" + text_clean)
+                    pages_data.append({
+                        "page_number": p_num + 1,
+                        "text": text_clean,
+                        "has_images": False,
+                        "has_drawings": False,
+                        "char_count": len(text_clean),
+                    })
             if pages:
                 metadata["page_range"] = f"Pages {s_idx + 1}-{e_idx}"
+                metadata["pages_data"] = pages_data
                 return "\n\n".join(pages), metadata
         except ImportError:
             pass
@@ -323,6 +373,7 @@ class DocumentIngester:
         content = "\n\n".join(pages)
         if not content:
             raise ValueError(f"Could not extract readable text from PDF: {file_path}")
+        metadata["pages_data"] = pages_data
         return content, metadata
 
     def _extract_txt(self, file_path: Path) -> tuple[str, dict]:

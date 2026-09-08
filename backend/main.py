@@ -82,12 +82,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
         # Content Security Policy (allows local SPA, styles, fonts, and trusted LLM APIs)
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "default-src 'self' data: blob:; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com data:; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' http://localhost:* http://127.0.0.1:* https://api.groq.com https://generativelanguage.googleapis.com https://api.openai.com; "
+            "connect-src 'self' * http: https: ws: wss:; "
             "frame-ancestors 'none';"
         )
         return response

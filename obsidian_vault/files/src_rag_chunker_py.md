@@ -32,7 +32,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\chunker.py (318 lines)
+Module: src\rag\chunker.py (408 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class ChunkConfig:, class TextChunker:, def __init__, def _compile_separator_pattern, def _count_tokens

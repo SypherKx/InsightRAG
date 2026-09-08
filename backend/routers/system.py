@@ -38,6 +38,10 @@ class PullModelRequest(BaseModel):
     model_name: Optional[str] = DEFAULT_MODEL
 
 
+class HardwareModeRequest(BaseModel):
+    mode: str = "cpu"
+
+
 @router.get("/health", response_model=SystemHealthStatus)
 async def get_system_health():
     """Returns comprehensive health check for Desktop App onboarding screen."""
@@ -65,6 +69,30 @@ async def get_system_specs():
     specs["ollama_running"] = running
     specs["installed_models"] = installed
     return specs
+
+
+@router.get("/hardware-mode")
+async def get_hardware_mode():
+    """Get active hardware acceleration mode and GPU eligibility details."""
+    from ..dependencies import get_rag_service
+    rag_svc = get_rag_service()
+    if hasattr(rag_svc, "get_hardware_mode"):
+        return rag_svc.get_hardware_mode()
+    from ..services.ollama_manager import get_system_hardware_specs
+    return get_system_hardware_specs()
+
+
+@router.post("/hardware-mode")
+async def switch_hardware_mode(request: HardwareModeRequest):
+    """Switch processing between GPU and CPU at runtime with live terminal logs."""
+    from ..dependencies import get_rag_service
+    from ..services.ollama_manager import set_active_hardware_mode
+    rag_svc = get_rag_service()
+    set_active_hardware_mode(request.mode)
+    if hasattr(rag_svc, "set_hardware_mode"):
+        result = rag_svc.set_hardware_mode(request.mode)
+        return result
+    return {"mode": request.mode, "status": "updated"}
 
 
 @router.post("/pull-model")

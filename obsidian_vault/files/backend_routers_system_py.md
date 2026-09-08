@@ -19,16 +19,19 @@ tags:
 ## ⚙️ Key Symbols & Interfaces
 - `class SystemHealthStatus`
 - `class PullModelRequest`
+- `class HardwareModeRequest`
 - `async def get_system_health`
 - `async def get_system_specs`
+- `async def get_hardware_mode`
+- `async def switch_hardware_mode`
 - `async def trigger_model_pull`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\routers\system.py (78 lines)
+Module: backend\routers\system.py (106 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
-Exports: class SystemHealthStatus, class PullModelRequest, async def get_system_health, async def get_system_specs, async def trigger_model_pull
+Exports: class SystemHealthStatus, class PullModelRequest, class HardwareModeRequest, async def get_system_health, async def get_system_specs
 ```
