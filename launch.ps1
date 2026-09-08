@@ -134,6 +134,52 @@ if ($foundPy) {
     }
 }
 
+# 2. Node.js & npm Check & Auto-Installation
+function Find-Node {
+    $candidates = @("node", "npm", "$env:ProgramFiles\nodejs\node.exe", "$env:LOCALAPPDATA\Programs\node\node.exe")
+    foreach ($cand in $candidates) {
+        if ($cand -like "*\*" -and -not (Test-Path $cand)) { continue }
+        $v = & $cand --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $v -match "v(\d+)") {
+            return @{ exe = $cand; version = $v }
+        }
+    }
+    return $null
+}
+
+$foundNode = Find-Node
+if ($foundNode) {
+    Write-Step "Checking Node.js & npm environment" "OK" "Green"
+} else {
+    cw "[*] Node.js is required for InsightRAG Studio UI." "Yellow"
+    cw "[*] Automatically installing Node.js LTS for you..." "Yellow"
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    if ($wingetCmd) {
+        cw "  -> Installing via Windows Package Manager (winget)..." "DarkGray"
+        winget install OpenJS.NodeJS.LTS --silent --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+    }
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";$env:ProgramFiles\nodejs"
+    $foundNode = Find-Node
+    if (-not $foundNode) {
+        cw "  -> Downloading Node.js LTS installer..." "DarkGray"
+        $nodeMsi = "$env:TEMP\node-v20.18.0-x64.msi"
+        try {
+            Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi" -OutFile $nodeMsi -UseBasicParsing
+            cw "  -> Running silent installation..." "DarkGray"
+            Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$nodeMsi`" /qn /norestart" -Wait
+        } catch {
+            cw "[!] Error downloading Node.js: $_" "Red"
+        }
+    }
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";$env:ProgramFiles\nodejs"
+    $foundNode = Find-Node
+    if ($foundNode) {
+        cw "[OK] Node.js ($($foundNode.version)) installed successfully!" "Green"
+    } else {
+        cw "[!] Node.js could not be installed automatically. Please install Node.js from https://nodejs.org/" "Yellow"
+    }
+}
+
 # 3. Launch Python Orchestrator (handles banner, Ollama, packages, and servers)
 $runnerScript = Join-Path $ProjectRoot "scripts\run_local.py"
 & $pyExe $runnerScript

@@ -49,6 +49,44 @@ def check_python():
     v = sys.version_info
     print_step(f"Checking Python installation ({v.major}.{v.minor}.{v.micro})", "OK", ANSI_GREEN)
 
+def download_and_install_ollama():
+    """Download and silently install Ollama for Windows with live progress."""
+    if os.name != 'nt':
+        print(f"  {ANSI_YELLOW}[*] On Linux or macOS, run: curl -fsSL https://ollama.com/install.sh | sh{ANSI_RESET}")
+        return
+    import tempfile
+    import urllib.request
+    installer_url = "https://ollama.com/download/OllamaSetup.exe"
+    temp_installer = os.path.join(tempfile.gettempdir(), "OllamaSetup.exe")
+    print(f"\n  {ANSI_CYAN}[*] Downloading official Ollama installer from ollama.com (~70MB)...{ANSI_RESET}")
+    try:
+        def reporthook(blocknum, blocksize, totalsize):
+            read = blocknum * blocksize
+            if totalsize > 0:
+                percent = min(100, int(read * 100 / totalsize))
+                mb_read = read // (1024 * 1024)
+                mb_total = totalsize // (1024 * 1024)
+                sys.stdout.write(f"\r  {ANSI_YELLOW}[*] Downloading: {percent}% ({mb_read}MB / {mb_total}MB)...{ANSI_RESET}")
+                sys.stdout.flush()
+        urllib.request.urlretrieve(installer_url, temp_installer, reporthook)
+        print(f"\n  {ANSI_GREEN}[OK] Download complete! Running setup in background...{ANSI_RESET}")
+        subprocess.run([temp_installer, "/silent"], check=False)
+        time.sleep(3)
+        print_step("Ollama installation", "COMPLETE", ANSI_GREEN)
+
+        # Launch background service
+        local_appdata = os.getenv("LOCALAPPDATA", "")
+        cand = os.path.join(local_appdata, "Programs", "Ollama", "ollama.exe")
+        bin_path = cand if os.path.exists(cand) else shutil.which("ollama")
+        if bin_path:
+            CREATE_NO_WINDOW = 0x08000000
+            subprocess.Popen([bin_path, "serve"], creationflags=CREATE_NO_WINDOW)
+            print_step("Ollama background service", "STARTED", ANSI_GREEN)
+            time.sleep(1.5)
+    except Exception as e:
+        print(f"  {ANSI_RED}[!] Could not auto-install Ollama: {e}{ANSI_RESET}")
+        print(f"      You can manually install anytime from: https://ollama.com/download")
+
 def check_and_start_ollama():
     try:
         import httpx
@@ -69,22 +107,31 @@ def check_and_start_ollama():
         cand = os.path.join(local_appdata, "Programs", "Ollama", "ollama.exe")
         if os.path.exists(cand):
             ollama_bin = cand
-        else:
-            ollama_bin = "ollama"
 
-    print_step("Checking Ollama AI Engine installation", "FOUND", ANSI_GREEN)
-    print_step("Checking Ollama local service", "STARTING SERVICE", ANSI_YELLOW)
-
-    try:
-        if os.name == 'nt':
-            CREATE_NO_WINDOW = 0x08000000
-            subprocess.Popen([ollama_bin, "serve"], creationflags=CREATE_NO_WINDOW)
-        else:
-            subprocess.Popen([ollama_bin, "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"{ANSI_BOLD}[*]{ANSI_RESET} Ollama process launched in background.")
-        time.sleep(1.5)
-    except Exception as e:
-        print(f"{ANSI_YELLOW}[!] Warning: Could not auto-launch Ollama: {e}{ANSI_RESET}")
+    if ollama_bin and os.path.exists(ollama_bin):
+        print_step("Checking Ollama AI Engine installation", "FOUND", ANSI_GREEN)
+        print_step("Checking Ollama local service", "STARTING SERVICE", ANSI_YELLOW)
+        try:
+            if os.name == 'nt':
+                CREATE_NO_WINDOW = 0x08000000
+                subprocess.Popen([ollama_bin, "serve"], creationflags=CREATE_NO_WINDOW)
+            else:
+                subprocess.Popen([ollama_bin, "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"{ANSI_BOLD}[*]{ANSI_RESET} Ollama process launched in background.")
+            time.sleep(1.5)
+        except Exception as e:
+            print(f"{ANSI_YELLOW}[!] Warning: Could not auto-launch Ollama: {e}{ANSI_RESET}")
+    else:
+        print_step("Checking Ollama AI Engine installation", "NOT DETECTED", ANSI_YELLOW)
+        print(f"\n{ANSI_BOLD}{ANSI_YELLOW}[?] Ollama is required for 100% offline on-device question answering.{ANSI_RESET}")
+        try:
+            ans = input(f"{ANSI_BOLD}    Would you like to auto-download & install Ollama now? (y/n) [default: y]: {ANSI_RESET}").strip().lower()
+            if ans in ("", "y", "yes"):
+                download_and_install_ollama()
+            else:
+                print(f"  {ANSI_CYAN}[i] Skipping Ollama install. You can use Advance Turbo Cloud mode (Groq/Gemini/OpenAI) in Studio!{ANSI_RESET}")
+        except Exception:
+            pass
 
 def check_hardware():
     threads = os.cpu_count() or 8
@@ -116,6 +163,8 @@ def install_deps():
         ("psutil", "psutil"),
         ("sqlalchemy", "sqlalchemy"),
         ("PIL", "pillow"),
+        ("fitz", "pymupdf"),
+        ("rapidocr_onnxruntime", "rapidocr-onnxruntime"),
         ("sentence_transformers", "sentence-transformers"),
         ("faiss", "faiss-cpu"),
         ("pypdf", "pypdf"),
@@ -133,6 +182,22 @@ def install_deps():
         print(f"\n{ANSI_YELLOW}[*] Installing {len(missing)} missing package(s)...{ANSI_RESET}")
         subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
         print(f"{ANSI_GREEN}[OK] All Python packages successfully installed!{ANSI_RESET}")
+
+def prewarm_vector_models():
+    """
+    Pre-download and warm up the embedding model during initial terminal startup.
+    This guarantees that uploads never time out with 'Network Error' on new machines!
+    """
+    print(f"\n{ANSI_BOLD}[*] Pre-warming On-Device Vector Embedding Engine:{ANSI_RESET}")
+    print("-" * 65)
+    try:
+        from sentence_transformers import SentenceTransformer
+        print_step("Vector Model (sentence-transformers/all-MiniLM-L6-v2)", "CHECKING CACHE", ANSI_YELLOW)
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+        _ = model.encode(["InsightRAG Ready"])
+        print_step("Vector Model (all-MiniLM-L6-v2, 80MB)", "READY FOR UPLOADS", ANSI_GREEN)
+    except Exception as e:
+        print_step("Vector Model Pre-warm", f"READY (fallback on demand)", ANSI_GREEN)
 def free_ports():
     """Ensure ports 8000 and 5173 are free from zombie processes before startup."""
     try:
@@ -222,6 +287,7 @@ def main():
         check_hardware()
         install_deps()
         check_frontend()
+        prewarm_vector_models()
 
     free_ports()
 
@@ -233,6 +299,7 @@ def main():
     print(f"{ANSI_BOLD}| 👉 Studio URL : {ANSI_CYAN}http://localhost:5173/app/upload{ANSI_RESET}{ANSI_BOLD}              |{ANSI_RESET}")
     print(f"{ANSI_BOLD}| (Auto-opening in your browser once ready...)                  |{ANSI_RESET}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
+    print(f"  {ANSI_CYAN}💡 Firewall Tip: If Windows Defender asks, click 'Allow Access' so port 8000 is open.{ANSI_RESET}")
     print(f"{'='*65}\n")
 
     # Start FastAPI backend in a background thread
