@@ -5,7 +5,7 @@ import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "Architecture & Philosophy — InsightForge Healthcare & Education RAG" },
+      { title: "About" },
       {
         name: "description",
         content:

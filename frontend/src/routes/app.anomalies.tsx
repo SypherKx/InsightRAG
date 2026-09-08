@@ -6,7 +6,7 @@ import { mockAnomalies, mockDatasets } from "@/lib/mock-data";
 import { getDatasets, getAnomalies } from "../services/api";
 
 export const Route = createFileRoute("/app/anomalies")({
-  head: () => ({ meta: [{ title: "Clinical Anomaly Signals — InsightForge Health & Edu" }] }),
+  head: () => ({ meta: [{ title: "Anomalies" }] }),
   component: AnomaliesPage,
 });
 

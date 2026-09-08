@@ -19,7 +19,7 @@ import type { AnomalyDetail } from "../types/backend-types";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/app/anomalies/$id")({
-  head: () => ({ meta: [{ title: "Insight — InsightForge AI" }] }),
+  head: () => ({ meta: [{ title: "Insight" }] }),
   component: InsightPage,
   notFoundComponent: () => <div className="p-10 text-zinc-400">Anomaly not found.</div>,
 });

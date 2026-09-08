@@ -34,7 +34,7 @@ import {
 export const Route = createFileRoute("/docs")({
   head: () => ({
     meta: [
-      { title: "Documentation — InsightRAG AI" },
+      { title: "Documentation" },
       {
         name: "description",
         content:

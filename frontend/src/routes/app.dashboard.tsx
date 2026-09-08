@@ -28,7 +28,7 @@ import { getDatasets, getRAGStats, getAnomalies } from "../services/api";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/app/dashboard")({
-  head: () => ({ meta: [{ title: "Clinical & Educational RAG Cockpit — InsightForge" }] }),
+  head: () => ({ meta: [{ title: "Dashboard" }] }),
   component: DashboardPage,
 });
 
