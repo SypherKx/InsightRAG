@@ -297,17 +297,23 @@ function KnowledgeBaseStudioPage() {
     setProcessingStep(0);
     setCurrentUploadingFiles(fileList.map((f) => f.name));
     setUploading(true);
-    setUploadProgress(15);
+    setUploadProgress(5);
     setUploadStatusMsg(null);
 
-    const step1 = setTimeout(() => setProcessingStep(1), 500);
-    const step2 = setTimeout(() => setProcessingStep(2), 1500);
-    const step3 = setTimeout(() => setProcessingStep(3), 2600);
-    const step4 = setTimeout(() => setProcessingStep(4), 3800);
+    // Scale parsing stage timers based on total file size
+    const totalSizeMB = fileList.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024);
+    const scale = totalSizeMB > 10 ? 4.0 : totalSizeMB > 2 ? 2.0 : 1.0;
+    const progressIncrement = totalSizeMB > 10 ? 1.5 : totalSizeMB > 2 ? 3 : 6;
+    const progressInterval = totalSizeMB > 10 ? 400 : 200;
+
+    const step1 = setTimeout(() => setProcessingStep(1), Math.round(800 * scale));
+    const step2 = setTimeout(() => setProcessingStep(2), Math.round(2200 * scale));
+    const step3 = setTimeout(() => setProcessingStep(3), Math.round(4000 * scale));
+    const step4 = setTimeout(() => setProcessingStep(4), Math.round(6000 * scale));
 
     const interval = setInterval(() => {
-      setUploadProgress((p) => (p >= 92 ? 92 : p + 6));
-    }, 200);
+      setUploadProgress((p) => (p >= 92 ? 92 : p + progressIncrement));
+    }, progressInterval);
 
     try {
       const sPage = usePageRange && typeof startPage === "number" && startPage > 0 ? startPage : undefined;

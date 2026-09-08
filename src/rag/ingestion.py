@@ -318,8 +318,8 @@ class DocumentIngester:
                             bbox = img_info.get("bbox")
                             w = img_info.get("width", 0)
                             h = img_info.get("height", 0)
-                            # Skip tiny icons or decoration (< 45x45)
-                            if w < 45 and h < 45:
+                            # Skip tiny icons or decoration (< 30x30)
+                            if w < 30 and h < 30:
                                 continue
 
                             caption = _find_caption_near_bbox(page, bbox)
@@ -347,9 +347,9 @@ class DocumentIngester:
                     pass
 
                 # C. Fallback for scanned pages (low selectable text + visuals present)
-                if len(text_clean) < 40 and (has_images or has_drawings):
+                if len(text_clean) < 80 and (has_images or has_drawings):
                     try:
-                        pix = page.get_pixmap(dpi=150)
+                        pix = page.get_pixmap(dpi=200)
                         vis_info = _analyze_visual(
                             img_bytes=pix.tobytes("png"),
                             w=pix.width,
