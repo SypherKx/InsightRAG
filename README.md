@@ -5,7 +5,7 @@
 **Zero-Budget • 100% On-Device Vector Privacy • Hardware Auto-Tuned • Multimodal Vision & ROI Diagram Cropping**
 
 <br />
-
+```text
 ██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ 
 ██║████╗  ██║██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝    ██╔══██╗ ██╔══██╗ ██╔════╝ 
 ██║██╔██╗ ██║███████╗██║██║  ███╗███████║   ██║       ██████╔╝ ███████║ ██║  ███╗
@@ -95,20 +95,33 @@ python scripts/run_local.py
 * **Intelligent Sub-Region Isolation**: When asking for a specific diagram, flowchart, or component (e.g., *"show me the attention mechanism diagram"* or *"Figure 2 architecture"*), the engine scans PDF vector graphics (`fitz.get_drawings()`) and image bounding boxes.
 * **Focused High-Res PNG Rendering**: Instead of rendering a full blank page, it isolates and crops **only that specific diagram / sub-region** with crisp padding and embeds an interactive **📷 FOCUSED VISUAL EVIDENCE** card in chat.
 
-### 2. 💬 Multi-Turn Conversational Memory (ChatGPT Experience)
+### 2. 🔬 Deep Page-by-Page Multimodal Ingestion & Analysis
+* **Exhaustive Document Comprehension**: Never skims or rushes. Every page is systematically inspected, extracting high-fidelity text, vector graphics, image bounding boxes, tables, and mathematical formulas.
+* **Granular Visual Metadata**: Images, figures, and diagrams are tagged with their exact page coordinates (`[x0, y0, x1, y1]`) and embedded into dense vector memory with distinct context anchors for zero hallucination.
+
+### 3. 🖥️ Dedicated Fullscreen Chat Studio with Ingestion Gating
+* **Two-Phase Workflow**: Documents first undergo thorough multi-stage ingestion with animated progress trackers (Reading Pages → Extracting Graphics → Generating Vectors → Storing in FAISS).
+* **Immersive Fullscreen Workspace**: Once processing is complete, the studio seamlessly transitions into a dedicated fullscreen chat interface with multi-turn memory, high-res zoomable diagram previews, 1-click copy, and a quick **"← Back to Documents"** button to manage uploads.
+
+### 4. 💬 Multi-Turn Conversational Memory (ChatGPT Experience)
 * **Full Context Retention**: Seamlessly asks follow-up questions referencing previous answers, facts, and citations across multiple turns.
 * **Persistent Sessions**: Real-time auto-synchronization to `localStorage` preserves conversations and diagram evidence even after browser exits or PC reboots.
 * **Interactive Controls**: Features 1-click **Copy Answer**, auto-scroll toggling, and clean session clearing.
 
-### 3. 📑 Selective Page Range Slicing
+### 5. 📑 Selective Page Range Slicing
 * **Precision Ingestion**: Upload 1,000+ page books or manuals and choose exact page ranges (e.g., *Page 45 to 80*) to slice and index only the target chapter.
 * **Zero Index Bloat**: Saves vector space and boosts retrieval speed.
 
-### 4. ⚡ Dual Compute Architecture (Local Air-Gapped vs. Turbo Cloud)
+### 6. 🔄 Smart 1-Line Self-Healing Installer & Auto-Updater
+* **Single Command Setup**: Run `irm https://www.insightrag.tech/install.ps1 | iex` from any terminal.
+* **Zero-Conflict Auto-Updates**: Detects existing installations and pulls the latest GitHub updates automatically while strictly safeguarding your local database (`insightforge.db`), `.env`, and existing uploads.
+* **Global Offline Command**: Auto-registers `insightrag` command globally across Windows so you can launch anytime offline without internet.
+
+### 7. ⚡ Dual Compute Architecture (Local Air-Gapped vs. Turbo Cloud)
 * **💻 100% Local Mode [DEFAULT]**: Powered by local Ollama (`llama3.2:3b`, `qwen2.5`) and `faiss-cpu`. Zero data leaves your machine.
 * **⚡ Advance Turbo Server**: Accelerated cloud processing using Groq (`llama-3.3-70b-versatile`), Google Gemini (`gemini-1.5-flash`), or OpenAI (`gpt-4o-mini`).
 
-### 5. 🧠 Speed-Tiered Dense Embeddings
+### 8. 🧠 Speed-Tiered Dense Embeddings
 * **⚡ `all-MiniLM-L6-v2` (Ultra-Fast 5x • 384-dim)**: CPU-friendly embedding inference for fast laptops.
 * **⚖️ `bge-small-en-v1.5` (Balanced 3x • 384-dim)**: Top retrieval accuracy for standard desktop PCs.
 * **🧠 `bge-base-en-v1.5` (High Precision • 768-dim)**: SOTA dense semantic capture for research & technical depth.

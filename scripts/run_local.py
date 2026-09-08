@@ -33,7 +33,7 @@ ANSI_RED    = "\033[91m"
 ANSI_BOLD   = "\033[1m"
 ANSI_RESET  = "\033[0m"
 
-BANNER = f"""{ANSI_RED}
+BANNER = f"""{ANSI_BOLD}{ANSI_CYAN}
 ██╗███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗████████╗    ██████╗   █████╗   ██████╗ 
 ██║████╗  ██║██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝    ██╔══██╗ ██╔══██╗ ██╔════╝ 
 ██║██╔██╗ ██║███████╗██║██║  ███╗███████║   ██║       ██████╔╝ ███████║ ██║  ███╗
@@ -215,9 +215,9 @@ def wait_for_port(port, timeout=30):
     return False
 
 def main():
+    print(BANNER)
     skip_checks = "--skip-checks" in sys.argv
     if not skip_checks:
-        print(BANNER)
         check_python()
         check_and_start_ollama()
         check_hardware()
