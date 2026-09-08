@@ -151,11 +151,33 @@ def free_ports():
 def check_frontend():
     frontend_dir = ROOT_DIR / "frontend"
     node_modules = frontend_dir / "node_modules"
+    pkg_json = frontend_dir / "package.json"
+    hash_file = node_modules / ".package_hash"
     npm_cmd = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
+
+    needs_install = False
     if not node_modules.exists():
-        print(f"\n{ANSI_YELLOW}[*] Installing frontend packages (first run - ~30s)...{ANSI_RESET}")
+        needs_install = True
+    elif pkg_json.exists():
+        import hashlib
+        try:
+            current_hash = hashlib.md5(pkg_json.read_bytes()).hexdigest()
+            if not hash_file.exists() or hash_file.read_text().strip() != current_hash:
+                needs_install = True
+        except Exception:
+            pass
+
+    if needs_install:
+        print(f"\n{ANSI_YELLOW}[*] Installing/updating frontend packages (~30s)...{ANSI_RESET}")
         subprocess.check_call([npm_cmd, "install"], cwd=str(frontend_dir))
-        print(f"{ANSI_GREEN}[OK] Frontend packages installed!{ANSI_RESET}")
+        try:
+            if pkg_json.exists():
+                import hashlib
+                current_hash = hashlib.md5(pkg_json.read_bytes()).hexdigest()
+                hash_file.write_text(current_hash)
+        except Exception:
+            pass
+        print(f"{ANSI_GREEN}[OK] Frontend packages updated!{ANSI_RESET}")
     else:
         print_step("Checking frontend npm packages", "OK", ANSI_GREEN)
 

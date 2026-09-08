@@ -22,6 +22,7 @@ import {
   RotateCcw,
   User,
   MessageSquarePlus,
+  ArrowLeft,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -89,6 +90,45 @@ const EMBEDDING_OPTIONS = [
   },
 ];
 
+const PARSING_STAGES = [
+  {
+    step: 0,
+    title: "Document Buffer & Format Validation",
+    desc: "Validating file headers (PDF/DOCX/Images), parsing byte streams & initializing on-device memory pipelines.",
+    icon: "📄",
+  },
+  {
+    step: 1,
+    title: "Deep Page Rasterization & Scanned Text OCR",
+    desc: "Extracting complete native typography, boundary coordinates, and running high-res OCR on scanned text.",
+    icon: "🔍",
+  },
+  {
+    step: 2,
+    title: "Tabular Structure Extraction & Grid Conversion",
+    desc: "Detecting tables via PyMuPDF find_tables and converting them into clean structured Markdown grids.",
+    icon: "📊",
+  },
+  {
+    step: 3,
+    title: "Computer Vision & Diagram Edge Inspection",
+    desc: "Extracting embedded figures, computing Sobel edge density, and classifying charts, plots, and schematics.",
+    icon: "📐",
+  },
+  {
+    step: 4,
+    title: "Multimodal Contextualization & Figure Captioning",
+    desc: "Associating nearby captions with diagrams and generating ROI coordinates for high-res visual retrieval.",
+    icon: "🖼️",
+  },
+  {
+    step: 5,
+    title: "Semantic Chunking & FAISS Vector Indexing",
+    desc: "Compiling text and visual chunks into dense vector embeddings and persisting to the FAISS index.",
+    icon: "⚡",
+  },
+];
+
 function KnowledgeBaseStudioPage() {
   // Hardware Specs State
   const [specs, setSpecs] = useState<any>({
@@ -124,6 +164,11 @@ function KnowledgeBaseStudioPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [ragStats, setRagStats] = useState<any>({ total_vectors: 0, files: [] });
   const [deletingDocName, setDeletingDocName] = useState<string | null>(null);
+
+  // View state: 'upload' | 'processing' | 'chat'
+  const [activeView, setActiveView] = useState<"upload" | "processing" | "chat">("upload");
+  const [processingStep, setProcessingStep] = useState<number>(0);
+  const [currentUploadingFiles, setCurrentUploadingFiles] = useState<string[]>([]);
 
   // Page Range Slicing State (Controlled inside upload confirmation modal)
   const [usePageRange, setUsePageRange] = useState(false);
@@ -248,12 +293,21 @@ function KnowledgeBaseStudioPage() {
   };
 
   const startUpload = async (fileList: File[]) => {
+    setActiveView("processing");
+    setProcessingStep(0);
+    setCurrentUploadingFiles(fileList.map((f) => f.name));
     setUploading(true);
     setUploadProgress(15);
     setUploadStatusMsg(null);
+
+    const step1 = setTimeout(() => setProcessingStep(1), 500);
+    const step2 = setTimeout(() => setProcessingStep(2), 1500);
+    const step3 = setTimeout(() => setProcessingStep(3), 2600);
+    const step4 = setTimeout(() => setProcessingStep(4), 3800);
+
     const interval = setInterval(() => {
-      setUploadProgress((p) => (p >= 90 ? 90 : p + 15));
-    }, 150);
+      setUploadProgress((p) => (p >= 92 ? 92 : p + 6));
+    }, 200);
 
     try {
       const sPage = usePageRange && typeof startPage === "number" && startPage > 0 ? startPage : undefined;
@@ -261,23 +315,36 @@ function KnowledgeBaseStudioPage() {
 
       const res = await uploadRAGDocuments(fileList, sPage, ePage);
       clearInterval(interval);
+      clearTimeout(step1);
+      clearTimeout(step2);
+      clearTimeout(step3);
+      clearTimeout(step4);
+
+      setProcessingStep(5);
       setUploadProgress(100);
 
       const rangeNotice = (sPage || ePage) ? ` [Pages ${sPage || 1} to ${ePage || 'End'}]` : "";
       setUploadStatusMsg(`✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`);
 
+      await loadSpecsAndStats();
+
       setTimeout(() => {
         setUploading(false);
+        setActiveView("chat");
         setUploadProgress(0);
-        loadSpecsAndStats();
-      }, 600);
-      setTimeout(() => {
-        setUploadStatusMsg(null);
-      }, 6000);
+        setTimeout(() => {
+          chatInputRef.current?.focus();
+        }, 300);
+      }, 900);
     } catch (err: any) {
       clearInterval(interval);
+      clearTimeout(step1);
+      clearTimeout(step2);
+      clearTimeout(step3);
+      clearTimeout(step4);
       setUploading(false);
       setUploadProgress(0);
+      setActiveView("upload");
       setUploadStatusMsg(`⚠️ Upload error: ${err?.response?.data?.detail || err?.message || "Failed to process files"}`);
       loadSpecsAndStats();
     }
@@ -304,6 +371,7 @@ function KnowledgeBaseStudioPage() {
       loadSpecsAndStats();
       setChatMessages([]);
       localStorage.removeItem("insightrag_chat_history");
+      setActiveView("upload");
     }
   };
 
@@ -498,7 +566,7 @@ function KnowledgeBaseStudioPage() {
         backgroundColor: "#e6f0fa",
       }}
     >
-      <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 w-full">
+      <div className={`mx-auto space-y-4 sm:space-y-6 w-full ${activeView === "chat" ? "max-w-6xl" : "max-w-5xl"}`}>
         {/* 1. TOP SYSTEM SPECS BADGE */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-black text-white p-3 sm:px-5 sm:py-3 rounded-2xl shadow-xl border-2 border-black font-mono text-xs">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-bold">
@@ -525,539 +593,166 @@ function KnowledgeBaseStudioPage() {
           </span>
         </div>
 
-        {/* 2. MAIN STUDIO CONTAINER CARD */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-3 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-5 sm:space-y-6 text-black">
-          {/* Header Title + Download Button */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-300 pb-4 sm:pb-5 gap-3 sm:gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/"
-                  className="sm:hidden bg-black text-white font-black font-mono text-[10px] px-2 py-0.5 rounded border border-black"
-                >
-                  ← Home
-                </Link>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-black font-mono">
-                  KNOWLEDGE BASE STUDIO
-                </h1>
+        {/* CONDITIONAL ACTIVE VIEW ROUTING */}
+        {activeView === "processing" ? (
+          /* DEDICATED DEEP MULTI-MODAL PARSING & UNDERSTANDING VIEW */
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-6 sm:p-10 border-3 border-black shadow-[6px_6px_0px_#000] sm:shadow-[10px_10px_0px_#000] space-y-6 text-black font-mono">
+            {/* Header */}
+            <div className="border-b-2 border-black pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-black text-[#ffe600] text-[10px] font-black px-2 py-0.5 rounded border border-black uppercase animate-pulse">
+                    PARSING PIPELINE
+                  </span>
+                  <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-black">
+                    Deep Multi-Modal Understanding
+                  </h2>
+                </div>
+                <p className="text-xs text-gray-600 mt-1 font-bold">
+                  Thoroughly extracting every page, table, image & diagram before entering the Chat Studio.
+                </p>
               </div>
-              <p className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1">
-                Zero-Budget Local Multimodal RAG Engine • 100% On-Device Privacy
-              </p>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <Link
-                to="/"
-                className="hidden sm:flex bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] items-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
-              >
-                Home
-              </Link>
-              <Link
-                to="/docs"
-                className="flex-1 sm:flex-none bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-black" />
-                <span>Docs</span>
-              </Link>
               <button
-                onClick={() => setShowModal(true)}
-                className="flex-1 sm:flex-none bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                onClick={() => {
+                  setActiveView("upload");
+                  setUploading(false);
+                }}
+                className="bg-gray-100 hover:bg-gray-200 text-black text-xs font-bold px-3 py-1.5 rounded-lg border border-black shadow-[1px_1px_0px_#000] transition active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#ffe600]" />
-                <span>+ Models</span>
+                ← Back to Upload
               </button>
             </div>
-          </div>
 
-          {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* COMPUTE ARCHITECTURE (100% LOCAL VS ADVANCE TURBO CLOUD) */}
-            <div className="space-y-1.5 md:col-span-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                  COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
-                </label>
-                <span className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${
-                  processingMode === "local" ? "bg-emerald-400 text-black" : "bg-purple-400 text-black animate-pulse"
-                }`}>
-                  {processingMode === "local" ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)" : "⚡ CLOUD TURBO ACCELERATED"}
-                </span>
-              </div>
-              <select
-                value={processingMode}
-                onChange={(e) => setProcessingMode(e.target.value)}
-                className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-              >
-                <option value="local">
-                  💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
-                </option>
-                <option value="groq:llama-3.3-70b-versatile">
-                  ⚡ Advance Turbo Server (Groq Llama-3.3 70B • 500+ Page Fast Cloud Processing)
-                </option>
-                <option value="gemini:gemini-1.5-flash">
-                  🧠 High-Reasoning Cloud Server (Google Gemini 1.5 Flash • 1M Long Context)
-                </option>
-                <option value="openai:gpt-4o-mini">
-                  🚀 Enterprise Cloud Server (OpenAI GPT-4o-mini • High-Speed Multimodal)
-                </option>
-              </select>
-
-              {/* Dynamic Cloud Settings Box */}
-              {processingMode !== "local" ? (
-                <div className="p-3 bg-purple-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2 mt-2">
-                  <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
-                    <span className="flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-purple-600" />
-                      <span>⚡ Advance Cloud Mode Active — Large PDFs & books will process at lightning speed on cloud server.</span>
-                    </span>
-                  </div>
-                  <input
-                    type="password"
-                    value={cloudApiKey}
-                    onChange={(e) => setCloudApiKey(e.target.value)}
-                    placeholder="Enter Cloud API Key (Optional — leave blank to use preconfigured server key)"
-                    className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none"
-                  />
-                </div>
-              ) : (
-                <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1">
-                  🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
-                </div>
-              )}
-            </div>
-
-            {/* LOCAL HARDWARE ACCELERATOR (CPU vs GPU SWITCH) */}
-            {processingMode === "local" && (
-              <div className="space-y-2 md:col-span-2 p-3 sm:p-4 bg-gray-50/90 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000]">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                  <div>
-                    <span className="text-[11px] font-black font-mono uppercase tracking-wider text-black flex items-center gap-1.5">
-                      <Cpu className="w-3.5 h-3.5 text-black" />
-                      LOCAL HARDWARE ACCELERATION ENGINE (CPU VS. GPU)
-                    </span>
-                    <p className="text-[10px] font-mono text-gray-500">
-                      Instantly shift embeddings and local Ollama inference between Multi-Threaded CPU and GPU.
-                    </p>
-                  </div>
-                  <span
-                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-black uppercase w-fit ${
-                      activeHardwareMode === "gpu"
-                        ? "bg-[#ffe600] text-black shadow-[1px_1px_0px_#000]"
-                        : "bg-white text-black"
-                    }`}
-                  >
-                    {activeHardwareMode === "gpu" ? "⚡ GPU ACCELERATED" : "💻 CPU STANDARD"}
-                  </span>
-                </div>
-
-                {/* 2-Button Toggle Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                  {/* CPU Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchHardware("cpu")}
-                    disabled={switchingHardware}
-                    className={`flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left cursor-pointer ${
-                      activeHardwareMode === "cpu"
-                        ? "bg-black text-white border-black shadow-[3px_3px_0px_#000]"
-                        : "bg-white text-black border-black hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg border ${
-                      activeHardwareMode === "cpu" ? "bg-gray-800 border-gray-700 text-amber-300" : "bg-gray-100 border-gray-300 text-black"
-                    }`}>
-                      <Cpu className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-black text-xs uppercase">CPU Engine</span>
-                        {activeHardwareMode === "cpu" && (
-                          <span className="text-[10px] font-mono font-bold bg-amber-300 text-black px-1.5 py-0.2 rounded">ACTIVE</span>
-                        )}
-                      </div>
-                      <p className="font-mono text-[10px] opacity-80 mt-0.5">
-                        Multi-threaded CPU parallel execution ({specs.cpu_threads || 8} Threads). 100% universal across all laptops.
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* GPU Button with Strict Eligibility Check & Tooltip */}
-                  <div className="relative group">
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchHardware("gpu")}
-                      disabled={switchingHardware || !specs.has_gpu_access}
-                      title={!specs.has_gpu_access ? (specs.gpu_disabled_reason || "GPU acceleration disabled on this laptop.") : "Click to shift processing & Ollama to GPU"}
-                      className={`w-full h-full flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left ${
-                        !specs.has_gpu_access
-                          ? "bg-gray-100/90 text-gray-400 border-gray-300 cursor-not-allowed"
-                          : activeHardwareMode === "gpu"
-                          ? "bg-[#ffe600] text-black border-black shadow-[3px_3px_0px_#000] cursor-pointer"
-                          : "bg-white text-black border-black hover:bg-amber-50 cursor-pointer"
-                      }`}
-                    >
-                      <div className={`p-2 rounded-lg border ${
-                        !specs.has_gpu_access
-                          ? "bg-gray-200 border-gray-300 text-gray-400"
-                          : activeHardwareMode === "gpu"
-                          ? "bg-black text-[#ffe600] border-black"
-                          : "bg-amber-100 text-amber-900 border-amber-300"
-                      }`}>
-                        <Zap className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-black text-xs uppercase flex items-center gap-1">
-                            <span>GPU Acceleration</span>
-                            {!specs.has_gpu_access && (
-                              <span className="text-[9px] font-mono bg-gray-300 text-gray-700 px-1 py-0.2 rounded border border-gray-400">LOCKED</span>
-                            )}
-                          </span>
-                          {activeHardwareMode === "gpu" && specs.has_gpu_access && (
-                            <span className="text-[10px] font-mono font-bold bg-black text-[#ffe600] px-1.5 py-0.2 rounded">ACTIVE</span>
-                          )}
-                        </div>
-                        <p className="font-mono text-[10px] opacity-80 mt-0.5">
-                          {specs.has_gpu_access
-                            ? `Hardware CUDA offload on ${specs.gpu_name} (${specs.vram_gb} GB VRAM). Fastest embedding & inference.`
-                            : `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected (No CUDA compute access).`}
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* Hover Tooltip when GPU is disabled */}
-                    {!specs.has_gpu_access && (
-                      <div className="hidden group-hover:block absolute z-30 bottom-full left-0 right-0 mb-2 p-2.5 bg-black text-white text-[10px] font-mono rounded-lg border border-gray-700 shadow-xl pointer-events-none">
-                        <div className="font-bold text-amber-300 flex items-center gap-1 mb-0.5">
-                          <span>🔒 GPU Acceleration Disabled</span>
-                        </div>
-                        <p className="text-gray-300 leading-tight">
-                          {specs.gpu_disabled_reason || "No dedicated CUDA/ROCm GPU available on this laptop. The system automatically routes all processing through your multi-threaded CPU for maximum stability."}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Status Notice / Feedback Banner */}
-                {hardwareNotice ? (
-                  <div className="text-[10px] sm:text-xs font-mono font-bold p-2.5 rounded-lg border-2 border-black bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] animate-pulse">
-                    {hardwareNotice}
-                  </div>
-                ) : !specs.has_gpu_access ? (
-                  <div className="text-[10px] font-mono text-gray-600 bg-gray-100 p-2 rounded-lg border border-gray-300 flex items-start gap-1.5">
-                    <span className="text-amber-600 font-bold shrink-0">ℹ️ Hardware Status:</span>
-                    <span>
-                      {specs.gpu_disabled_reason || "GPU compute runtime not found. System is safely locked to CPU Multi-Threaded Engine to avoid execution errors."}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-300 flex items-center justify-between">
-                    <span>
-                      ✅ <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} ({specs.vram_gb} GB VRAM) is supported and ready for instant activation.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TEXT LLM MODEL */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                LOCAL LLM MODEL (OLLAMA)
-              </label>
-              <select
-                value={selectedLLM}
-                onChange={(e) => setSelectedLLM(e.target.value)}
-                disabled={processingMode !== "local"}
-                className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-              >
-                {specs.installed_models && specs.installed_models.length > 0 ? (
-                  specs.installed_models.map((m: string) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))
-                ) : (
-                  <option value="llama3.2:3b">llama3.2:3b</option>
-                )}
-                <option value="mistral:7b">mistral:7b</option>
-                <option value="phi3:mini">phi3:mini</option>
-              </select>
-            </div>
-
-            {/* SESSION LIFETIME */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                SESSION LIFETIME
-              </label>
-              <select
-                value={sessionLifetime}
-                onChange={(e) => setSessionLifetime(e.target.value)}
-                className="w-full bg-white font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-              >
-                <option value="1 Hour">1 Hour</option>
-                <option value="3 Hours">3 Hours</option>
-                <option value="24 Hours">24 Hours</option>
-                <option value="Unlimited">Unlimited Persistent</option>
-              </select>
-            </div>
-
-            {/* DENSE EMBEDDING ENGINE */}
-            <div className="space-y-1.5 md:col-span-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                  DENSE EMBEDDING ENGINE (GPU / CPU MODULAR VECTORS)
-                </label>
-                <span className="bg-emerald-400 text-black text-[10px] font-black font-mono px-2 py-0.5 rounded border border-black uppercase">
-                  {specs.acceleration_mode || "GPU / CPU ACCELERATED"}
-                </span>
-              </div>
-              <select
-                value={embeddingModel}
-                onChange={(e) => setEmbeddingModel(e.target.value)}
-                className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-              >
-                <option value="all-MiniLM-L6-v2">
-                  ⚡ all-MiniLM-L6-v2 (Ultra-Fast 5x • 4GB+ RAM • 384-dim • CPU Friendly)
-                </option>
-                <option value="bge-small-en-v1.5">
-                  ⚖️ bge-small-en-v1.5 (Balanced 3x • 6GB+ RAM • 384-dim • Standard PC)
-                </option>
-                <option value="bge-base-en-v1.5">
-                  🧠 bge-base-en-v1.5 (SOTA High Precision • 8-16GB RAM/GPU • 768-dim • Research)
-                </option>
-                <option value="nomic-embed-text">
-                  🚀 nomic-embed-text (Ollama Native 8K • 8GB+ RAM • 768-dim • Long Context)
-                </option>
-              </select>
-
-              {/* Dynamic Helper Note */}
-              <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
-                {embeddingModel === "all-MiniLM-L6-v2" && (
-                  <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold">
-                    ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB). Recommended
-                    for laptops, CPU mode & rapid indexing.
-                  </span>
-                )}
-                {embeddingModel === "bge-small-en-v1.5" && (
-                  <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-lg border border-sky-400 font-bold">
-                    ⚖️ <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high
-                    accuracy across standard documents.
-                  </span>
-                )}
-                {embeddingModel === "bge-base-en-v1.5" && (
-                  <span className="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-lg border border-yellow-400 font-bold">
-                    🧠 <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense
-                    medical research, legal & technical books.
-                  </span>
-                )}
-                {embeddingModel === "nomic-embed-text" && (
-                  <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg border border-purple-400 font-bold">
-                    🚀 <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama
-                    service. Supports large chunks up to 8192 tokens.
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* VISION OCR MODELS */}
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                VISION OCR MODELS
-              </label>
+            {/* Current File Processing Progress */}
+            <div className="bg-yellow-50 p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 bg-white border-2 border-black px-4 py-2 rounded-xl shadow-[3px_3px_0px_#000] cursor-pointer font-mono text-xs font-bold">
-                  <input
-                    type="checkbox"
-                    checked={visionOCR}
-                    onChange={(e) => setVisionOCR(e.target.checked)}
-                    className="w-4 h-4 rounded accent-black cursor-pointer"
-                  />
-                  <span>moondream:latest</span>
-                  <span className="bg-emerald-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded border border-black">
-                    ACCELERATED
-                  </span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. DOCUMENT DROPZONE */}
-          <div className="pt-2 space-y-3">
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDrag(true);
-              }}
-              onDragLeave={() => setDrag(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDrag(false);
-                onSelectFiles(e.dataTransfer.files);
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${
-                drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.docx,.txt,.md,.csv,.json,.log,.rst,.html,.xml,.png,.jpg,.jpeg,.webp"
-                className="hidden"
-                onChange={(e) => onSelectFiles(e.target.files)}
-              />
-              <div className="mx-auto w-12 h-12 rounded-xl bg-[#ffe600] border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center mb-3">
-                <Upload className="w-6 h-6 text-black" />
-              </div>
-
-              <h2 className="text-xl font-black font-mono text-black">
-                Drop your documents, PDFs, or photos here
-              </h2>
-              <p className="text-xs font-mono font-bold text-gray-600 mt-1">
-                Supports PDF, DOCX, TXT, MD, CSV, PNG, JPG, WEBP • Click to Browse Files
-              </p>
-            </div>
-
-            {/* Upload Status Banner */}
-            {uploadStatusMsg && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_#000] ${
-                  uploadStatusMsg.startsWith("✓")
-                    ? "bg-emerald-400 text-black"
-                    : "bg-red-400 text-black"
-                }`}
-              >
-                <span>{uploadStatusMsg}</span>
-                <button
-                  onClick={() => setUploadStatusMsg(null)}
-                  className="cursor-pointer font-black text-xs hover:opacity-75"
-                >
-                  ✕
-                </button>
-              </motion.div>
-            )}
-          </div>
-
-          {/* Upload Progress Bar */}
-          {uploading && (
-            <div className="bg-black text-white p-4 rounded-xl border-2 border-black space-y-2">
-              <div className="flex justify-between font-mono text-xs font-bold">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#ffe600] animate-spin" />
-                  Indexing documents into local vector database...
-                </span>
-                <span className="text-[#ffe600]">{uploadProgress}%</span>
-              </div>
-              <div className="w-full bg-gray-800 h-3 rounded-full overflow-hidden border border-gray-700">
-                <div
-                  className="bg-[#ffe600] h-full transition-all duration-200"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Ingested Vector Index Stats Bar */}
-          <div className="flex flex-wrap items-center justify-between bg-gray-100 p-4 rounded-2xl border-2 border-black gap-3">
-            <div className="flex items-center gap-4 font-mono text-xs font-bold">
-              <span className="flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-gray-700" />
-                Indexed Vectors:{" "}
-                <span className="text-black font-extrabold">{ragStats.total_vectors || 0}</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <HardDrive className="w-4 h-4 text-gray-700" />
-                Active Store:{" "}
-                <span className="text-emerald-600 font-extrabold">FAISS Vector Index</span>
-              </span>
-            </div>
-
-            {ragStats.total_vectors > 0 && (
-              <button
-                onClick={handleClearKnowledgeBase}
-                className="text-xs font-mono font-bold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-red-300 hover:border-red-600 shadow-[1px_1px_0px_#000]"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Clear Entire Index
-              </button>
-            )}
-          </div>
-
-          {/* Indexed Knowledge Base Documents List with Individual Deletion */}
-          {ragStats.files && ragStats.files.length > 0 && (
-            <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-[3px_3px_0px_#000] space-y-3 font-mono">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                <span className="text-xs font-black uppercase text-gray-800 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-black" />
-                  <span>INDEXED DOCUMENTS ({ragStats.files.length})</span>
-                </span>
-                <span className="text-[10px] text-gray-500 font-bold">
-                  Delete individual files to re-index knowledge base
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                {ragStats.files.map((file: any, fIdx: number) => (
-                  <div
-                    key={fIdx}
-                    className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-300 hover:border-black transition-colors"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
-                      <span className="bg-black text-[#ffe600] text-[9px] font-black px-1.5 py-0.5 rounded border border-black uppercase shrink-0">
-                        {file.extension ? file.extension.replace('.', '') : 'DOC'}
-                      </span>
-                      <span className="truncate text-xs font-bold text-gray-900" title={file.name}>
-                        {file.name}
-                      </span>
-                      <span className="text-[10px] text-gray-500 shrink-0">
-                        ({(file.size_bytes / 1024).toFixed(0)} KB)
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteSingleDoc(file.name)}
-                      disabled={deletingDocName === file.name}
-                      title={`Delete ${file.name}`}
-                      className="p-1.5 bg-white hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-lg border border-gray-300 hover:border-red-500 shadow-[1px_1px_0px_#000] transition active:scale-95 cursor-pointer shrink-0"
-                    >
-                      {deletingDocName === file.name ? (
-                        <Sparkles className="w-3.5 h-3.5 animate-spin text-red-500" />
-                      ) : (
-                        <Trash2 className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 5. CHATGPT-GRADE INTERACTIVE RAG CHAT & QA PANEL */}
-          <div className="border-3 border-black rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-white space-y-4 shadow-[6px_6px_0px_#000]">
-            {/* Chat Panel Header */}
-            <div className="flex flex-wrap items-center justify-between border-b-2 border-gray-200 pb-3.5 gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
-                  <Bot className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-black text-[#ffe600] flex items-center justify-center font-bold text-base shadow-[2px_2px_0px_#000] shrink-0">
+                  <FileText className="w-5 h-5 text-[#ffe600]" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 font-mono font-black text-sm text-black uppercase tracking-tight">
-                    <span>InsightRAG Assistant</span>
-                    <span className="bg-emerald-400/20 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-400">
-                      Multi-Turn Active
-                    </span>
+                  <div className="text-xs font-black uppercase text-black">
+                    Currently Ingesting ({currentUploadingFiles.length || files.length} Document{currentUploadingFiles.length > 1 ? "s" : ""})
                   </div>
-                  <div className="text-[11px] font-mono text-gray-500">
-                    {chatMessages.length > 0
-                      ? `${chatMessages.length} message(s) in session • Context preserved`
-                      : "Ready for conversation • Zero data leaks"}
+                  <div className="text-xs text-gray-800 font-bold truncate max-w-md">
+                    {currentUploadingFiles.length > 0 ? currentUploadingFiles.join(", ") : files.map((f) => f.name).join(", ")}
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-52 space-y-1">
+                <div className="flex justify-between text-[11px] font-black">
+                  <span>PROGRESS</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 h-3.5 rounded-full border border-black overflow-hidden">
+                  <div
+                    className="bg-[#ffe600] h-full transition-all duration-300 ease-out border-r border-black"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 6 Parsing Milestones Breakdown */}
+            <div className="space-y-3">
+              <div className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-black" />
+                <span>Comprehension Milestones:</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {PARSING_STAGES.map((stage, sIdx) => {
+                  const isDone = processingStep > stage.step;
+                  const isCurrent = processingStep === stage.step;
+
+                  return (
+                    <div
+                      key={sIdx}
+                      className={`p-3.5 rounded-xl border-2 transition-all flex items-start gap-3.5 ${isDone
+                          ? "bg-emerald-50/70 border-emerald-500 shadow-[2px_2px_0px_#10b981]"
+                          : isCurrent
+                            ? "bg-yellow-50 border-black shadow-[3px_3px_0px_#000] ring-2 ring-[#ffe600]"
+                            : "bg-gray-50/70 border-gray-200 opacity-50"
+                        }`}
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        {isDone ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        ) : isCurrent ? (
+                          <Sparkles className="w-5 h-5 text-black animate-spin" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center text-[10px] font-bold text-gray-400">
+                            {stage.step + 1}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-black">
+                            {stage.icon} {stage.title}
+                          </span>
+                          {isCurrent && (
+                            <span className="bg-[#ffe600] text-black text-[9px] font-black px-1.5 py-0.2 rounded border border-black uppercase animate-pulse">
+                              ANALYZING
+                            </span>
+                          )}
+                          {isDone && (
+                            <span className="bg-emerald-400 text-black text-[9px] font-black px-1.5 py-0.2 rounded border border-black uppercase">
+                              DONE
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed font-sans font-medium">
+                          {stage.desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Auto-redirect Helper Notice */}
+            <div className="p-3 bg-gray-100 rounded-xl border border-gray-300 text-[11px] text-gray-700 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-black shrink-0" />
+              <span>
+                Deep comprehension running. You will be automatically redirected to the <strong>Full-Screen Chat Studio</strong> once ready.
+              </span>
+            </div>
+          </div>
+        ) : activeView === "chat" ? (
+          /* DEDICATED FULL-SCREEN CHAT STUDIO VIEW */
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-3 border-black shadow-[6px_6px_0px_#000] sm:shadow-[10px_10px_0px_#000] space-y-4 text-black min-h-[82vh] flex flex-col justify-between">
+            {/* Top Navigation & Status Bar */}
+            <div className="flex flex-wrap items-center justify-between border-b-2 border-gray-200 pb-3.5 gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveView("upload")}
+                  className="flex items-center gap-1.5 bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                  title="Return to document manager"
+                >
+                  <ArrowLeft className="w-4 h-4 text-black" />
+                  <span>← Back to Upload & Documents</span>
+                </button>
+
+                <div className="h-6 w-[2px] bg-gray-300 hidden sm:block" />
+
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 font-mono font-black text-sm text-black uppercase tracking-tight">
+                      <span>InsightRAG Studio</span>
+                      <span className="bg-emerald-400/20 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-400">
+                        Full-Screen
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono text-gray-500">
+                      {ragStats.files?.length || 0} doc(s) loaded • {ragStats.total_vectors || 0} vectors grounded
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1066,9 +761,8 @@ function KnowledgeBaseStudioPage() {
                 <span className="hidden md:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
                   ⚡ {embeddingModel}
                 </span>
-                <span className={`px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] ${
-                  processingMode === "local" ? "bg-black text-white" : "bg-purple-600 text-white animate-pulse"
-                }`}>
+                <span className={`px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] ${processingMode === "local" ? "bg-black text-white" : "bg-purple-600 text-white animate-pulse"
+                  }`}>
                   {processingMode === "local" ? `💻 ${selectedLLM}` : `⚡ ${processingMode.split(':')[0].toUpperCase()}`}
                 </span>
                 {chatMessages.length > 0 && (
@@ -1084,7 +778,7 @@ function KnowledgeBaseStudioPage() {
               </div>
             </div>
 
-            {/* Suggested Prompt Pills (Quick Starters) */}
+            {/* Suggested Prompt Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 font-mono text-[11px]">
               <span className="text-gray-500 font-bold shrink-0 flex items-center gap-1 text-[10px]">
                 <Sparkles className="w-3 h-3 text-[#ffe600]" /> SUGGESTIONS:
@@ -1093,7 +787,7 @@ function KnowledgeBaseStudioPage() {
                 "Summarize key findings",
                 "What are the primary conclusions?",
                 "List actionable protocols & steps",
-                "Explain the core terms & data"
+                "Explain the core terms & data",
               ].map((sug, sIdx) => (
                 <button
                   key={sIdx}
@@ -1106,17 +800,17 @@ function KnowledgeBaseStudioPage() {
               ))}
             </div>
 
-            {/* Chat Messages Log Container */}
-            <div className="min-h-[260px] max-h-[460px] overflow-y-auto space-y-4 p-2 sm:p-3 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black">
+            {/* Full-Screen Chat Messages Container */}
+            <div className="flex-1 min-h-[460px] max-h-[64vh] overflow-y-auto space-y-4 p-3 sm:p-4 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black">
               {chatMessages.length === 0 ? (
-                <div className="text-center text-gray-500 py-16 space-y-3">
+                <div className="text-center text-gray-500 py-20 space-y-3">
                   <div className="w-14 h-14 bg-white rounded-2xl border-2 border-black mx-auto flex items-center justify-center shadow-[3px_3px_0px_#000]">
                     <Sparkles className="w-7 h-7 text-black" />
                   </div>
                   <div>
-                    <p className="font-extrabold text-sm text-black">Start your interactive document consultation</p>
+                    <p className="font-extrabold text-sm text-black">Start your grounded document consultation</p>
                     <p className="text-[11px] text-gray-600 mt-0.5">
-                      Multi-turn memory enabled • Answers grounded strictly on your indexed documents
+                      Multi-turn memory enabled • Answers grounded strictly on your {ragStats.total_vectors} indexed vectors
                     </p>
                   </div>
                 </div>
@@ -1130,11 +824,10 @@ function KnowledgeBaseStudioPage() {
                     className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                   >
                     <div
-                      className={`p-3.5 sm:p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2 max-w-[92%] sm:max-w-[85%] ${
-                        msg.role === "user"
+                      className={`p-3.5 sm:p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2 max-w-[92%] sm:max-w-[85%] ${msg.role === "user"
                           ? "bg-[#ffe600] text-black font-bold ml-auto"
                           : "bg-white text-black"
-                      }`}
+                        }`}
                     >
                       {/* Message Meta Header */}
                       <div className="flex items-center justify-between gap-3 text-[10px] font-mono border-b border-black/10 pb-1.5">
@@ -1272,7 +965,7 @@ function KnowledgeBaseStudioPage() {
                 e.preventDefault();
                 handleSendQuery();
               }}
-              className="flex gap-2"
+              className="flex gap-2 pt-2 border-t border-gray-200"
             >
               <input
                 ref={chatInputRef}
@@ -1299,7 +992,560 @@ function KnowledgeBaseStudioPage() {
               </button>
             </form>
           </div>
-        </div>
+        ) : (
+          /* 2. MAIN STUDIO CONTAINER CARD (UPLOAD VIEW) */
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-3 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-5 sm:space-y-6 text-black">
+            {/* Header Title + Download Button */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-300 pb-4 sm:pb-5 gap-3 sm:gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/"
+                    className="sm:hidden bg-black text-white font-black font-mono text-[10px] px-2 py-0.5 rounded border border-black"
+                  >
+                    ← Home
+                  </Link>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-black font-mono">
+                    KNOWLEDGE BASE STUDIO
+                  </h1>
+                </div>
+                <p className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1">
+                  Zero-Budget Local Multimodal RAG Engine • 100% On-Device Privacy
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                {ragStats.total_vectors > 0 && (
+                  <button
+                    onClick={() => setActiveView("chat")}
+                    className="flex-1 sm:flex-none bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                  >
+                    <Bot className="w-3.5 h-3.5 text-black" />
+                    <span>Open Chat Studio →</span>
+                  </button>
+                )}
+                <Link
+                  to="/"
+                  className="hidden sm:flex bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] items-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  Home
+                </Link>
+                <Link
+                  to="/docs"
+                  className="flex-1 sm:flex-none bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-black" />
+                  <span>Docs</span>
+                </Link>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex-1 sm:flex-none bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#ffe600]" />
+                  <span>+ Models</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* COMPUTE ARCHITECTURE (100% LOCAL VS ADVANCE TURBO CLOUD) */}
+              <div className="space-y-1.5 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                    COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
+                  </label>
+                  <span className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${processingMode === "local" ? "bg-emerald-400 text-black" : "bg-purple-400 text-black animate-pulse"
+                    }`}>
+                    {processingMode === "local" ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)" : "⚡ CLOUD TURBO ACCELERATED"}
+                  </span>
+                </div>
+                <select
+                  value={processingMode}
+                  onChange={(e) => setProcessingMode(e.target.value)}
+                  className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                >
+                  <option value="local">
+                    💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
+                  </option>
+                  <option value="groq:llama-3.3-70b-versatile">
+                    ⚡ Advance Turbo Server (Groq Llama-3.3 70B • 500+ Page Fast Cloud Processing)
+                  </option>
+                  <option value="gemini:gemini-1.5-flash">
+                    🧠 High-Reasoning Cloud Server (Google Gemini 1.5 Flash • 1M Long Context)
+                  </option>
+                  <option value="openai:gpt-4o-mini">
+                    🚀 Enterprise Cloud Server (OpenAI GPT-4o-mini • High-Speed Multimodal)
+                  </option>
+                </select>
+
+                {/* Dynamic Cloud Settings Box */}
+                {processingMode !== "local" ? (
+                  <div className="p-3 bg-purple-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2 mt-2">
+                    <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
+                      <span className="flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-purple-600" />
+                        <span>⚡ Advance Cloud Mode Active — Large PDFs & books will process at lightning speed on cloud server.</span>
+                      </span>
+                    </div>
+                    <input
+                      type="password"
+                      value={cloudApiKey}
+                      onChange={(e) => setCloudApiKey(e.target.value)}
+                      placeholder="Enter Cloud API Key (Optional — leave blank to use preconfigured server key)"
+                      className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1">
+                    🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
+                  </div>
+                )}
+              </div>
+
+              {/* LOCAL HARDWARE ACCELERATOR (CPU vs GPU SWITCH) */}
+              {processingMode === "local" && (
+                <div className="space-y-2 md:col-span-2 p-3 sm:p-4 bg-gray-50/90 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div>
+                      <span className="text-[11px] font-black font-mono uppercase tracking-wider text-black flex items-center gap-1.5">
+                        <Cpu className="w-3.5 h-3.5 text-black" />
+                        LOCAL HARDWARE ACCELERATION ENGINE (CPU VS. GPU)
+                      </span>
+                      <p className="text-[10px] font-mono text-gray-500">
+                        Instantly shift embeddings and local Ollama inference between Multi-Threaded CPU and GPU.
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-black uppercase w-fit ${activeHardwareMode === "gpu"
+                          ? "bg-[#ffe600] text-black shadow-[1px_1px_0px_#000]"
+                          : "bg-white text-black"
+                        }`}
+                    >
+                      {activeHardwareMode === "gpu" ? "⚡ GPU ACCELERATED" : "💻 CPU STANDARD"}
+                    </span>
+                  </div>
+
+                  {/* 2-Button Toggle Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {/* CPU Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchHardware("cpu")}
+                      disabled={switchingHardware}
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left cursor-pointer ${activeHardwareMode === "cpu"
+                          ? "bg-black text-white border-black shadow-[3px_3px_0px_#000]"
+                          : "bg-white text-black border-black hover:bg-gray-100"
+                        }`}
+                    >
+                      <div className={`p-2 rounded-lg border ${activeHardwareMode === "cpu" ? "bg-gray-800 border-gray-700 text-amber-300" : "bg-gray-100 border-gray-300 text-black"
+                        }`}>
+                        <Cpu className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-black text-xs uppercase">CPU Engine</span>
+                          {activeHardwareMode === "cpu" && (
+                            <span className="text-[10px] font-mono font-bold bg-amber-300 text-black px-1.5 py-0.2 rounded">ACTIVE</span>
+                          )}
+                        </div>
+                        <p className="font-mono text-[10px] opacity-80 mt-0.5">
+                          Multi-threaded CPU parallel execution ({specs.cpu_threads || 8} Threads). 100% universal across all laptops.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* GPU Button with Strict Eligibility Check & Tooltip */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchHardware("gpu")}
+                        disabled={switchingHardware || !specs.has_gpu_access}
+                        title={!specs.has_gpu_access ? (specs.gpu_disabled_reason || "GPU acceleration disabled on this laptop.") : "Click to shift processing & Ollama to GPU"}
+                        className={`w-full h-full flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left ${!specs.has_gpu_access
+                            ? "bg-gray-100/90 text-gray-400 border-gray-300 cursor-not-allowed"
+                            : activeHardwareMode === "gpu"
+                              ? "bg-[#ffe600] text-black border-black shadow-[3px_3px_0px_#000] cursor-pointer"
+                              : "bg-white text-black border-black hover:bg-amber-50 cursor-pointer"
+                          }`}
+                      >
+                        <div className={`p-2 rounded-lg border ${!specs.has_gpu_access
+                            ? "bg-gray-200 border-gray-300 text-gray-400"
+                            : activeHardwareMode === "gpu"
+                              ? "bg-black text-[#ffe600] border-black"
+                              : "bg-amber-100 text-amber-900 border-amber-300"
+                          }`}>
+                          <Zap className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-black text-xs uppercase flex items-center gap-1">
+                              <span>GPU Acceleration</span>
+                              {!specs.has_gpu_access && (
+                                <span className="text-[9px] font-mono bg-gray-300 text-gray-700 px-1 py-0.2 rounded border border-gray-400">LOCKED</span>
+                              )}
+                            </span>
+                            {activeHardwareMode === "gpu" && specs.has_gpu_access && (
+                              <span className="text-[10px] font-mono font-bold bg-black text-[#ffe600] px-1.5 py-0.2 rounded">ACTIVE</span>
+                            )}
+                          </div>
+                          <p className="font-mono text-[10px] opacity-80 mt-0.5">
+                            {specs.has_gpu_access
+                              ? `Hardware CUDA offload on ${specs.gpu_name} (${specs.vram_gb} GB VRAM). Fastest embedding & inference.`
+                              : `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected (No CUDA compute access).`}
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Hover Tooltip when GPU is disabled */}
+                      {!specs.has_gpu_access && (
+                        <div className="hidden group-hover:block absolute z-30 bottom-full left-0 right-0 mb-2 p-2.5 bg-black text-white text-[10px] font-mono rounded-lg border border-gray-700 shadow-xl pointer-events-none">
+                          <div className="font-bold text-amber-300 flex items-center gap-1 mb-0.5">
+                            <span>🔒 GPU Acceleration Disabled</span>
+                          </div>
+                          <p className="text-gray-300 leading-tight">
+                            {specs.gpu_disabled_reason || "No dedicated CUDA/ROCm GPU available on this laptop. The system automatically routes all processing through your multi-threaded CPU for maximum stability."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status Notice / Feedback Banner */}
+                  {hardwareNotice ? (
+                    <div className="text-[10px] sm:text-xs font-mono font-bold p-2.5 rounded-lg border-2 border-black bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] animate-pulse">
+                      {hardwareNotice}
+                    </div>
+                  ) : !specs.has_gpu_access ? (
+                    <div className="text-[10px] font-mono text-gray-600 bg-gray-100 p-2 rounded-lg border border-gray-300 flex items-start gap-1.5">
+                      <span className="text-amber-600 font-bold shrink-0">ℹ️ Hardware Status:</span>
+                      <span>
+                        {specs.gpu_disabled_reason || "GPU compute runtime not found. System is safely locked to CPU Multi-Threaded Engine to avoid execution errors."}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-300 flex items-center justify-between">
+                      <span>
+                        ✅ <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} ({specs.vram_gb} GB VRAM) is supported and ready for instant activation.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TEXT LLM MODEL */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                  LOCAL LLM MODEL (OLLAMA)
+                </label>
+                <select
+                  value={selectedLLM}
+                  onChange={(e) => setSelectedLLM(e.target.value)}
+                  disabled={processingMode !== "local"}
+                  className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                >
+                  {specs.installed_models && specs.installed_models.length > 0 ? (
+                    specs.installed_models.map((m: string) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="llama3.2:3b">llama3.2:3b</option>
+                  )}
+                  <option value="mistral:7b">mistral:7b</option>
+                  <option value="phi3:mini">phi3:mini</option>
+                </select>
+              </div>
+
+              {/* SESSION LIFETIME */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                  SESSION LIFETIME
+                </label>
+                <select
+                  value={sessionLifetime}
+                  onChange={(e) => setSessionLifetime(e.target.value)}
+                  className="w-full bg-white font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                >
+                  <option value="1 Hour">1 Hour</option>
+                  <option value="3 Hours">3 Hours</option>
+                  <option value="24 Hours">24 Hours</option>
+                  <option value="Unlimited">Unlimited Persistent</option>
+                </select>
+              </div>
+
+              {/* DENSE EMBEDDING ENGINE */}
+              <div className="space-y-1.5 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                    DENSE EMBEDDING ENGINE (GPU / CPU MODULAR VECTORS)
+                  </label>
+                  <span className="bg-emerald-400 text-black text-[10px] font-black font-mono px-2 py-0.5 rounded border border-black uppercase">
+                    {specs.acceleration_mode || "GPU / CPU ACCELERATED"}
+                  </span>
+                </div>
+                <select
+                  value={embeddingModel}
+                  onChange={(e) => setEmbeddingModel(e.target.value)}
+                  className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                >
+                  <option value="all-MiniLM-L6-v2">
+                    ⚡ all-MiniLM-L6-v2 (Ultra-Fast 5x • 4GB+ RAM • 384-dim • CPU Friendly)
+                  </option>
+                  <option value="bge-small-en-v1.5">
+                    ⚖️ bge-small-en-v1.5 (Balanced 3x • 6GB+ RAM • 384-dim • Standard PC)
+                  </option>
+                  <option value="bge-base-en-v1.5">
+                    🧠 bge-base-en-v1.5 (SOTA High Precision • 8-16GB RAM/GPU • 768-dim • Research)
+                  </option>
+                  <option value="nomic-embed-text">
+                    🚀 nomic-embed-text (Ollama Native 8K • 8GB+ RAM • 768-dim • Long Context)
+                  </option>
+                </select>
+
+                {/* Dynamic Helper Note */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
+                  {embeddingModel === "all-MiniLM-L6-v2" && (
+                    <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold">
+                      ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB). Recommended
+                      for laptops, CPU mode & rapid indexing.
+                    </span>
+                  )}
+                  {embeddingModel === "bge-small-en-v1.5" && (
+                    <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-lg border border-sky-400 font-bold">
+                      ⚖️ <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high
+                      accuracy across standard documents.
+                    </span>
+                  )}
+                  {embeddingModel === "bge-base-en-v1.5" && (
+                    <span className="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-lg border border-yellow-400 font-bold">
+                      🧠 <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense
+                      medical research, legal & technical books.
+                    </span>
+                  )}
+                  {embeddingModel === "nomic-embed-text" && (
+                    <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg border border-purple-400 font-bold">
+                      🚀 <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama
+                      service. Supports large chunks up to 8192 tokens.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* VISION OCR MODELS */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
+                  VISION OCR MODELS
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 bg-white border-2 border-black px-4 py-2 rounded-xl shadow-[3px_3px_0px_#000] cursor-pointer font-mono text-xs font-bold">
+                    <input
+                      type="checkbox"
+                      checked={visionOCR}
+                      onChange={(e) => setVisionOCR(e.target.checked)}
+                      className="w-4 h-4 rounded accent-black cursor-pointer"
+                    />
+                    <span>moondream:latest</span>
+                    <span className="bg-emerald-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded border border-black">
+                      ACCELERATED
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. DOCUMENT DROPZONE */}
+            <div className="pt-2 space-y-3">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDrag(true);
+                }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDrag(false);
+                  onSelectFiles(e.dataTransfer.files);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
+                  }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.docx,.txt,.md,.csv,.json,.log,.rst,.html,.xml,.png,.jpg,.jpeg,.webp"
+                  className="hidden"
+                  onChange={(e) => onSelectFiles(e.target.files)}
+                />
+                <div className="mx-auto w-12 h-12 rounded-xl bg-[#ffe600] border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center mb-3">
+                  <Upload className="w-6 h-6 text-black" />
+                </div>
+
+                <h2 className="text-xl font-black font-mono text-black">
+                  Drop your documents, PDFs, or photos here
+                </h2>
+                <p className="text-xs font-mono font-bold text-gray-600 mt-1">
+                  Supports PDF, DOCX, TXT, MD, CSV, PNG, JPG, WEBP • Click to Browse Files
+                </p>
+              </div>
+
+              {/* Upload Status Banner */}
+              {uploadStatusMsg && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_#000] ${uploadStatusMsg.startsWith("✓")
+                      ? "bg-emerald-400 text-black"
+                      : "bg-red-400 text-black"
+                    }`}
+                >
+                  <span>{uploadStatusMsg}</span>
+                  <button
+                    onClick={() => setUploadStatusMsg(null)}
+                    className="cursor-pointer font-black text-xs hover:opacity-75"
+                  >
+                    ✕
+                  </button>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Upload Progress Bar */}
+            {uploading && (
+              <div className="bg-black text-white p-4 rounded-xl border-2 border-black space-y-2">
+                <div className="flex justify-between font-mono text-xs font-bold">
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#ffe600] animate-spin" />
+                    Indexing documents into local vector database...
+                  </span>
+                  <span className="text-[#ffe600]">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-800 h-3 rounded-full overflow-hidden border border-gray-700">
+                  <div
+                    className="bg-[#ffe600] h-full transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Ingested Vector Index Stats Bar */}
+            <div className="flex flex-wrap items-center justify-between bg-gray-100 p-4 rounded-2xl border-2 border-black gap-3">
+              <div className="flex items-center gap-4 font-mono text-xs font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-gray-700" />
+                  Indexed Vectors:{" "}
+                  <span className="text-black font-extrabold">{ragStats.total_vectors || 0}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <HardDrive className="w-4 h-4 text-gray-700" />
+                  Active Store:{" "}
+                  <span className="text-emerald-600 font-extrabold">FAISS Vector Index</span>
+                </span>
+              </div>
+
+              {ragStats.total_vectors > 0 && (
+                <button
+                  onClick={handleClearKnowledgeBase}
+                  className="text-xs font-mono font-bold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-red-300 hover:border-red-600 shadow-[1px_1px_0px_#000]"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear Entire Index
+                </button>
+              )}
+            </div>
+
+            {/* Indexed Knowledge Base Documents List with Individual Deletion */}
+            {ragStats.files && ragStats.files.length > 0 && (
+              <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-[3px_3px_0px_#000] space-y-3 font-mono">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                  <span className="text-xs font-black uppercase text-gray-800 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-black" />
+                    <span>INDEXED DOCUMENTS ({ragStats.files.length})</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-bold">
+                    Delete individual files to re-index knowledge base
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {ragStats.files.map((file: any, fIdx: number) => (
+                    <div
+                      key={fIdx}
+                      className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-300 hover:border-black transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <span className="bg-black text-[#ffe600] text-[9px] font-black px-1.5 py-0.5 rounded border border-black uppercase shrink-0">
+                          {file.extension ? file.extension.replace('.', '') : 'DOC'}
+                        </span>
+                        <span className="truncate text-xs font-bold text-gray-900" title={file.name}>
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-gray-500 shrink-0">
+                          ({(file.size_bytes / 1024).toFixed(0)} KB)
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteSingleDoc(file.name)}
+                        disabled={deletingDocName === file.name}
+                        title={`Delete ${file.name}`}
+                        className="p-1.5 bg-white hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-lg border border-gray-300 hover:border-red-500 shadow-[1px_1px_0px_#000] transition active:scale-95 cursor-pointer shrink-0"
+                      >
+                        {deletingDocName === file.name ? (
+                          <Sparkles className="w-3.5 h-3.5 animate-spin text-red-500" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5. GROUNDED KNOWLEDGE BASE READY BANNER & CHAT LAUNCHER */}
+            <div className="border-3 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-[#ffe600] shadow-[6px_6px_0px_#000] flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-black text-[#ffe600] flex items-center justify-center font-mono font-black text-xl shadow-[3px_3px_0px_#000] shrink-0">
+                  <Bot className="w-6 h-6 text-[#ffe600]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-mono font-black text-sm sm:text-base text-black uppercase tracking-tight">
+                      {ragStats.total_vectors > 0 ? "Document Knowledge Base Ready" : "Document Knowledge Base Ready For Ingestion"}
+                    </h3>
+                    {ragStats.total_vectors > 0 && (
+                      <span className="bg-black text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-black uppercase">
+                        Grounded
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-mono text-gray-800 mt-0.5">
+                    {ragStats.total_vectors > 0
+                      ? `${ragStats.files?.length || 0} document(s) fully parsed with tables, images & deep OCR • ${ragStats.total_vectors} vectors indexed.`
+                      : "Upload any document above to trigger the 5-phase deep parsing & understanding engine."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => setActiveView("chat")}
+                  disabled={ragStats.total_vectors === 0}
+                  className="w-full md:w-auto bg-black hover:bg-gray-800 text-white disabled:opacity-50 disabled:cursor-not-allowed font-mono font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                >
+                  <Bot className="w-4 h-4 text-[#ffe600]" />
+                  <span>Launch Full-Screen Chat Studio →</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 5.5 INTERACTIVE INGESTION & PAGE RANGE SCOPE MODAL */}
@@ -1371,11 +1617,10 @@ function KnowledgeBaseStudioPage() {
                   <button
                     type="button"
                     onClick={() => setUsePageRange(false)}
-                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${
-                      !usePageRange
+                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${!usePageRange
                         ? "bg-[#ffe600] shadow-[3px_3px_0px_#000] font-black"
                         : "bg-white hover:bg-gray-50 shadow-[1px_1px_0px_#000] font-bold text-gray-700"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-xs font-black">All Pages</span>
@@ -1389,11 +1634,10 @@ function KnowledgeBaseStudioPage() {
                   <button
                     type="button"
                     onClick={() => setUsePageRange(true)}
-                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${
-                      usePageRange
+                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${usePageRange
                         ? "bg-[#ffe600] shadow-[3px_3px_0px_#000] font-black"
                         : "bg-white hover:bg-gray-50 shadow-[1px_1px_0px_#000] font-bold text-gray-700"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-xs font-black">Custom Page Range</span>

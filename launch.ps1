@@ -8,6 +8,10 @@
 #
 # ============================================================
 
+param(
+    [switch]$Update
+)
+
 $ErrorActionPreference = "SilentlyContinue"
 $ProgressPreference = "SilentlyContinue"
 
@@ -42,6 +46,24 @@ function Write-Step {
     cw "[*] $Msg... [ " "White" -NoNewline
     cw $Status $StatusColor -NoNewline
     cw " ]" "White"
+}
+
+if ($Update) {
+    Sep
+    cw " [*] Checking & pulling latest updates from GitHub..." "Yellow"
+    Sep
+    if (Test-Path (Join-Path $ProjectRoot ".git")) {
+        try {
+            git fetch origin main 2>&1 | Out-Null
+            git stash 2>&1 | Out-Null
+            git pull origin main --rebase 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                git reset --hard origin/main 2>&1 | Out-Null
+            }
+            git stash pop 2>&1 | Out-Null
+            cw "[✓] Project updated to latest version!" "Green"
+        } catch {}
+    }
 }
 
 # 1. Python Check & Auto-Installation

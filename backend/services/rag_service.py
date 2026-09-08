@@ -209,13 +209,13 @@ class RAGService:
                 target_page = intent_info.get("target_page")
                 if results:
                     context_blocks = []
-                    for i, r in enumerate(results[:4]):
+                    for i, r in enumerate(results[:6]):
                         r_meta = r.get("metadata", {})
                         p_num = r_meta.get("page_number") or r_meta.get("page")
                         p_str = f"Page {p_num}" if p_num else "Excerpt"
                         f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                        # Trim chunk text to 600 chars to keep prompt lean and fast
-                        chunk_text = r.get('text', '').strip()[:600]
+                        # Allow generous context allowance (up to 2500 chars) so text, structured tables, and visual descriptions remain fully intact
+                        chunk_text = r.get('text', '').strip()[:2500]
                         context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
                     context_str = "\n\n".join(context_blocks)
                     page_instruction = (
@@ -223,9 +223,12 @@ class RAGService:
                         if target_page else ""
                     )
                     prompt = (
-                        f"You are InsightRAG AI. Answer ONLY from the document context below. Never say 'I cannot determine' or 'not available'. "
-                        f"{page_instruction}"
-                        f"If diagrams or figures exist, describe them.\n\n"
+                        f"You are InsightRAG AI, a high-precision multimodal document intelligence assistant.\n"
+                        f"Answer the user's question completely, accurately, and factually based on the provided document context below.\n"
+                        f"The context contains page-by-page text content, structured markdown tables, and visual diagram/figure descriptions.\n"
+                        f"- When citing data, numbers, or facts, reference the specific Page, Table, or Figure/Diagram.\n"
+                        f"- Synthesize both the textual details and the visual diagram descriptions to give a clear, comprehensive answer.\n"
+                        f"{page_instruction}\n\n"
                         f"{history_str}"
                         f"DOCUMENT CONTEXT:\n{context_str}\n\n"
                         f"QUESTION: {query}\n"
@@ -362,9 +365,9 @@ class RAGService:
                                             "stream": False,
                                             "keep_alive": "30m",
                                             "options": {
-                                                "num_ctx": 1536,
+                                                "num_ctx": 4096,
                                                 "temperature": 0.1,
-                                                "num_predict": 350,
+                                                "num_predict": 600,
                                                 "num_thread": _cpu_threads,
                                                 "top_k": 25,
                                                 "top_p": 0.85,

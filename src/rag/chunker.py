@@ -312,6 +312,9 @@ class TextChunker:
                         c["page"] = page_num
                         c["has_images"] = page_info.get("has_images", False)
                         c["has_drawings"] = page_info.get("has_drawings", False)
+                        c["has_tables"] = page_info.get("has_tables", False)
+                        c["tables_count"] = page_info.get("tables_count", 0)
+                        c["visual_elements"] = page_info.get("visual_elements", [])
                         c["title"] = title
                         c["source_path"] = source_path
                         
@@ -320,6 +323,9 @@ class TextChunker:
                         chunk_meta["page"] = page_num
                         chunk_meta["has_images"] = page_info.get("has_images", False)
                         chunk_meta["has_drawings"] = page_info.get("has_drawings", False)
+                        chunk_meta["has_tables"] = page_info.get("has_tables", False)
+                        chunk_meta["tables_count"] = page_info.get("tables_count", 0)
+                        chunk_meta["visual_elements"] = page_info.get("visual_elements", [])
                         chunk_meta["file_name"] = file_name
                         c["doc_metadata"] = chunk_meta
                         doc_chunks.append(c)
