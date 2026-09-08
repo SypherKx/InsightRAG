@@ -273,7 +273,8 @@ class RAGRetriever:
                 c_page = c_meta.get("page_number") or c_meta.get("page")
                 if t_page is not None and c_page is not None and int(c_page) == t_page:
                     base_score += 2.0  # Dominant boost for exact page requested
-                c["similarity_score"] = base_score
+                # Clamp to [0, 1] — Pydantic RetrievalResult enforces le=1.0
+                c["similarity_score"] = min(max(base_score, 0.0), 1.0)
 
             candidate_pool.sort(key=lambda x: x["similarity_score"], reverse=True)
             filtered = [c for c in candidate_pool if c["similarity_score"] >= min_score]

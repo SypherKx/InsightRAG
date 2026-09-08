@@ -215,7 +215,6 @@ def wait_for_port(port, timeout=30):
     return False
 
 def main():
-    print(BANNER)
     skip_checks = "--skip-checks" in sys.argv
     if not skip_checks:
         check_python()
@@ -261,7 +260,6 @@ def main():
     ready = wait_for_port(5173, timeout=30)
 
     if ready:
-        print(BANNER)
         print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
         print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
         try:

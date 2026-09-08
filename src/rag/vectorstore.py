@@ -204,7 +204,8 @@ class FAISSVectorStore:
                 continue
 
             # Convert inner product to cosine similarity (already normalized)
-            similarity = float(distance)
+            # Clamp to [0, 1] — float precision can push IP slightly above 1.0
+            similarity = min(max(float(distance), 0.0), 1.0)
 
             result = {
                 "chunk_id": meta["chunk_id"],
