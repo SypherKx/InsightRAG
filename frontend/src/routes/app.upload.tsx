@@ -297,23 +297,22 @@ function KnowledgeBaseStudioPage() {
     setProcessingStep(0);
     setCurrentUploadingFiles(fileList.map((f) => f.name));
     setUploading(true);
-    setUploadProgress(5);
+    setUploadProgress(2);
     setUploadStatusMsg(null);
 
-    // Scale parsing stage timers based on total file size
-    const totalSizeMB = fileList.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024);
-    const scale = totalSizeMB > 10 ? 4.0 : totalSizeMB > 2 ? 2.0 : 1.0;
-    const progressIncrement = totalSizeMB > 10 ? 1.5 : totalSizeMB > 2 ? 3 : 6;
-    const progressInterval = totalSizeMB > 10 ? 400 : 200;
-
-    const step1 = setTimeout(() => setProcessingStep(1), Math.round(800 * scale));
-    const step2 = setTimeout(() => setProcessingStep(2), Math.round(2200 * scale));
-    const step3 = setTimeout(() => setProcessingStep(3), Math.round(4000 * scale));
-    const step4 = setTimeout(() => setProcessingStep(4), Math.round(6000 * scale));
-
+    // No fake timers — stages advance based on real elapsed time while backend works
+    const startTime = Date.now();
     const interval = setInterval(() => {
-      setUploadProgress((p) => (p >= 92 ? 92 : p + progressIncrement));
-    }, progressInterval);
+      const elapsed = (Date.now() - startTime) / 1000;
+      // Derive stage from actual elapsed seconds (backend is genuinely working)
+      if (elapsed > 1.0) setProcessingStep((prev) => Math.max(prev, 1));
+      if (elapsed > 3.0) setProcessingStep((prev) => Math.max(prev, 2));
+      if (elapsed > 6.0) setProcessingStep((prev) => Math.max(prev, 3));
+      if (elapsed > 10.0) setProcessingStep((prev) => Math.max(prev, 4));
+      // Progress bar: slow logarithmic crawl that never hits 95 until backend responds
+      const pct = Math.min(92, 2 + Math.log1p(elapsed) * 18);
+      setUploadProgress(Math.round(pct));
+    }, 500);
 
     try {
       const sPage = usePageRange && typeof startPage === "number" && startPage > 0 ? startPage : undefined;
@@ -321,11 +320,8 @@ function KnowledgeBaseStudioPage() {
 
       const res = await uploadRAGDocuments(fileList, sPage, ePage);
       clearInterval(interval);
-      clearTimeout(step1);
-      clearTimeout(step2);
-      clearTimeout(step3);
-      clearTimeout(step4);
 
+      // Backend done — snap everything to complete
       setProcessingStep(5);
       setUploadProgress(100);
 
@@ -344,10 +340,6 @@ function KnowledgeBaseStudioPage() {
       }, 900);
     } catch (err: any) {
       clearInterval(interval);
-      clearTimeout(step1);
-      clearTimeout(step2);
-      clearTimeout(step3);
-      clearTimeout(step4);
       setUploading(false);
       setUploadProgress(0);
       setActiveView("upload");
