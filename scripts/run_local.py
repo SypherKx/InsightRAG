@@ -194,7 +194,7 @@ def run_frontend_dev():
     frontend_dir = ROOT_DIR / "frontend"
     npm_cmd = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
     return subprocess.Popen(
-        [npm_cmd, "run", "dev"],
+        [npm_cmd, "run", "dev", "--", "--clearScreen", "false"],
         cwd=str(frontend_dir),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -248,8 +248,10 @@ def main():
     # Stream Vite output so user can see startup logs
     def stream_vite():
         for line in vite_proc.stdout:
-            sys.stdout.write(line)
-            sys.stdout.flush()
+            cleaned = line.replace('\x1b[2J', '').replace('\x1b[0f', '').replace('\x1b[3J', '').replace('\x1b[H', '').replace('\x1b[2K', '')
+            if cleaned.strip():
+                sys.stdout.write(cleaned)
+                sys.stdout.flush()
 
     threading.Thread(target=stream_vite, daemon=True).start()
 
@@ -259,6 +261,7 @@ def main():
     ready = wait_for_port(5173, timeout=30)
 
     if ready:
+        print(BANNER)
         print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
         print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
         try:

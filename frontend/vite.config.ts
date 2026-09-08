@@ -13,6 +13,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    clearScreen: false,
     server: {
       host: "0.0.0.0",
       port: 5173,
