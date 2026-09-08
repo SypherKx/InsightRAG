@@ -234,22 +234,12 @@ function LandingPage() {
         NEO-BRUTALIST 3-CARD SECTION
         ========================================================================
       */}
-      <section
-        id="capabilities"
-        className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 border-t-4 border-black"
-        style={{
-          backgroundImage: `url('/assets/skytextured.jpg'), url('/skytextured.jpg')`,
-          backgroundColor: "#86b0d9",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12">
+      <section id="capabilities" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-6xl mx-auto space-y-8 sm:space-y-12">
         <div className="text-center space-y-2 sm:space-y-3">
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black font-sans text-black tracking-tight">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black font-sans text-white tracking-tight">
             Deterministic Precision. Zero Fluff.
           </h2>
-          <p className="text-black/75 font-mono text-xs sm:text-sm max-w-xl mx-auto px-2 font-bold">
+          <p className="text-zinc-400 font-mono text-xs sm:text-sm max-w-xl mx-auto px-2">
             100% air-gapped local intelligence with strict source grounding and zero cloud leakage.
           </p>
         </div>
@@ -257,7 +247,7 @@ function LandingPage() {
         {/* 3 Neo-Brutalist Cards Grid (1 col mobile, 2 col tablet, 3 col desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {/* Card 1: MULTIMODAL (Yellow Card) */}
-          <div className="bg-[#ffe600] text-black border-4 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-6 shadow-[5px_5px_0px_#000] sm:shadow-[8px_8px_0px_#000] hover:translate-y-[-4px] transition-transform">
+          <div className="bg-[#ffe600] text-black border-4 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-6 shadow-[6px_6px_0px_#ffe600] sm:shadow-[8px_8px_0px_#ffe600] hover:translate-y-[-4px] transition-transform">
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-2 sm:pb-3">
                 <h3 className="text-xl sm:text-2xl font-black font-mono uppercase tracking-tight">
@@ -276,7 +266,7 @@ function LandingPage() {
           </div>
 
           {/* Card 2: GUARDRAILS (Green Card) */}
-          <div className="bg-[#22c55e] text-black border-4 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-6 shadow-[5px_5px_0px_#000] sm:shadow-[8px_8px_0px_#000] hover:translate-y-[-4px] transition-transform">
+          <div className="bg-[#22c55e] text-black border-4 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-6 shadow-[6px_6px_0px_#ffe600] sm:shadow-[8px_8px_0px_#ffe600] hover:translate-y-[-4px] transition-transform">
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-2 sm:pb-3">
                 <h3 className="text-xl sm:text-2xl font-black font-mono uppercase tracking-tight">
@@ -295,7 +285,7 @@ function LandingPage() {
           </div>
 
           {/* Card 3: STANDALONE (Pink Card) */}
-          <div className="bg-[#ec4899] text-black border-4 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-6 shadow-[5px_5px_0px_#000] sm:shadow-[8px_8px_0px_#000] hover:translate-y-[-4px] transition-transform">
+          <div className="bg-[#ec4899] text-black border-4 border-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-6 shadow-[6px_6px_0px_#ffe600] sm:shadow-[8px_8px_0px_#ffe600] hover:translate-y-[-4px] transition-transform">
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-2 sm:pb-3">
                 <h3 className="text-xl sm:text-2xl font-black font-mono uppercase tracking-tight">
@@ -312,8 +302,6 @@ function LandingPage() {
               FastAPI + ChromaDB + UI
             </div>
           </div>
-          </div>
-        </div>
         </div>
       </section>
 
