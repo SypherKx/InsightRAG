@@ -913,30 +913,6 @@ function KnowledgeBaseStudioPage() {
                         </div>
                       )}
 
-                      {/* Source Passages Citations */}
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-gray-200 text-[10px] space-y-1.5 font-mono">
-                          <div className="font-bold text-gray-600 flex items-center gap-1">
-                            <FileText className="w-3 h-3 text-black" />
-                            <span>Grounded Document Citations ({msg.sources.length}):</span>
-                          </div>
-                          <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                            {msg.sources.map((src: any, sIdx: number) => (
-                              <div
-                                key={sIdx}
-                                className="bg-gray-100 p-1.5 rounded-lg border border-gray-300 text-gray-800 flex items-start justify-between gap-2"
-                              >
-                                <span className="truncate font-semibold">
-                                  📄 {src.metadata?.title || src.metadata?.file_name || src.filename || src.source || `Passage #${sIdx + 1}`}
-                                </span>
-                                <span className="bg-black text-[#ffe600] px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0">
-                                  {((src.score || src.similarity_score || 0.9) * 100).toFixed(0)}% Match
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 ))
