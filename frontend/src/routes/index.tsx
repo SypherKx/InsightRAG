@@ -126,7 +126,13 @@ function LandingPage() {
 
           {/* Display Headline */}
           <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black font-sans tracking-tight leading-[1.08] sm:leading-[1.05] px-1">
-            <span className="text-[#ffe600] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] sm:drop-shadow-[0_4px_10px_rgba(0,0,0,0.75)] inline-block">
+            <span
+              className="text-[#ffe600] inline-block drop-shadow-[0_3px_6px_rgba(0,0,0,0.75)]"
+              style={{
+                WebkitTextStroke: "2.5px #000000",
+                paintOrder: "stroke fill",
+              }}
+            >
               Autonomous Multimodal
             </span>{" "}
             <br className="hidden xs:inline" />
