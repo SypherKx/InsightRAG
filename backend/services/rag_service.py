@@ -448,11 +448,10 @@ class RAGService:
                         if files:
                             doc_name = files[0]
 
-                # Use exact page number from metadata or target_page
-                page_num = target_page or meta.get("page_number") or meta.get("page") or 1
-                is_visual_content = is_visual_query or (target_page is not None) or any(w in chosen_hit.get("text", "").lower() for w in ["figure", "diagram", "fig.", "chart", "table"])
+                # Only attach visual snippet if user query requested visual content or target page
+                requires_visual = is_visual_query or (target_page is not None)
                 
-                if doc_name and (is_visual_content or Path(doc_name).suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg", ".webp"]):
+                if doc_name and requires_visual:
                     import urllib.parse
                     encoded_query = urllib.parse.quote(query)
                     crop_url = f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}&query={encoded_query}"
@@ -524,7 +523,10 @@ class RAGService:
         # Yield metadata event (sources, visual crop)
         visual_snippet = None
         target_page = intent_info.get("target_page")
-        if results:
+        is_visual_query = intent_info.get("is_visual", False)
+        requires_visual = is_visual_query or (target_page is not None)
+
+        if results and requires_visual:
             chosen_hit = results[0]
             if target_page is not None:
                 for h in results:
