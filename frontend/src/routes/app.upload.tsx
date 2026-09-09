@@ -34,6 +34,7 @@ import {
   getSystemSpecs,
   setHardwareMode,
   pullModel,
+  checkBackendHealth,
 } from "../services/api";
 
 export const Route = createFileRoute("/app/upload")({
@@ -132,13 +133,13 @@ const PARSING_STAGES = [
 function KnowledgeBaseStudioPage() {
   // Hardware Specs State
   const [specs, setSpecs] = useState<any>({
-    cpu_threads: 12,
-    ram_gb: 15.4,
-    gpu_name: "Integrated / CPU",
+    cpu_threads: 0,
+    ram_gb: 0,
+    gpu_name: "Detecting Engine...",
     vram_gb: 0.0,
     has_gpu: false,
     has_gpu_access: false,
-    acceleration_mode: "CPU PARALLEL ENGINE",
+    acceleration_mode: "LOCAL ENGINE",
     installed_models: ["llama3.2:3b", "moondream:latest"],
   });
 
@@ -164,6 +165,9 @@ function KnowledgeBaseStudioPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [ragStats, setRagStats] = useState<any>({ total_vectors: 0, files: [] });
   const [deletingDocName, setDeletingDocName] = useState<string | null>(null);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  const [copiedInstall, setCopiedInstall] = useState(false);
 
   // View state: 'upload' | 'processing' | 'chat'
   const [activeView, setActiveView] = useState<"upload" | "processing" | "chat">("upload");
@@ -223,20 +227,27 @@ function KnowledgeBaseStudioPage() {
   }, []);
 
   const loadSpecsAndStats = async () => {
+    setCheckingHealth(true);
     try {
       const data = await getSystemSpecs();
-      if (data) {
+      if (data && (data.cpu_threads || data.gpu_name)) {
         setSpecs(data);
         if (data.has_gpu_access) {
           setActiveHardwareMode(data.active_mode || "gpu");
         } else {
           setActiveHardwareMode("cpu");
         }
+        setBackendOnline(true);
+      } else {
+        setBackendOnline(false);
       }
       const stats = await getRAGStats();
       if (stats) setRagStats(stats);
     } catch (err) {
-      console.error(err);
+      console.warn("Local backend check failed:", err);
+      setBackendOnline(false);
+    } finally {
+      setCheckingHealth(false);
     }
   };
 
@@ -295,6 +306,13 @@ function KnowledgeBaseStudioPage() {
   };
 
   const startUpload = async (fileList: File[]) => {
+    if (backendOnline === false) {
+      setUploadStatusMsg(
+        "⚠️ Local RAG Engine is offline. InsightRAG is 100% on-device for total privacy — please launch the engine via run.bat or install.ps1 before uploading files.",
+      );
+      return;
+    }
+
     setActiveView("processing");
     setProcessingStep(0);
     setCurrentUploadingFiles(fileList.map((f) => f.name));
@@ -349,9 +367,13 @@ function KnowledgeBaseStudioPage() {
       setUploading(false);
       setUploadProgress(0);
       setActiveView("upload");
-      const isNetErr = err?.message?.includes("Network Error") || err?.code === "ERR_NETWORK";
+      setBackendOnline(false);
+      const isNetErr =
+        err?.message?.includes("Network Error") ||
+        err?.code === "ERR_NETWORK" ||
+        err?.message?.includes("Failed to fetch");
       const errMsg = isNetErr
-        ? "Backend connection failed. Please ensure the backend is running via run.bat or insightrag."
+        ? "Backend connection failed. InsightRAG runs 100% locally on your machine for zero-cloud privacy. Please ensure the backend is running via run.bat or install.ps1."
         : err?.response?.data?.detail || err?.message || "Failed to process files";
       setUploadStatusMsg(`⚠️ Upload error: ${errMsg}`);
       loadSpecsAndStats();
@@ -599,27 +621,64 @@ function KnowledgeBaseStudioPage() {
         {/* 1. TOP SYSTEM SPECS BADGE */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-black text-white p-3 sm:px-5 sm:py-3 rounded-2xl shadow-xl border-2 border-black font-mono text-xs">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-bold">
-            <span className="inline-flex items-center gap-1.5 bg-[#1a1a1a] px-2.5 py-1 rounded-full border border-gray-800">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-emerald-400">
-                {specs.gpu_name} ({specs.vram_gb} GB)
+            {backendOnline === false ? (
+              <span className="inline-flex items-center gap-1.5 bg-red-950/90 px-2.5 py-1 rounded-full border border-red-700 text-red-400">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span>LOCAL ENGINE OFFLINE</span>
               </span>
-            </span>
+            ) : backendOnline === true ? (
+              <span className="inline-flex items-center gap-1.5 bg-[#1a1a1a] px-2.5 py-1 rounded-full border border-gray-800">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-emerald-400">
+                  {specs.gpu_name} ({specs.vram_gb} GB)
+                </span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 bg-[#1a1a1a] px-2.5 py-1 rounded-full border border-gray-800 text-gray-400">
+                <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />
+                <span>Checking Local Engine...</span>
+              </span>
+            )}
 
-            <span className="hidden sm:inline-block text-gray-500">|</span>
-            <span>
-              RAM: <span className="text-amber-300">{specs.ram_gb} GB</span>
-            </span>
+            {backendOnline && (
+              <>
+                <span className="hidden sm:inline-block text-gray-500">|</span>
+                <span>
+                  RAM: <span className="text-amber-300">{specs.ram_gb} GB</span>
+                </span>
 
-            <span className="hidden sm:inline-block text-gray-500">|</span>
-            <span>
-              CPU: <span className="text-amber-300">{specs.cpu_threads} Threads</span>
-            </span>
+                <span className="hidden sm:inline-block text-gray-500">|</span>
+                <span>
+                  CPU: <span className="text-amber-300">{specs.cpu_threads} Threads</span>
+                </span>
+              </>
+            )}
           </div>
 
-          <span className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 py-1 rounded-md uppercase tracking-wider border border-black shadow-[2px_2px_0px_#000] shrink-0 self-end sm:self-auto">
-            {specs.acceleration_mode}
-          </span>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            {backendOnline === false && (
+              <button
+                onClick={loadSpecsAndStats}
+                disabled={checkingHealth}
+                className="cursor-pointer bg-neutral-800 hover:bg-neutral-700 text-[#ffe600] font-mono text-[10px] sm:text-xs px-2.5 py-1 rounded-md border border-neutral-700 flex items-center gap-1 transition-colors"
+                title="Retry connection to local engine"
+              >
+                <RotateCcw className={`w-3 h-3 ${checkingHealth ? "animate-spin" : ""}`} />
+                {checkingHealth ? "Checking..." : "Reconnect"}
+              </button>
+            )}
+            <span
+              className={`font-black font-mono text-[10px] sm:text-xs px-2.5 py-1 rounded-md uppercase tracking-wider border border-black shadow-[2px_2px_0px_#000] ${
+                backendOnline === false
+                  ? "bg-red-500 text-white"
+                  : backendOnline === true
+                    ? "bg-[#ffe600] text-black"
+                    : "bg-gray-400 text-black"
+              }`}
+            >
+              {backendOnline === false ? "ENGINE DISCONNECTED" : specs.acceleration_mode}
+            </span>
+          </div>
         </div>
 
         {/* CONDITIONAL ACTIVE VIEW ROUTING */}
@@ -1432,6 +1491,64 @@ function KnowledgeBaseStudioPage() {
               </div>
             </div>
 
+            {/* LOCAL ENGINE OFFLINE ADVISORY */}
+            {backendOnline === false && (
+              <div className="bg-[#fff9db] border-3 border-black p-4 sm:p-5 rounded-2xl shadow-[5px_5px_0px_#000] text-black font-mono space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded border border-black uppercase animate-pulse">
+                      LOCAL ENGINE OFFLINE
+                    </span>
+                    <h3 className="font-black text-sm sm:text-base">
+                      InsightRAG Runs 100% Privately On Your Device
+                    </h3>
+                  </div>
+                  <button
+                    onClick={loadSpecsAndStats}
+                    disabled={checkingHealth}
+                    className="cursor-pointer bg-black text-[#ffe600] hover:bg-neutral-800 text-xs font-black px-3 py-1.5 rounded-lg border-2 border-black flex items-center gap-1.5 shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all self-start sm:self-auto"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${checkingHealth ? "animate-spin" : ""}`} />
+                    {checkingHealth ? "Checking..." : "Retry Connection"}
+                  </button>
+                </div>
+
+                <p className="text-xs text-neutral-800 leading-relaxed font-bold">
+                  Zero cloud server dependency. Your documents, FAISS vector embeddings, and LLM inferences remain strictly confidential on your PC. To index files, please start the local backend.
+                </p>
+
+                <div className="bg-black text-white p-3 sm:p-3.5 rounded-xl border-2 border-black space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-gray-300">
+                    <span>⚡ Quick 1-Line Setup (Windows PowerShell):</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText("irm https://www.insightrag.tech/install.ps1 | iex");
+                        setCopiedInstall(true);
+                        setTimeout(() => setCopiedInstall(false), 2000);
+                      }}
+                      className="text-[#ffe600] hover:underline flex items-center gap-1 text-[11px] font-black cursor-pointer"
+                    >
+                      {copiedInstall ? "✓ Copied!" : "📋 Copy Command"}
+                    </button>
+                  </div>
+                  <code className="block bg-[#1a1a1a] p-2 rounded text-[#ffe600] text-xs font-mono select-all overflow-x-auto">
+                    irm https://www.insightrag.tech/install.ps1 | iex
+                  </code>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs pt-0.5">
+                  <span className="font-bold text-neutral-700">Already have InsightRAG on your PC? Run:</span>
+                  <span className="bg-white border-2 border-black px-2 py-0.5 rounded font-mono text-[11px] font-black shadow-[2px_2px_0px_#000]">
+                    run.bat
+                  </span>
+                  <span className="text-neutral-500 font-bold">or</span>
+                  <span className="bg-white border-2 border-black px-2 py-0.5 rounded font-mono text-[11px] font-black shadow-[2px_2px_0px_#000]">
+                    python scripts/run_local.py
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* 4. DOCUMENT DROPZONE */}
             <div className="pt-2 space-y-3">
               <div
@@ -1475,19 +1592,35 @@ function KnowledgeBaseStudioPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_#000] ${
+                  className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-[2px_2px_0px_#000] ${
                     uploadStatusMsg.startsWith("✓")
                       ? "bg-emerald-400 text-black"
                       : "bg-red-400 text-black"
                   }`}
                 >
                   <span>{uploadStatusMsg}</span>
-                  <button
-                    onClick={() => setUploadStatusMsg(null)}
-                    className="cursor-pointer font-black text-xs hover:opacity-75"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    {!uploadStatusMsg.startsWith("✓") && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            "irm https://www.insightrag.tech/install.ps1 | iex",
+                          );
+                          setCopiedInstall(true);
+                          setTimeout(() => setCopiedInstall(false), 2000);
+                        }}
+                        className="cursor-pointer bg-black text-[#ffe600] hover:bg-neutral-800 text-[10px] font-black px-2 py-1 rounded border border-black shadow-[1px_1px_0px_#000]"
+                      >
+                        {copiedInstall ? "✓ Copied Launch Command" : "📋 Copy Launch Command"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setUploadStatusMsg(null)}
+                      className="cursor-pointer font-black text-xs hover:opacity-75 px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </div>

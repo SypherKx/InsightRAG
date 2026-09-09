@@ -7,22 +7,43 @@ import type {
   Dataset,
 } from "../types/backend-types";
 
-const getApiBase = () => {
+export const getApiBase = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== "undefined" && window.location?.hostname) {
-    const host = window.location.hostname;
-    const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-    return `${protocol}//${host}:8000/api/v1`;
+  if (typeof window !== "undefined") {
+    const { hostname, port } = window.location;
+    // When running under Vite dev server (port 5173), proxy directly to backend
+    if (port === "5173") {
+      return "/api/v1";
+    }
+    // When served directly by FastAPI (port 8000), use same-origin relative path
+    if (port === "8000") {
+      return "/api/v1";
+    }
+    // If local loopback on another port, use IPv4 127.0.0.1 to avoid Windows 11 ::1 resolution failure
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://127.0.0.1:8000/api/v1";
+    }
+    // In production web deployment (e.g. www.insightrag.tech), use relative API path
+    return "/api/v1";
   }
-  return "http://localhost:8000/api/v1";
+  return "http://127.0.0.1:8000/api/v1";
 };
 
-const API_BASE = getApiBase();
+export const API_BASE = getApiBase();
 
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 120000, // 2 minute timeout — embedding generation & Ollama inference need time
 });
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const { data } = await api.get("/health", { timeout: 3000 });
+    return Boolean(data && data.status === "ok");
+  } catch {
+    return false;
+  }
+}
 
 // ─── Datasets ───
 

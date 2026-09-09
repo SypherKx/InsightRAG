@@ -295,12 +295,12 @@ def main():
 
     free_ports()
 
-    STUDIO_URL = "http://localhost:5173/app/upload"
+    STUDIO_URL = "http://127.0.0.1:5173/app/upload"
 
     print(f"\n{'='*65}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
     print(f"{ANSI_BOLD}| ⚡ InsightRAG AI Studio — 100% Local On-Device AI             |{ANSI_RESET}")
-    print(f"{ANSI_BOLD}| 👉 Studio URL : {ANSI_CYAN}http://localhost:5173/app/upload{ANSI_RESET}{ANSI_BOLD}              |{ANSI_RESET}")
+    print(f"{ANSI_BOLD}| 👉 Studio URL : {ANSI_CYAN}http://127.0.0.1:5173/app/upload{ANSI_RESET}{ANSI_BOLD}             |{ANSI_RESET}")
     print(f"{ANSI_BOLD}| (Auto-opening in your browser once ready...)                  |{ANSI_RESET}")
     print(f"{ANSI_BOLD}+---------------------------------------------------------------+{ANSI_RESET}")
     print(f"  {ANSI_CYAN}💡 Firewall Tip: If Windows Defender asks, click 'Allow Access' so port 8000 is open.{ANSI_RESET}")

@@ -23,7 +23,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\services\api.ts (298 lines)
+Module: frontend\src\services\api.ts (319 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
 Exports: export interface StreamCallbacks {
