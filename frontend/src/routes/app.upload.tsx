@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import {
   uploadRAGDocuments,
+  getRAGTaskStatus,
+  type RAGTaskStatus,
   queryRAG,
   streamRAGQuery,
   getRAGStats,
@@ -317,22 +319,8 @@ function KnowledgeBaseStudioPage() {
     setProcessingStep(0);
     setCurrentUploadingFiles(fileList.map((f) => f.name));
     setUploading(true);
-    setUploadProgress(2);
+    setUploadProgress(5);
     setUploadStatusMsg(null);
-
-    // No fake timers — stages advance based on real elapsed time while backend works
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      // Derive stage from actual elapsed seconds (backend is genuinely working)
-      if (elapsed > 1.0) setProcessingStep((prev) => Math.max(prev, 1));
-      if (elapsed > 3.0) setProcessingStep((prev) => Math.max(prev, 2));
-      if (elapsed > 6.0) setProcessingStep((prev) => Math.max(prev, 3));
-      if (elapsed > 10.0) setProcessingStep((prev) => Math.max(prev, 4));
-      // Progress bar: slow logarithmic crawl that never hits 95 until backend responds
-      const pct = Math.min(92, 2 + Math.log1p(elapsed) * 18);
-      setUploadProgress(Math.round(pct));
-    }, 500);
 
     try {
       const sPage =
@@ -341,29 +329,80 @@ function KnowledgeBaseStudioPage() {
         usePageRange && typeof endPage === "number" && endPage > 0 ? endPage : undefined;
 
       const res = await uploadRAGDocuments(fileList, sPage, ePage);
-      clearInterval(interval);
-
-      // Backend done — snap everything to complete
-      setProcessingStep(5);
-      setUploadProgress(100);
-
       const rangeNotice = sPage || ePage ? ` [Pages ${sPage || 1} to ${ePage || "End"}]` : "";
-      setUploadStatusMsg(
-        `✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`,
-      );
 
-      await loadSpecsAndStats();
+      if (res?.task_id) {
+        // Asynchronous background ingestion — poll real status from backend
+        const taskId = res.task_id;
+        let isDone = false;
 
-      setTimeout(() => {
-        setUploading(false);
-        setActiveView("chat");
-        setUploadProgress(0);
+        while (!isDone) {
+          await new Promise((r) => setTimeout(r, 500));
+          try {
+            const statusData: RAGTaskStatus = await getRAGTaskStatus(taskId);
+
+            if (typeof statusData.step === "number") {
+              setProcessingStep(statusData.step);
+            }
+            if (typeof statusData.progress === "number") {
+              setUploadProgress(statusData.progress);
+            }
+
+            if (statusData.status === "completed") {
+              isDone = true;
+              setProcessingStep(5);
+              setUploadProgress(100);
+              setUploadStatusMsg(
+                statusData.message ||
+                  `✓ Successfully indexed ${statusData.documents_ingested || fileList.length} document(s)${rangeNotice} (${statusData.chunks_created || 0} chunks)!`,
+              );
+              await loadSpecsAndStats();
+
+              setTimeout(() => {
+                setUploading(false);
+                setActiveView("chat");
+                setUploadProgress(0);
+                setTimeout(() => {
+                  chatInputRef.current?.focus();
+                }, 300);
+              }, 900);
+              return;
+            }
+
+            if (statusData.status === "failed") {
+              isDone = true;
+              setUploading(false);
+              setUploadProgress(0);
+              setActiveView("upload");
+              setUploadStatusMsg(
+                `⚠️ Ingestion failed: ${statusData.error_message || statusData.message || "Unknown error during parsing"}`,
+              );
+              await loadSpecsAndStats();
+              return;
+            }
+          } catch (pollErr: any) {
+            console.warn("Status poll error:", pollErr);
+          }
+        }
+      } else {
+        // Synchronous / legacy fallback response
+        setProcessingStep(5);
+        setUploadProgress(100);
+        setUploadStatusMsg(
+          `✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`,
+        );
+        await loadSpecsAndStats();
+
         setTimeout(() => {
-          chatInputRef.current?.focus();
-        }, 300);
-      }, 900);
+          setUploading(false);
+          setActiveView("chat");
+          setUploadProgress(0);
+          setTimeout(() => {
+            chatInputRef.current?.focus();
+          }, 300);
+        }, 900);
+      }
     } catch (err: any) {
-      clearInterval(interval);
       setUploading(false);
       setUploadProgress(0);
       setActiveView("upload");

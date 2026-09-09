@@ -13,6 +13,7 @@ tags:
 ## 🔗 Connected Dependencies & Imported Modules
 - Main Subsystem Hub: [[05_FastAPI_Backend_Hub]]
 - Imported Module: [[files/backend_services_ollama_manager_py]]
+- Imported Module: [[files/backend_services_rag_task_manager_py]]
 
 ---
 
@@ -24,16 +25,16 @@ tags:
 - `def get_hardware_mode`
 - `def is_available`
 - `def ingest_documents`
-- `def query`
-- `async def query_stream`
-- `def get_stats`
-- `def delete_single_document`
+- `def start_background_ingestion`
+- `def _run_ingestion_worker`
+- `def progress_hook`
+- `def get_task_status`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\services\rag_service.py (739 lines)
+Module: backend\services\rag_service.py (890 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: class RAGService:, def __init__, def set_hardware_mode, def _safe_terminal_print, def get_hardware_mode

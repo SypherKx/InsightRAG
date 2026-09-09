@@ -11,14 +11,14 @@ High-level interface for the complete RAG workflow:
 
 import logging
 from pathlib import Path
-from typing import List, Union, Optional, Dict, Any
+from typing import List, Union, Optional, Dict, Any, Callable
 
 from .ingestion import DocumentIngester, IngestionConfig
 from .chunker import TextChunker, ChunkConfig
 from .embeddings import EmbeddingGenerator, EmbeddingConfig
 from .vectorstore import FAISSVectorStore
 from .retriever import RAGRetriever, RAGQuery
-from .models import Document, DocumentChunk
+from .models import Document, DocumentChunk, RAGResponse
 
 logger = logging.getLogger(__name__)
 
@@ -85,19 +85,24 @@ class RAGPipeline:
     def ingest_and_index(self, sources: List[Union[str, Path]],
                         document_type: Optional[str] = None,
                         start_page: Optional[int] = None,
-                        end_page: Optional[int] = None) -> Dict[str, Any]:
+                        end_page: Optional[int] = None,
+                        progress_callback: Optional[Callable[[int, str, int, str], None]] = None) -> Dict[str, Any]:
         """
-        Ingest documents and add them to the vector index with optional page range.
+        Ingest documents and add them to the vector index with optional page range and progress reporting.
 
         Args:
             sources: List of file paths or directory paths
             document_type: Override document type (auto-detected if None)
             start_page: Optional 1-indexed start page
             end_page: Optional 1-indexed end page
+            progress_callback: Optional callback(step, stage_name, progress_pct, message)
 
         Returns:
             Dict with stats: {'documents': N, 'chunks': M, 'errors': K}
         """
+        if progress_callback:
+            progress_callback(0, "Document Buffer & Format Validation", 5, "Validating file buffers and initializing pipeline...")
+
         stats = {
             "documents_ingested": 0,
             "chunks_created": 0,
@@ -116,7 +121,8 @@ class RAGPipeline:
                     self.org_id,
                     document_type,
                     start_page=start_page,
-                    end_page=end_page
+                    end_page=end_page,
+                    progress_callback=progress_callback
                 )
                 if doc:
                     all_documents.append(doc)
@@ -135,9 +141,14 @@ class RAGPipeline:
 
         if not all_documents:
             logger.warning("No documents to process")
+            if progress_callback:
+                progress_callback(0, "Document Buffer & Format Validation", 100, "No documents were successfully parsed.")
             return stats
 
-        # Step 2: Chunk
+        # Step 2 & 3: Contextual Chunking
+        if progress_callback:
+            progress_callback(4, "Multimodal Contextualization & Figure Captioning", 70, f"Preparing contextual chunks for {len(all_documents)} document(s)...")
+
         chunks_data = self.chunker.chunk_documents(
             [d.model_dump() for d in all_documents],
             text_key="content"
@@ -146,6 +157,8 @@ class RAGPipeline:
 
         if not chunks_data:
             logger.warning("No chunks created")
+            if progress_callback:
+                progress_callback(5, "Semantic Chunking & FAISS Vector Indexing", 100, "No chunks created from documents.")
             return stats
 
         # Step 3: Create DocumentChunk objects
@@ -180,9 +193,15 @@ class RAGPipeline:
         # Step 4: Generate embeddings (embedding contextualized embedded_text)
         texts_to_embed = [c.embedded_text or c.text for c in chunk_objects]
         logger.info(f"Generating embeddings for {len(texts_to_embed)} contextual chunks...")
+        if progress_callback:
+            progress_callback(5, "Semantic Chunking & FAISS Vector Indexing", 80, f"Generating dense vector embeddings for {len(texts_to_embed)} chunks...")
+
         embeddings = self.embedding_gen.generate(texts_to_embed)
 
         # Step 5: Store in vector store
+        if progress_callback:
+            progress_callback(5, "Semantic Chunking & FAISS Vector Indexing", 92, f"Committing {len(chunk_objects)} vectors to FAISS index...")
+
         for chunk_obj, embedding in zip(chunk_objects, embeddings):
             chunk_obj.embedding = embedding
 
@@ -197,6 +216,9 @@ class RAGPipeline:
             f"{stats['chunks_created']} chunks, {self.vector_store.total_vectors} total vectors"
         )
 
+        if progress_callback:
+            progress_callback(5, "Complete", 100, f"Successfully indexed {stats['documents_ingested']} document(s) ({stats['chunks_created']} chunks)!")
+
         return stats
 
     def query(self,
@@ -204,7 +226,8 @@ class RAGPipeline:
               top_k: int = 5,
               min_score: float = 0.0,
               filters: Optional[Dict[str, Any]] = None,
-              history: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+              history: Optional[List[Dict[str, Any]]] = None,
+              rewritten_query: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Query for relevant context.
 
@@ -214,20 +237,19 @@ class RAGPipeline:
             min_score: Minimum similarity threshold
             filters: Metadata filters
             history: Optional conversation history for LLM query rewriting
+            rewritten_query: Optional pre-rewritten query string
 
         Returns:
             List of result dicts with text, score, metadata
         """
-        rag_query = RAGQuery(
+        response = self.query_with_response(
             query=query,
-            org_id=self.org_id,
             top_k=top_k,
             min_score=min_score,
-            filters=filters or {},
-            history=history
+            filters=filters,
+            history=history,
+            rewritten_query=rewritten_query
         )
-
-        response = self.retriever.retrieve(rag_query)
         return [
             {
                 "text": r.chunk.text,
@@ -239,6 +261,27 @@ class RAGPipeline:
             }
             for r in response.results
         ]
+
+    def query_with_response(self,
+                            query: str,
+                            top_k: int = 5,
+                            min_score: float = 0.0,
+                            filters: Optional[Dict[str, Any]] = None,
+                            history: Optional[List[Dict[str, Any]]] = None,
+                            rewritten_query: Optional[str] = None) -> RAGResponse:
+        """
+        Query for relevant context and return the full RAGResponse including metadata.
+        """
+        rag_query = RAGQuery(
+            query=query,
+            org_id=self.org_id,
+            top_k=top_k,
+            min_score=min_score,
+            filters=filters or {},
+            history=history,
+            rewritten_query=rewritten_query
+        )
+        return self.retriever.retrieve(rag_query)
 
     def get_stats(self) -> Dict[str, Any]:
         """

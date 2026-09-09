@@ -11,7 +11,7 @@ Handles loading and extracting text from various file formats:
 import os
 import uuid
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Callable
 from dataclasses import dataclass
 import logging
 
@@ -78,9 +78,10 @@ class DocumentIngester:
     def ingest_file(self, file_path: Union[str, Path], org_id: str,
                     document_type: Optional[str] = None,
                     start_page: Optional[int] = None,
-                    end_page: Optional[int] = None) -> Optional[Document]:
+                    end_page: Optional[int] = None,
+                    progress_callback: Optional[Callable] = None) -> Optional[Document]:
         """
-        Ingest a single file with optional page range slicing.
+        Ingest a single file with optional page range slicing and progress reporting.
 
         Args:
             file_path: Path to file
@@ -88,6 +89,7 @@ class DocumentIngester:
             document_type: Type classification (auto-detected if None)
             start_page: Optional 1-indexed starting page
             end_page: Optional 1-indexed ending page
+            progress_callback: Optional callback(step, stage_name, progress_pct, message)
 
         Returns:
             Document object or None if failed
@@ -117,7 +119,7 @@ class DocumentIngester:
         try:
             # Extract text based on file type
             if ext == ".pdf":
-                content, metadata = self._extract_pdf(file_path, start_page=start_page, end_page=end_page)
+                content, metadata = self._extract_pdf(file_path, start_page=start_page, end_page=end_page, progress_callback=progress_callback)
             elif ext in self._loaded_extractors:
                 content, metadata = self._loaded_extractors[ext](file_path)
             else:
@@ -229,7 +231,7 @@ class DocumentIngester:
         # Default
         return "other"
 
-    def _extract_pdf(self, file_path: Path, start_page: Optional[int] = None, end_page: Optional[int] = None) -> tuple[str, dict]:
+    def _extract_pdf(self, file_path: Path, start_page: Optional[int] = None, end_page: Optional[int] = None, progress_callback: Optional[Callable] = None) -> tuple[str, dict]:
         """
         Extract complete, high-fidelity content from every page of a PDF file.
         Extracts:
@@ -261,17 +263,20 @@ class DocumentIngester:
 
             s_idx = max(0, (start_page - 1)) if start_page else 0
             e_idx = min(total_pages, end_page) if end_page else total_pages
+            total_pages_to_process = max(1, e_idx - s_idx)
 
             for p_num in range(s_idx, e_idx):
                 page = doc[p_num]
                 page_number = p_num + 1
+                curr_idx = p_num - s_idx + 1
 
-                # 1. Text Extraction in natural reading order
-                page_text = page.get_text("text") or ""
-                text_clean = page_text.strip()
+                if progress_callback:
+                    pct = int(10 + 50 * (curr_idx / total_pages_to_process))
+                    progress_callback(1, "Deep Page Rasterization & Scanned Text OCR", pct, f"Parsing page {page_number} of {total_pages}...")
 
-                # 2. Table Extraction using PyMuPDF TableFinder
+                # 1. Table Extraction using PyMuPDF TableFinder
                 tables_md = []
+                table_bboxes = []
                 try:
                     tabs = page.find_tables()
                     if tabs and hasattr(tabs, "tables"):
@@ -281,33 +286,83 @@ class DocumentIngester:
                                 md = _table_to_markdown(extracted)
                                 if md:
                                     tables_md.append(f"Table {t_idx + 1} (Page {page_number}):\n{md}")
+                                    if hasattr(tab, "bbox") and tab.bbox:
+                                        table_bboxes.append(tab.bbox)
                 except Exception as e:
                     logger.debug(f"Table detection on page {page_number}: {e}")
+
+                # 2. Text Extraction in natural multi-column reading order (excluding text inside tables to prevent duplication)
+                text_blocks = []
+                try:
+                    blocks = page.get_text("blocks", sort=True)
+                    for b in blocks:
+                        # b: (x0, y0, x1, y1, text, block_no, block_type)
+                        if len(b) >= 5 and b[6] == 0:
+                            b_text = b[4].strip()
+                            if not b_text:
+                                continue
+                            b_rect = fitz.Rect(b[0], b[1], b[2], b[3])
+                            # Omit block if it is inside an extracted table to prevent garbled duplicates
+                            is_in_table = False
+                            for tb in table_bboxes:
+                                t_rect = fitz.Rect(tb)
+                                b_cx = (b_rect.x0 + b_rect.x1) / 2
+                                b_cy = (b_rect.y0 + b_rect.y1) / 2
+                                if (t_rect.x0 - 5 <= b_cx <= t_rect.x1 + 5 and
+                                    t_rect.y0 - 5 <= b_cy <= t_rect.y1 + 5):
+                                    is_in_table = True
+                                    break
+                            if not is_in_table:
+                                text_blocks.append(b_text)
+                except Exception:
+                    text_blocks = [page.get_text("text").strip()]
+
+                text_clean = "\n\n".join(text_blocks).strip()
 
                 # 3. Visual Elements (Drawings, Schematics, Embedded Images)
                 visual_elements = []
                 has_images = False
                 has_drawings = False
 
-                # A. Vector Drawings (Flowcharts, block diagrams, circuits)
+                # A. Vector Drawings (Flowcharts, block diagrams, circuits) with sub-region extraction
                 try:
                     drawings = page.get_drawings()
                     if drawings and len(drawings) > 0:
                         has_drawings = True
                         sig_drawings = [d for d in drawings if d.get("rect") and (d["rect"].width * d["rect"].height) > 1000]
                         if sig_drawings:
-                            d_caption = _find_caption_near_bbox(page, sig_drawings[0]["rect"])
+                            d_x0 = min(d["rect"].x0 for d in sig_drawings)
+                            d_y0 = min(d["rect"].y0 for d in sig_drawings)
+                            d_x1 = max(d["rect"].x1 for d in sig_drawings)
+                            d_y1 = max(d["rect"].y1 for d in sig_drawings)
+                            diagram_rect = fitz.Rect(d_x0, d_y0, d_x1, d_y1)
+                            d_caption = _find_caption_near_bbox(page, diagram_rect)
+
+                            # Extract internal text labels as sub-regions with exact bounding boxes
+                            sub_regions = []
+                            words = page.get_text("words")
+                            if words:
+                                for w in words:
+                                    w_rect = fitz.Rect(w[0], w[1], w[2], w[3])
+                                    if diagram_rect.contains(w_rect) and len(w[4].strip()) > 1:
+                                        sub_regions.append({
+                                            "label": w[4].strip(),
+                                            "bbox": [round(w[0], 1), round(w[1], 1), round(w[2], 1), round(w[3], 1)]
+                                        })
+
                             visual_elements.append({
                                 "idx": 1,
                                 "visual_type": "Vector Schematic / Architecture Diagram",
-                                "width": int(sig_drawings[0]["rect"].width),
-                                "height": int(sig_drawings[0]["rect"].height),
+                                "width": int(diagram_rect.width),
+                                "height": int(diagram_rect.height),
+                                "bbox": [round(diagram_rect.x0, 1), round(diagram_rect.y0, 1), round(diagram_rect.x1, 1), round(diagram_rect.y1, 1)],
                                 "aspect_ratio": "Vector Layout",
                                 "caption": d_caption or f"Diagram / Schematic on Page {page_number}",
-                                "description": f"Vector-rendered illustration or flowchart on Page {page_number} with {len(sig_drawings)} geometric shapes and connectors.",
+                                "description": f"Vector-rendered illustration or flowchart on Page {page_number} with {len(sig_drawings)} geometric components.",
+                                "sub_regions": sub_regions[:20],
                             })
-                except Exception:
-                    pass
+                except Exception as draw_err:
+                    logger.debug(f"Drawing extraction error on page {page_number}: {draw_err}")
 
                 # B. Embedded Raster Images (Figures, charts, photos)
                 try:
@@ -343,8 +398,8 @@ class DocumentIngester:
                                 idx=len(visual_elements) + 1
                             )
                             visual_elements.append(vis_info)
-                except Exception:
-                    pass
+                except Exception as img_err:
+                    logger.debug(f"Image extraction error on page {page_number}: {img_err}")
 
                 # C. Fallback for scanned pages (low selectable text + visuals present)
                 if len(text_clean) < 80 and (has_images or has_drawings):
@@ -354,6 +409,7 @@ class DocumentIngester:
                             img_bytes=pix.tobytes("png"),
                             w=pix.width,
                             h=pix.height,
+                            bbox=[0, 0, pix.width, pix.height],
                             caption=f"Scanned Document / Graphic Layout on Page {page_number}",
                             page_num=page_number,
                             idx=len(visual_elements) + 1
@@ -390,6 +446,7 @@ class DocumentIngester:
                     "has_drawings": has_drawings,
                     "has_tables": len(tables_md) > 0,
                     "tables_count": len(tables_md),
+                    "tables": tables_md,
                     "visual_elements": visual_elements,
                     "char_count": len(combined_page_text),
                 })
@@ -735,6 +792,7 @@ def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1,
         "visual_type": visual_type,
         "width": w,
         "height": h,
+        "bbox": [round(float(c), 1) for c in bbox] if bbox else None,
         "aspect_ratio": aspect_ratio,
         "caption": caption or f"Visual Element {idx} on Page {page_num}",
         "description": desc,

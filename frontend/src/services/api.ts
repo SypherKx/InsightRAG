@@ -127,6 +127,29 @@ export async function checkHealth(): Promise<any> {
 
 // ─── RAG Query & Upload ───
 
+export interface RAGTaskStatus {
+  task_id: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  step: number;
+  stage: string;
+  progress: number;
+  message: string;
+  error_message?: string | null;
+  files: string[];
+  documents_ingested: number;
+  chunks_created: number;
+  errors: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getRAGTaskStatus(taskId: string): Promise<RAGTaskStatus> {
+  const { data } = await api.get(`/rag/documents/${encodeURIComponent(taskId)}/status`, {
+    timeout: 10000,
+  });
+  return data;
+}
+
 export async function uploadRAGDocuments(
   files: File[],
   startPage?: number,
@@ -142,7 +165,7 @@ export async function uploadRAGDocuments(
   }
   const { data } = await api.post("/rag/documents", formData, {
     headers: { "Content-Type": "multipart/form-data" },
-    timeout: 180000, // 3 minutes for document chunking + embedding generation
+    timeout: 60000, // Upload returns immediately now
   });
   return data;
 }

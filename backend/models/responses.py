@@ -161,6 +161,25 @@ class RAGQueryResponse(BaseModel):
 
 
 class RAGUploadResponse(BaseModel):
+    task_id: Optional[str] = None
+    status: str = "processing"
+    message: str = ""
     documents_ingested: int = 0
     chunks_created: int = 0
     errors: int = 0
+
+
+class RAGTaskStatusResponse(BaseModel):
+    task_id: str
+    status: str
+    step: int = 0
+    stage: str = ""
+    progress: int = 0
+    message: str = ""
+    error_message: Optional[str] = None
+    files: List[str] = []
+    documents_ingested: int = 0
+    chunks_created: int = 0
+    errors: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

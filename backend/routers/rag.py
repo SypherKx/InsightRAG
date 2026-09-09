@@ -6,11 +6,12 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Response, Query
+import uuid
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Response, Query, BackgroundTasks, status
 
 from ..dependencies import get_rag_service
 from ..models.requests import RAGQueryRequest
-from ..models.responses import RAGQueryResponse, RAGUploadResponse
+from ..models.responses import RAGQueryResponse, RAGUploadResponse, RAGTaskStatusResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/rag", tags=["RAG"])
@@ -43,11 +44,13 @@ async def delete_single_rag_document(doc_name: str):
 
 @router.post("/documents", response_model=RAGUploadResponse)
 async def upload_rag_documents(
+    background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     start_page: Optional[int] = Form(None),
     end_page: Optional[int] = Form(None),
+    sync: bool = Query(False, description="Run ingestion synchronously if True (default: False for non-blocking background ingestion)")
 ):
-    """Upload documents to the RAG knowledge base with sanitized paths and strict extension checks."""
+    """Upload documents to the RAG knowledge base. Ingests in the background and returns a task_id immediately."""
     rag_svc = get_rag_service()
 
     if not rag_svc.is_available:
@@ -89,23 +92,63 @@ async def upload_rag_documents(
         if not saved_paths:
             raise HTTPException(status_code=400, detail="No valid non-empty files were provided.")
 
-        # Ingest documents into FAISS vector database
-        stats = rag_svc.ingest_documents(
-            saved_paths,
+        if sync:
+            # Synchronous ingestion mode (for legacy callers / tests)
+            stats = rag_svc.ingest_documents(
+                saved_paths,
+                start_page=start_page,
+                end_page=end_page
+            )
+            return RAGUploadResponse(
+                task_id=None,
+                status="completed",
+                message=f"Synchronous indexing complete: {stats.get('documents_ingested', 0)} document(s) ({stats.get('chunks_created', 0)} chunks).",
+                documents_ingested=stats.get("documents_ingested", 0),
+                chunks_created=stats.get("chunks_created", 0),
+                errors=stats.get("errors", 0),
+            )
+
+        # Asynchronous background ingestion via dedicated thread pool executor
+        task_id = str(uuid.uuid4())
+        rag_svc.start_background_ingestion(
+            task_id=task_id,
+            file_paths=saved_paths,
             start_page=start_page,
             end_page=end_page
         )
 
         return RAGUploadResponse(
-            documents_ingested=stats.get("documents_ingested", 0),
-            chunks_created=stats.get("chunks_created", 0),
-            errors=stats.get("errors", 0),
+            task_id=task_id,
+            status="processing",
+            message=f"Document upload accepted for {len(saved_paths)} file(s). Ingestion running in background.",
+            documents_ingested=0,
+            chunks_created=0,
+            errors=0,
         )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.exception(f"Document upload failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to process document upload.")
+
+
+@router.get("/documents/{task_id}/status", response_model=RAGTaskStatusResponse)
+@router.get("/tasks/{task_id}", response_model=RAGTaskStatusResponse)
+async def get_rag_ingestion_status(task_id: str):
+    """
+    Get real-time ingestion progress and status for a document upload task.
+    Tracks multi-stage comprehension milestones:
+    (0: Format Validation -> 1: Rasterization/OCR -> 2: Table Extraction -> 3: Diagrams/CV -> 4: Captions -> 5: FAISS Indexing -> Complete)
+    """
+    rag_svc = get_rag_service()
+    task_info = rag_svc.get_task_status(task_id)
+    if not task_info:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Task '{task_id}' not found. It may have expired or was never created."
+        )
+    return RAGTaskStatusResponse(**task_info)
 
 
 import io
@@ -202,33 +245,42 @@ async def get_diagram_crop(
                 image_rects = [fitz.Rect(img["bbox"]) for img in image_infos if img.get("bbox") and (fitz.Rect(img["bbox"]).width * fitz.Rect(img["bbox"]).height) > 1500]
                 all_visual_rects = drawing_rects + image_rects
 
-                # Priority 1: Diagram / Figure / Chart / Table Localization
-                is_diagram_query = bool(clean_query and any(w in clean_query.lower() for w in ['diagram', 'figure', 'fig.', 'chart', 'circuit', 'graph', 'schematic', 'table']))
+                # Priority 1: Diagram / Figure / Chart / Table Localization with Sub-Region Support
+                is_diagram_query = bool(clean_query and any(w in clean_query.lower() for w in ['diagram', 'figure', 'fig.', 'chart', 'circuit', 'graph', 'schematic', 'table', 'box', 'node', 'architecture', 'component']))
                 if is_diagram_query and all_visual_rects:
-                    caption_hits = []
-                    for kw in keywords[:3]:
-                        caption_hits.extend(pdf_page.search_for(kw))
-                    for cap in ['figure', 'fig.', 'diagram', 'chart', 'table', 'circuit']:
-                        caption_hits.extend(pdf_page.search_for(cap))
-                    
-                    if caption_hits:
-                        best_vis = None
-                        min_dist = float('inf')
-                        for hit in caption_hits:
-                            for v in all_visual_rects:
-                                dist = ((hit.x0 - v.x0)**2 + (hit.y0 - v.y0)**2)**0.5
-                                if dist < min_dist:
-                                    min_dist = dist
-                                    best_vis = v
-                        if best_vis and min_dist < 400:
-                            target_rect = fitz.Rect(
-                                max(0, best_vis.x0 - f_padding),
-                                max(0, best_vis.y0 - f_padding),
-                                min(pdf_page.rect.width, best_vis.x1 + f_padding),
-                                min(pdf_page.rect.height, best_vis.y1 + f_padding)
-                            )
-                    if target_rect is None and all_visual_rects:
-                        target_rect = max(all_visual_rects, key=lambda r: r.width * r.height)
+                    try:
+                        from src.rag.image_regions import find_pdf_diagram_and_sub_regions
+                        sub_rect, is_sub, meta_info = find_pdf_diagram_and_sub_regions(pdf_page, clean_query, padding=f_padding)
+                        if sub_rect is not None:
+                            target_rect = sub_rect
+                    except Exception as roi_err:
+                        logger.debug(f"Sub-region ROI localization error: {roi_err}")
+
+                    if target_rect is None:
+                        caption_hits = []
+                        for kw in keywords[:3]:
+                            caption_hits.extend(pdf_page.search_for(kw))
+                        for cap in ['figure', 'fig.', 'diagram', 'chart', 'table', 'circuit']:
+                            caption_hits.extend(pdf_page.search_for(cap))
+                        
+                        if caption_hits:
+                            best_vis = None
+                            min_dist = float('inf')
+                            for hit in caption_hits:
+                                for v in all_visual_rects:
+                                    dist = ((hit.x0 - v.x0)**2 + (hit.y0 - v.y0)**2)**0.5
+                                    if dist < min_dist:
+                                        min_dist = dist
+                                        best_vis = v
+                            if best_vis and min_dist < 400:
+                                target_rect = fitz.Rect(
+                                    max(0, best_vis.x0 - f_padding),
+                                    max(0, best_vis.y0 - f_padding),
+                                    min(pdf_page.rect.width, best_vis.x1 + f_padding),
+                                    min(pdf_page.rect.height, best_vis.y1 + f_padding)
+                                )
+                        if target_rect is None and all_visual_rects:
+                            target_rect = max(all_visual_rects, key=lambda r: r.width * r.height)
 
                 # Priority 2: Intelligent Document Section / Heading Bounding Box
                 # (Resumes, Reports, Scientific Papers, Layout-driven PDFs)
@@ -344,15 +396,22 @@ async def get_diagram_crop(
             Image.MAX_IMAGE_PIXELS = 25_000_000
 
             with Image.open(safe_path) as img:
-                if x1 > x0 and y1 > y0:
+                if f_x1 > f_x0 and f_y1 > f_y0:
                     w, h = img.size
                     crop_box = (
-                        max(0, int(x0 - padding)),
-                        max(0, int(y0 - padding)),
-                        min(w, int(x1 + padding)),
-                        min(h, int(y1 + padding))
+                        max(0, int(f_x0 - f_padding)),
+                        max(0, int(f_y0 - f_padding)),
+                        min(w, int(f_x1 + f_padding)),
+                        min(h, int(f_y1 + f_padding))
                     )
                     cropped = img.crop(crop_box)
+                elif clean_query:
+                    from src.rag.image_regions import find_image_sub_region
+                    sub_box, is_sub = find_image_sub_region(img, clean_query, padding=int(f_padding))
+                    if is_sub:
+                        cropped = img.crop(sub_box)
+                    else:
+                        cropped = img
                 else:
                     cropped = img
 

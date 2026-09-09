@@ -20,21 +20,22 @@ tags:
 - `class ChunkConfig:`
 - `class TextChunker:`
 - `def build_contextual_chunk`
+- `def is_section_heading`
+- `def is_markdown_table`
+- `def split_markdown_table_by_rows`
 - `def __init__`
 - `def _compile_separator_pattern`
 - `def _count_tokens`
 - `def _split_by_separators`
 - `def chunk_text`
 - `def _clean_text`
-- `def chunk_documents`
-- `def create_default_chunker`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\chunker.py (485 lines)
+Module: src\rag\chunker.py (586 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
-Exports: class ChunkConfig:, class TextChunker:, def build_contextual_chunk, def __init__, def _compile_separator_pattern
+Exports: class ChunkConfig:, class TextChunker:, def build_contextual_chunk, def is_section_heading, def is_markdown_table
 ```

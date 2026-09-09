@@ -7,7 +7,7 @@ import os
 import time
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 
 SRC_DIR = str(Path(__file__).resolve().parent.parent.parent / "src")
 if SRC_DIR not in sys.path:
@@ -145,9 +145,10 @@ class RAGService:
         self,
         file_paths: List[str],
         start_page: Optional[int] = None,
-        end_page: Optional[int] = None
+        end_page: Optional[int] = None,
+        progress_callback: Optional[Callable] = None,
     ) -> Dict[str, Any]:
-        """Ingest documents into RAG index with optional page range."""
+        """Ingest documents synchronously into RAG index with optional page range."""
         if not self.is_available:
             return {"error": "RAG not available", "documents_ingested": 0}
 
@@ -155,12 +156,86 @@ class RAGService:
             stats = self.pipeline.ingest_and_index(
                 file_paths,
                 start_page=start_page,
-                end_page=end_page
+                end_page=end_page,
+                progress_callback=progress_callback,
             )
             return stats
         except Exception as e:
             logger.error(f"RAG ingestion failed: {e}")
             return {"error": str(e), "documents_ingested": 0}
+
+    def start_background_ingestion(
+        self,
+        task_id: str,
+        file_paths: List[str],
+        start_page: Optional[int] = None,
+        end_page: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Dispatches heavy ingestion to INGESTION_EXECUTOR thread pool.
+        Returns immediately with initial task metadata.
+        """
+        from .rag_task_manager import rag_task_manager, INGESTION_EXECUTOR
+
+        task = rag_task_manager.create_task(task_id, file_paths)
+
+        # Offload CPU work (PyMuPDF, OpenCV, Embeddings) to dedicated thread pool
+        # so FastAPI request threads and the event loop stay completely responsive
+        INGESTION_EXECUTOR.submit(
+            self._run_ingestion_worker,
+            task_id,
+            file_paths,
+            start_page,
+            end_page,
+        )
+        return task
+
+    def _run_ingestion_worker(
+        self,
+        task_id: str,
+        file_paths: List[str],
+        start_page: Optional[int] = None,
+        end_page: Optional[int] = None,
+    ):
+        """Worker function executed inside INGESTION_EXECUTOR thread pool."""
+        from .rag_task_manager import rag_task_manager
+
+        def progress_hook(step: int, stage_name: str, progress_pct: int, message: str):
+            rag_task_manager.update_progress(task_id, step, stage_name, progress_pct, message)
+
+        try:
+            if not self.is_available:
+                rag_task_manager.mark_failed(task_id, "RAG pipeline unavailable on backend.")
+                return
+
+            rag_task_manager.update_progress(
+                task_id, 0, "Document Buffer & Format Validation", 5, "Starting background document ingestion..."
+            )
+
+            stats = self.pipeline.ingest_and_index(
+                file_paths,
+                start_page=start_page,
+                end_page=end_page,
+                progress_callback=progress_hook,
+            )
+
+            if stats.get("errors", 0) > 0 and stats.get("documents_ingested", 0) == 0:
+                rag_task_manager.mark_failed(
+                    task_id,
+                    f"Extraction failed for all {len(file_paths)} document(s).",
+                    stage="Document Buffer & Format Validation",
+                )
+            else:
+                rag_task_manager.mark_completed(task_id, stats)
+
+        except Exception as e:
+            logger.exception(f"Background ingestion worker exception for task {task_id}: {e}")
+            rag_task_manager.mark_failed(task_id, str(e))
+
+    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve current status of an ingestion task."""
+        from .rag_task_manager import rag_task_manager
+        return rag_task_manager.get_task(task_id)
 
     def query(
         self, query: str, top_k: int = 4, min_score: float = 0.0,
@@ -183,17 +258,33 @@ class RAGService:
         intent_info = QueryProcessor.classify_intent(query)
         effective_top_k = min(top_k, intent_info.get("top_k", 4))
         history_str, chat_history_turns = QueryProcessor.compress_conversation_history(history, max_turns=4)
+
+        # 1b. Service-level query rewriting for multi-turn conversations
+        was_rewritten = False
+        retrieval_query = query
+        if history:
+            try:
+                retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
+                    current_query=query,
+                    history=history,
+                    ollama_url=ollama_url or "http://127.0.0.1:11434",
+                    model=model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b",
+                )
+            except Exception as rewrite_err:
+                logger.warning(f"Query rewrite failed, using raw query: {rewrite_err}")
+                retrieval_query = query
+                was_rewritten = False
         profiler.end_stage("query_processing_ms")
 
         try:
-            # 2. Hybrid Retrieval + Reranking (passes history for LLM query rewriting)
+            # 2. Hybrid Retrieval + Reranking (using rewritten standalone query)
             profiler.start_stage("retrieval_ms")
             results = self.pipeline.query(
-                query=query,
+                query=retrieval_query,
                 top_k=effective_top_k,
                 min_score=min_score,
                 filters=filters,
-                history=history,
+                history=None,  # rewriting already done at service level
             )
             profiler.end_stage("retrieval_ms")
 
@@ -236,6 +327,11 @@ class RAGService:
                         "3. STRICT BOUNDARIES (NO OUTSIDE KNOWLEDGE): Answer ONLY from the provided context. You are strictly forbidden from using general knowledge, assumptions, or unverified extrapolations outside the provided text.\n"
                         "4. INCOMPLETE CONTEXT DISCLOSURE: If the provided context is incomplete, ambiguous, or lacks sufficient information to fully answer the question, explicitly state what specific information is missing instead of guessing or generalizing.\n"
                         "5. EXACT SPECIFICITY: Match the precision of your answer to the question. Include exact numbers, metrics, dates, page numbers, and diagram/table references whenever present in the context.\n\n"
+                        "RESPONSE FORMAT:\n"
+                        "- Use bullet points or numbered lists for multi-part answers.\n"
+                        "- Use **bold** for key terms and metrics.\n"
+                        "- Keep paragraphs short (2-3 sentences max).\n"
+                        "- Start with a direct answer, then elaborate with supporting details.\n\n"
                         f"{visual_instruction}"
                         f"{page_instruction}"
                         f"{history_str}"
@@ -333,7 +429,7 @@ class RAGService:
                                         used_llm = True
                                         llm_model = "⚡ OpenAI GPT-4o-mini (Cloud)"
                     except Exception as cloud_err:
-                        logger.warning(f"Cloud turbo processing failed ({cloud_err}), falling back to local...")
+                        logger.exception(f"Cloud turbo processing failed, falling back to local: {cloud_err}")
                     finally:
                         profiler.end_stage("cloud_generation_ms")
 
@@ -383,7 +479,7 @@ class RAGService:
                                             "options": {
                                                 "num_ctx": 4096,
                                                 "temperature": 0.1,
-                                                "num_predict": 600,
+                                                "num_predict": 512,
                                                 "num_thread": _cpu_threads,
                                                 "top_k": 25,
                                                 "top_p": 0.85,
@@ -416,7 +512,7 @@ class RAGService:
                                     )
                                 )
                     except Exception as ollama_err:
-                        logger.info(f"Local Ollama generation unavailable ({ollama_err}).")
+                        logger.exception(f"Local Ollama generation failed: {ollama_err}")
                         if results:
                             answer = (
                                 f"📄 Relevant passages from your local documents:\n\n"
@@ -462,11 +558,29 @@ class RAGService:
 
                 # Only attach visual snippet if user query requested visual content or target page
                 requires_visual = is_visual_query or (target_page is not None)
+
+                # Compute page_num from target_page or best-hit metadata
+                page_num = target_page
+                if page_num is None:
+                    meta_page = meta.get("page_number") or meta.get("page")
+                    page_num = int(meta_page) if meta_page is not None else 1
                 
                 if doc_name and requires_visual:
                     import urllib.parse
                     encoded_query = urllib.parse.quote(query)
-                    crop_url = f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}&query={encoded_query}"
+                    coords_param = ""
+                    for v in meta.get("visual_elements", []):
+                        for sub in v.get("sub_regions", []):
+                            lbl = sub.get("label", "").lower()
+                            if lbl and any(kw in lbl for kw in query.lower().split() if len(kw) > 2):
+                                sb = sub.get("bbox")
+                                if sb and len(sb) == 4:
+                                    coords_param = f"&x0={sb[0]}&y0={sb[1]}&x1={sb[2]}&y1={sb[3]}"
+                                    break
+                        if coords_param:
+                            break
+
+                    crop_url = f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}{coords_param}&query={encoded_query}"
                     caption = f"Targeted Page {page_num} Preview ({doc_name})" if target_page else f"Focused Section / Diagram ROI — Page {page_num} ({doc_name})"
                     visual_snippet = {
                         "has_image": True,
@@ -494,8 +608,8 @@ class RAGService:
                 "metrics": metrics
             }
         except Exception as e:
-            logger.error(f"RAG query failed: {e}")
-            return {"results": [], "error": str(e)}
+            logger.exception(f"RAG query failed with full traceback: {e}")
+            return {"results": [], "error": str(e), "answer": None}
 
     async def query_stream(
         self, query: str, top_k: int = 4, min_score: float = 0.0,
@@ -523,12 +637,28 @@ class RAGService:
         effective_top_k = min(top_k, intent_info.get("top_k", 4))
         history_str, _ = QueryProcessor.compress_conversation_history(history, max_turns=4)
 
+        # 1b. Service-level query rewriting for multi-turn conversations
+        was_rewritten = False
+        retrieval_query = query
+        if history:
+            try:
+                retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
+                    current_query=query,
+                    history=history,
+                    ollama_url=ollama_url or "http://127.0.0.1:11434",
+                    model=model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b",
+                )
+            except Exception as rewrite_err:
+                logger.warning(f"Query rewrite failed, using raw query: {rewrite_err}")
+                retrieval_query = query
+                was_rewritten = False
+
         results = self.pipeline.query(
-            query=query,
+            query=retrieval_query,
             top_k=effective_top_k,
             min_score=min_score,
             filters=filters,
-            history=history,
+            history=None,  # rewriting already done at service level
         )
         profiler.end_stage("retrieval_ms")
 
@@ -553,9 +683,21 @@ class RAGService:
             page_num = target_page or meta.get("page_number") or meta.get("page") or 1
             if doc_name:
                 import urllib.parse
+                coords_param = ""
+                for v in meta.get("visual_elements", []):
+                    for sub in v.get("sub_regions", []):
+                        lbl = sub.get("label", "").lower()
+                        if lbl and any(kw in lbl for kw in query.lower().split() if len(kw) > 2):
+                            sb = sub.get("bbox")
+                            if sb and len(sb) == 4:
+                                coords_param = f"&x0={sb[0]}&y0={sb[1]}&x1={sb[2]}&y1={sb[3]}"
+                                break
+                    if coords_param:
+                        break
+
                 visual_snippet = {
                     "has_image": True,
-                    "crop_url": f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}&query={urllib.parse.quote(query)}",
+                    "crop_url": f"/api/v1/rag/crop?doc_name={urllib.parse.quote(doc_name)}&page={page_num}{coords_param}&query={urllib.parse.quote(query)}",
                     "doc_name": doc_name,
                     "page": page_num,
                     "caption": f"Targeted Page {page_num} Preview ({doc_name})" if target_page else f"Focused Section / Diagram ROI — Page {page_num} ({doc_name})"
@@ -568,18 +710,20 @@ class RAGService:
                 "visual_snippet": visual_snippet,
                 "intent": intent_info.get("intent"),
                 "target_page": target_page,
+                "was_rewritten": was_rewritten,
+                "rewritten_query": retrieval_query if was_rewritten else None,
             }
         }
 
         # Build prompt
         if results:
             context_blocks = []
-            for i, r in enumerate(results[:4]):
+            for i, r in enumerate(results[:6]):
                 r_meta = r.get("metadata", {})
                 p_num = r_meta.get("page_number") or r_meta.get("page")
                 p_str = f"Page {p_num}" if p_num else "Excerpt"
                 f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                chunk_text = r.get('text', '').strip()[:1000]
+                chunk_text = r.get('text', '').strip()[:2500]
                 context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
             page_instruction = (
                 f"CRITICAL: The user explicitly asked about Page {target_page}. Detail what is on Page {target_page} using the context provided below.\n"
@@ -598,6 +742,11 @@ class RAGService:
                 "3. STRICT BOUNDARIES (NO OUTSIDE KNOWLEDGE): Answer ONLY from the provided context. You are strictly forbidden from using general knowledge, assumptions, or unverified extrapolations outside the provided text.\n"
                 "4. INCOMPLETE CONTEXT DISCLOSURE: If the provided context is incomplete, ambiguous, or lacks sufficient information to fully answer the question, explicitly state what specific information is missing instead of guessing or generalizing.\n"
                 "5. EXACT SPECIFICITY: Match the precision of your answer to the question. Include exact numbers, metrics, dates, page numbers, and diagram/table references whenever present in the context.\n\n"
+                "RESPONSE FORMAT:\n"
+                "- Use bullet points or numbered lists for multi-part answers.\n"
+                "- Use **bold** for key terms and metrics.\n"
+                "- Keep paragraphs short (2-3 sentences max).\n"
+                "- Start with a direct answer, then elaborate with supporting details.\n\n"
                 f"{visual_instruction}"
                 f"{page_instruction}"
                 f"{history_str}"
@@ -629,9 +778,9 @@ class RAGService:
                         "stream": True,
                         "keep_alive": "30m",
                         "options": {
-                            "num_ctx": 1536,
+                            "num_ctx": 4096,
                             "temperature": 0.1,
-                            "num_predict": 350,
+                            "num_predict": 512,
                             "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
                             "top_k": 25,
                             "top_p": 0.85,
@@ -654,7 +803,7 @@ class RAGService:
                             except Exception:
                                 pass
         except Exception as err:
-            logger.warning(f"Streaming error: {err}")
+            logger.exception(f"Streaming error with full traceback: {err}")
             yield {"event": "token", "data": {"token": f"\n[Streaming error: {err}]"}}
 
         total_gen_time = max(time.perf_counter() - gen_start, 0.001)
@@ -664,6 +813,8 @@ class RAGService:
         metrics["ttft_ms"] = ttft_ms
         metrics["tokens_generated"] = token_count
         metrics["tokens_per_sec"] = tokens_per_sec
+        metrics["query_intent"] = intent_info.get("intent")
+        metrics["was_rewritten"] = was_rewritten
 
         yield {
             "event": "done",
