@@ -146,6 +146,8 @@ class FAISSVectorStore:
                 "org_id": chunk.org_id,
                 "chunk_index": chunk.chunk_index,
                 "text": chunk.text,
+                "display_text": chunk.text,
+                "embedded_text": getattr(chunk, "embedded_text", chunk.text) or chunk.text,
                 "metadata": chunk.metadata.copy()
             }
 

@@ -19,6 +19,7 @@ tags:
 ## ⚙️ Key Symbols & Interfaces
 - `class ChunkConfig:`
 - `class TextChunker:`
+- `def build_contextual_chunk`
 - `def __init__`
 - `def _compile_separator_pattern`
 - `def _count_tokens`
@@ -32,8 +33,8 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\chunker.py (414 lines)
+Module: src\rag\chunker.py (485 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
-Exports: class ChunkConfig:, class TextChunker:, def __init__, def _compile_separator_pattern, def _count_tokens
+Exports: class ChunkConfig:, class TextChunker:, def build_contextual_chunk, def __init__, def _compile_separator_pattern
 ```

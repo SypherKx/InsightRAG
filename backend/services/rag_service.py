@@ -182,18 +182,18 @@ class RAGService:
         # 1. Query Intent Classification & Conversational Rewriting
         intent_info = QueryProcessor.classify_intent(query)
         effective_top_k = min(top_k, intent_info.get("top_k", 4))
-        retrieval_query, was_rewritten = QueryProcessor.rewrite_conversational_query(query, history)
         history_str, chat_history_turns = QueryProcessor.compress_conversation_history(history, max_turns=4)
         profiler.end_stage("query_processing_ms")
 
         try:
-            # 2. Hybrid Retrieval + Reranking
+            # 2. Hybrid Retrieval + Reranking (passes history for LLM query rewriting)
             profiler.start_stage("retrieval_ms")
             results = self.pipeline.query(
-                query=retrieval_query,
+                query=query,
                 top_k=effective_top_k,
                 min_score=min_score,
                 filters=filters,
+                history=history,
             )
             profiler.end_stage("retrieval_ms")
 
@@ -207,6 +207,7 @@ class RAGService:
             if generate_answer:
                 profiler.start_stage("prompt_prep_ms")
                 target_page = intent_info.get("target_page")
+                is_visual_query = intent_info.get("is_visual", False)
                 if results:
                     context_blocks = []
                     for i, r in enumerate(results[:6]):
@@ -219,20 +220,24 @@ class RAGService:
                         context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
                     context_str = "\n\n".join(context_blocks)
                     page_instruction = (
-                        f"CRITICAL: The user asked about Page {target_page}. You MUST describe what is on Page {target_page} using ONLY the context below. Do NOT say you cannot determine or that context is missing. The context IS the page content. "
+                        f"CRITICAL: The user asked about Page {target_page}. You MUST detail what is on Page {target_page} using ONLY the context provided below.\n"
                         if target_page else ""
                     )
                     visual_instruction = (
-                        "- When the user asks for a photo, image, picture, preview, or snapshot of a section or part of the document (e.g. 'photo of the project part'), DO NOT say 'there is no photo' or that you cannot provide images. Succinctly explain the content of that requested section/part, and note that the targeted visual crop snapshot is rendered below.\n"
+                        "VISUAL CROPS: When the user asks for a photo, image, picture, preview, or snapshot of a section or diagram (e.g. 'photo of the project part'), explain the content from the context and note that the targeted visual crop snapshot is rendered in the viewer.\n"
+                        if is_visual_query else ""
                     )
                     prompt = (
-                        f"You are InsightRAG AI, a high-precision multimodal document intelligence assistant.\n"
-                        f"Answer the user's question completely, accurately, and factually based on the provided document context below.\n"
-                        f"The context contains page-by-page text content, structured markdown tables, and visual diagram/figure descriptions.\n"
-                        f"- When citing data, numbers, or facts, reference the specific Page, Table, or Figure/Diagram.\n"
-                        f"- Synthesize both the textual details and the visual diagram descriptions to give a clear, comprehensive answer.\n"
+                        "You are InsightRAG AI, a high-precision enterprise document intelligence assistant.\n"
+                        "Your sole task is to answer the user's question using ONLY the provided document context chunks below.\n\n"
+                        "MANDATORY OPERATING RULES:\n"
+                        "1. GROUNDING & CITATIONS: Base every statement strictly on the provided context. You MUST cite every claim, data point, or fact using bracketed chunk numbers like [1], [2], [1][3] immediately after the claim.\n"
+                        "2. SYNTHESIS: Synthesize information across multiple context chunks into one coherent, structured answer. Do NOT simply list or summarize chunks individually.\n"
+                        "3. STRICT BOUNDARIES (NO OUTSIDE KNOWLEDGE): Answer ONLY from the provided context. You are strictly forbidden from using general knowledge, assumptions, or unverified extrapolations outside the provided text.\n"
+                        "4. INCOMPLETE CONTEXT DISCLOSURE: If the provided context is incomplete, ambiguous, or lacks sufficient information to fully answer the question, explicitly state what specific information is missing instead of guessing or generalizing.\n"
+                        "5. EXACT SPECIFICITY: Match the precision of your answer to the question. Include exact numbers, metrics, dates, page numbers, and diagram/table references whenever present in the context.\n\n"
                         f"{visual_instruction}"
-                        f"{page_instruction}\n\n"
+                        f"{page_instruction}"
                         f"{history_str}"
                         f"DOCUMENT CONTEXT:\n{context_str}\n\n"
                         f"QUESTION: {query}\n"
@@ -258,7 +263,14 @@ class RAGService:
                         cloud_messages = [
                             {
                                 "role": "system",
-                                "content": "You are InsightRAG AI, an enterprise-grade grounded document intelligence assistant. Be concise, direct, and factual."
+                                "content": (
+                                    "You are InsightRAG AI, a high-precision enterprise document intelligence assistant.\n"
+                                    "1. Base all statements strictly on provided context and cite chunks like [1][2].\n"
+                                    "2. Synthesize facts across chunks into one coherent answer.\n"
+                                    "3. Forbid general knowledge outside context.\n"
+                                    "4. Explicitly state what is missing if context is incomplete.\n"
+                                    "5. Include exact numbers, metrics, and page references."
+                                )
                             }
                         ]
                         cloud_messages.extend(chat_history_turns)
@@ -509,14 +521,14 @@ class RAGService:
 
         intent_info = QueryProcessor.classify_intent(query)
         effective_top_k = min(top_k, intent_info.get("top_k", 4))
-        retrieval_query, was_rewritten = QueryProcessor.rewrite_conversational_query(query, history)
         history_str, _ = QueryProcessor.compress_conversation_history(history, max_turns=4)
 
         results = self.pipeline.query(
-            query=retrieval_query,
+            query=query,
             top_k=effective_top_k,
             min_score=min_score,
             filters=filters,
+            history=history,
         )
         profiler.end_stage("retrieval_ms")
 
@@ -556,11 +568,10 @@ class RAGService:
                 "visual_snippet": visual_snippet,
                 "intent": intent_info.get("intent"),
                 "target_page": target_page,
-                "rewritten_query": retrieval_query if was_rewritten else None
             }
         }
 
-        # Build prompt (trimmed context for speed)
+        # Build prompt
         if results:
             context_blocks = []
             for i, r in enumerate(results[:4]):
@@ -568,17 +579,25 @@ class RAGService:
                 p_num = r_meta.get("page_number") or r_meta.get("page")
                 p_str = f"Page {p_num}" if p_num else "Excerpt"
                 f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                chunk_text = r.get('text', '').strip()[:600]
+                chunk_text = r.get('text', '').strip()[:1000]
                 context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
             page_instruction = (
-                f"CRITICAL: The user asked about Page {target_page}. Describe what is on Page {target_page} using the context below. Do NOT say you cannot determine. "
+                f"CRITICAL: The user explicitly asked about Page {target_page}. Detail what is on Page {target_page} using the context provided below.\n"
                 if target_page else ""
             )
             visual_instruction = (
-                "NOTE: If the user asks for a photo, picture, image, preview, or visual snapshot of any section or part of the document (e.g., 'photo of the project part'), DO NOT say 'there is no photo' or that you cannot provide images. Succinctly explain what is in that section/part from the context, and note that the targeted visual snapshot is rendered below.\n"
+                "VISUAL CROPS: When the user asks for a photo, image, picture, preview, or snapshot of a section or diagram (e.g. 'photo of the project part'), explain the content from the context and note that the targeted visual crop snapshot is rendered in the viewer.\n"
+                if is_visual_query else ""
             )
             prompt = (
-                f"You are InsightRAG AI. Answer ONLY from document context below. Never say 'I cannot determine'.\n\n"
+                "You are InsightRAG AI, a high-precision enterprise document intelligence assistant.\n"
+                "Your sole task is to answer the user's question using ONLY the provided document context chunks below.\n\n"
+                "MANDATORY OPERATING RULES:\n"
+                "1. GROUNDING & CITATIONS: Base every statement strictly on the provided context. You MUST cite every claim, data point, or fact using bracketed chunk numbers like [1], [2], [1][3] immediately after the claim.\n"
+                "2. SYNTHESIS: Synthesize information across multiple context chunks into one coherent, structured answer. Do NOT simply list or summarize chunks individually.\n"
+                "3. STRICT BOUNDARIES (NO OUTSIDE KNOWLEDGE): Answer ONLY from the provided context. You are strictly forbidden from using general knowledge, assumptions, or unverified extrapolations outside the provided text.\n"
+                "4. INCOMPLETE CONTEXT DISCLOSURE: If the provided context is incomplete, ambiguous, or lacks sufficient information to fully answer the question, explicitly state what specific information is missing instead of guessing or generalizing.\n"
+                "5. EXACT SPECIFICITY: Match the precision of your answer to the question. Include exact numbers, metrics, dates, page numbers, and diagram/table references whenever present in the context.\n\n"
                 f"{visual_instruction}"
                 f"{page_instruction}"
                 f"{history_str}"

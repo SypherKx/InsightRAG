@@ -153,12 +153,15 @@ class RAGPipeline:
         for chunk_dict in chunks_data:
             doc_meta = chunk_dict.get("doc_metadata") or {}
             page_num = chunk_dict.get("page_number") or doc_meta.get("page_number", 1)
+            raw_text = chunk_dict.get("display_text") or chunk_dict.get("text", "")
+            embedded_text = chunk_dict.get("embedded_text") or raw_text
             chunk_obj = DocumentChunk(
                 id=chunk_dict["chunk_id"],
                 document_id=chunk_dict["document_id"],
                 org_id=self.org_id,
                 chunk_index=chunk_dict["chunk_index"],
-                text=chunk_dict["text"],
+                text=raw_text,
+                embedded_text=embedded_text,
                 metadata={
                     **doc_meta,
                     "token_count": chunk_dict.get("token_count", 0),
@@ -174,10 +177,10 @@ class RAGPipeline:
             )
             chunk_objects.append(chunk_obj)
 
-        # Step 4: Generate embeddings
-        texts = [c.text for c in chunk_objects]
-        logger.info(f"Generating embeddings for {len(texts)} chunks...")
-        embeddings = self.embedding_gen.generate(texts)
+        # Step 4: Generate embeddings (embedding contextualized embedded_text)
+        texts_to_embed = [c.embedded_text or c.text for c in chunk_objects]
+        logger.info(f"Generating embeddings for {len(texts_to_embed)} contextual chunks...")
+        embeddings = self.embedding_gen.generate(texts_to_embed)
 
         # Step 5: Store in vector store
         for chunk_obj, embedding in zip(chunk_objects, embeddings):
@@ -200,7 +203,8 @@ class RAGPipeline:
               query: str,
               top_k: int = 5,
               min_score: float = 0.0,
-              filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+              filters: Optional[Dict[str, Any]] = None,
+              history: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
         """
         Query for relevant context.
 
@@ -209,6 +213,7 @@ class RAGPipeline:
             top_k: Number of results
             min_score: Minimum similarity threshold
             filters: Metadata filters
+            history: Optional conversation history for LLM query rewriting
 
         Returns:
             List of result dicts with text, score, metadata
@@ -218,7 +223,8 @@ class RAGPipeline:
             org_id=self.org_id,
             top_k=top_k,
             min_score=min_score,
-            filters=filters or {}
+            filters=filters or {},
+            history=history
         )
 
         response = self.retriever.retrieve(rag_query)

@@ -85,6 +85,85 @@ class QueryProcessor:
         return {"intent": "standard", "top_k": 4, "is_visual": False, "target_page": None, "is_page_lookup": False}
 
     @classmethod
+    def rewrite_query_with_llm(
+        cls,
+        current_query: str,
+        history: Optional[List[Dict[str, Any]]] = None,
+        ollama_url: str = "http://127.0.0.1:11434",
+        model: str = "llama3.2:3b",
+        timeout_seconds: float = 3.5,
+    ) -> Tuple[str, bool]:
+        """
+        Rewrites the current query into a standalone question using the last 2 turns of chat history
+        via the local Ollama LLM (temperature=0.0).
+        
+        If there is no history, returns (current_query, False).
+        If Ollama is unavailable, times out, or produces invalid output, falls back to rule-based rewriting.
+        
+        Returns:
+            Tuple of (rewritten_query_for_retrieval, was_rewritten)
+        """
+        if not history or not isinstance(history, list) or len(history) == 0:
+            return current_query, False
+
+        # Extract up to the last 2 turns of conversation history
+        recent_turns = []
+        for turn in history[-2:]:
+            role = "User" if turn.get("role") == "user" else "Assistant"
+            text = (turn.get("text") or turn.get("content") or "").strip()
+            if text:
+                if len(text) > 250:
+                    text = text[:250] + "..."
+                recent_turns.append(f"{role}: {text}")
+
+        if not recent_turns:
+            return current_query, False
+
+        history_context = "\n".join(recent_turns)
+        
+        prompt = (
+            "Given the following chat history and a follow-up question, rewrite the follow-up question "
+            "into a clear, self-contained, standalone question for search and retrieval. "
+            "Do NOT answer the question. Do NOT include explanations. Return ONLY the rewritten question.\n\n"
+            f"Chat History:\n{history_context}\n\n"
+            f"Follow-up Question: {current_query}\n"
+            "Standalone Question:"
+        )
+
+        try:
+            import httpx
+            with httpx.Client(timeout=timeout_seconds) as client:
+                res = client.post(
+                    f"{ollama_url.rstrip('/')}/api/generate",
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "keep_alive": "10m",
+                        "options": {
+                            "temperature": 0.0,
+                            "num_predict": 60,
+                            "top_k": 20,
+                            "top_p": 0.9,
+                        }
+                    }
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    rewritten = data.get("response", "").strip()
+                    # Strip leading/trailing quotes or 'Standalone Question:' echo
+                    rewritten = re.sub(r'^(standalone question\s*:\s*|["\'])', '', rewritten, flags=re.IGNORECASE)
+                    rewritten = rewritten.strip('"\'. \n')
+                    if rewritten and len(rewritten) > 3 and rewritten.lower() != current_query.lower():
+                        logger.info(f"Ollama conversational query rewrite: '{current_query}' -> '{rewritten}'")
+                        return rewritten, True
+        except Exception as e:
+            logger.debug(f"Ollama query rewrite call failed or timed out ({e}); attempting heuristic fallback")
+
+        # Fallback to rule-based rewrite if LLM was unavailable or produced identical text
+        return cls.rewrite_conversational_query(current_query, history)
+
+    @classmethod
     def rewrite_conversational_query(
         cls,
         current_query: str,

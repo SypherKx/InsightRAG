@@ -13,6 +13,45 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def build_contextual_chunk(
+    raw_text: str,
+    title: Optional[str] = None,
+    section: Optional[str] = None,
+    page_number: Optional[int] = None,
+) -> str:
+    """
+    Prepend each chunk with a lightweight, rule-based context header for vector embedding.
+    
+    Structure: [Document: <title> | Page: <page_number> | Section: <section>]
+    
+    Args:
+        raw_text: Raw chunk text (used for display and citation)
+        title: Document title or filename
+        section: Section header or heading name (if available)
+        page_number: Page number in document
+        
+    Returns:
+        Contextualized text formatted for dense embedding
+    """
+    clean_text = raw_text.strip()
+    if not clean_text:
+        return ""
+
+    header_parts = []
+    if title and str(title).strip():
+        header_parts.append(f"Document: {str(title).strip()}")
+    if page_number is not None and int(page_number) > 0:
+        header_parts.append(f"Page: {int(page_number)}")
+    if section and str(section).strip():
+        header_parts.append(f"Section: {str(section).strip()}")
+
+    if not header_parts:
+        return clean_text
+
+    header = " | ".join(header_parts)
+    return f"[{header}]\n{clean_text}"
+
+
 @dataclass
 class ChunkConfig:
     """Configuration for text chunking."""
@@ -184,14 +223,19 @@ class TextChunker:
 
             # Would adding this segment exceed the chunk size?
             if current_token_count + segment_tokens > self.config.chunk_size and current_chunk:
-                # Save current chunk
-                chunk_text = self.config.separator.join(current_chunk)
-                if chunk_prefix:
-                    chunk_text = f"{chunk_prefix}\n\n{chunk_text}"
+                # Save current chunk (raw clean text for display/citations)
+                raw_chunk_text = self.config.separator.join(current_chunk).strip()
+                embedded_chunk_text = (
+                    f"{chunk_prefix}\n\n{raw_chunk_text}"
+                    if chunk_prefix
+                    else build_contextual_chunk(raw_chunk_text, section=current_section)
+                )
 
                 chunks.append({
                     "chunk_index": chunk_index,
-                    "text": chunk_text,
+                    "text": raw_chunk_text,
+                    "display_text": raw_chunk_text,
+                    "embedded_text": embedded_chunk_text,
                     "section": current_section,
                     "token_count": current_token_count,
                     "segment_count": len(current_chunk)
@@ -221,13 +265,18 @@ class TextChunker:
 
         # Don't forget the last chunk
         if current_chunk:
-            chunk_text = self.config.separator.join(current_chunk)
-            if chunk_prefix:
-                chunk_text = f"{chunk_prefix}\n\n{chunk_text}"
+            raw_chunk_text = self.config.separator.join(current_chunk).strip()
+            embedded_chunk_text = (
+                f"{chunk_prefix}\n\n{raw_chunk_text}"
+                if chunk_prefix
+                else build_contextual_chunk(raw_chunk_text, section=current_section)
+            )
 
             chunks.append({
                 "chunk_index": chunk_index,
-                "text": chunk_text,
+                "text": raw_chunk_text,
+                "display_text": raw_chunk_text,
+                "embedded_text": embedded_chunk_text,
                 "section": current_section,
                 "token_count": current_token_count,
                 "segment_count": len(current_chunk)
@@ -273,8 +322,8 @@ class TextChunker:
 
     def chunk_documents(self, documents: List[dict], text_key: str = "content") -> List[dict]:
         """
-        Chunk multiple documents with full page-awareness.
-        Preserves exact page_number in each chunk metadata.
+        Chunk multiple documents with full page-awareness and contextual prefixing.
+        Preserves exact page_number, display_text, and embedded_text in each chunk.
 
         Args:
             documents: List of document dicts with at least 'id' and text content
@@ -304,8 +353,7 @@ class TextChunker:
                     if not page_text:
                         continue
                     
-                    page_prefix = f"[{file_name} | Page {page_num}]"
-                    p_chunks = self.chunk_text(page_text, f"{doc_id}_p{page_num}", chunk_prefix=page_prefix)
+                    p_chunks = self.chunk_text(page_text, f"{doc_id}_p{page_num}")
                     
                     for c in p_chunks:
                         c["page_number"] = page_num
@@ -318,9 +366,19 @@ class TextChunker:
                         c["title"] = title
                         c["source_path"] = source_path
                         
+                        # Build contextually prefixed embedded_text for vector embedding
+                        c["display_text"] = c["text"]
+                        c["embedded_text"] = build_contextual_chunk(
+                            raw_text=c["text"],
+                            title=file_name or title,
+                            section=c.get("section", ""),
+                            page_number=page_num
+                        )
+                        
                         chunk_meta = dict(doc_meta)
                         chunk_meta["page_number"] = page_num
                         chunk_meta["page"] = page_num
+                        chunk_meta["section"] = c.get("section", "")
                         chunk_meta["has_images"] = page_info.get("has_images", False)
                         chunk_meta["has_drawings"] = page_info.get("has_drawings", False)
                         chunk_meta["has_tables"] = page_info.get("has_tables", False)
@@ -346,7 +404,6 @@ class TextChunker:
                 continue
 
             # Check if text has [Page X] tags
-            import re
             page_sections = re.split(r'\[Page\s+(\d+)\]\s*\n', text)
             if len(page_sections) > 1:
                 # Format: [preamble, page_1_num, page_1_text, page_2_num, page_2_text, ...]
@@ -361,16 +418,23 @@ class TextChunker:
                         continue
                     
                     if p_text:
-                        p_prefix = f"[{file_name} | Page {p_num}]"
-                        p_chunks = self.chunk_text(p_text, f"{doc_id}_p{p_num}", chunk_prefix=p_prefix)
+                        p_chunks = self.chunk_text(p_text, f"{doc_id}_p{p_num}")
                         for c in p_chunks:
                             c["page_number"] = p_num
                             c["page"] = p_num
                             c["title"] = title
                             c["source_path"] = source_path
+                            c["display_text"] = c["text"]
+                            c["embedded_text"] = build_contextual_chunk(
+                                raw_text=c["text"],
+                                title=file_name or title,
+                                section=c.get("section", ""),
+                                page_number=p_num
+                            )
                             chunk_meta = dict(doc_meta)
                             chunk_meta["page_number"] = p_num
                             chunk_meta["page"] = p_num
+                            chunk_meta["section"] = c.get("section", "")
                             chunk_meta["file_name"] = file_name
                             c["doc_metadata"] = chunk_meta
                             doc_chunks.append(c)
@@ -385,16 +449,23 @@ class TextChunker:
                 continue
 
             # Default single-page document chunking
-            prefix = f"[{file_name} | Page 1]" if file_name else ""
-            chunks = self.chunk_text(text, doc_id, prefix)
+            chunks = self.chunk_text(text, doc_id)
             for c in chunks:
                 c["title"] = title
                 c["source_path"] = source_path
                 c["page_number"] = 1
                 c["page"] = 1
+                c["display_text"] = c["text"]
+                c["embedded_text"] = build_contextual_chunk(
+                    raw_text=c["text"],
+                    title=file_name or title,
+                    section=c.get("section", ""),
+                    page_number=1
+                )
                 chunk_meta = dict(doc_meta)
                 chunk_meta["page_number"] = 1
                 chunk_meta["page"] = 1
+                chunk_meta["section"] = c.get("section", "")
                 chunk_meta["file_name"] = file_name
                 c["doc_metadata"] = chunk_meta
             all_chunks.extend(chunks)

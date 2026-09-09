@@ -27,7 +27,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\models.py (67 lines)
+Module: src\rag\models.py (70 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class Document, class DocumentChunk, class RetrievalResult, class RAGQuery, class RAGResponse

@@ -13,6 +13,7 @@ import numpy as np
 from .models import Document, DocumentChunk, RAGQuery, RAGResponse, RetrievalResult
 from .embeddings import EmbeddingGenerator
 from .vectorstore import FAISSVectorStore
+from .query_processor import QueryProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class RAGRetriever:
     High-level retriever that orchestrates the search pipeline.
 
     Combines:
+    - Conversational query rewriting via LLM (Ollama)
     - Query embedding generation
     - Vector similarity search
     - Metadata filtering
@@ -46,34 +48,46 @@ class RAGRetriever:
         Execute a retrieval query.
 
         Pipeline:
-        1. Generate query embedding
-        2. Perform vector similarity search
-        3. Apply metadata filters
-        4. Filter by minimum score
-        5. Format results
+        1. Conversation-aware query rewriting via Ollama LLM (if multi-turn history exists)
+        2. Generate embedding for rewritten standalone query
+        3. Perform dense vector similarity search
+        4. Perform sparse/lexical keyword search
+        5. Reciprocal Rank Fusion (RRF) & Page-aware injection
+        6. Semantic reranking
+        7. Format results
 
         Args:
-            query: Query parameters
+            query: Query parameters (including optional multi-turn history)
             load_documents: Whether to load full document data for results
 
         Returns:
             RAGResponse with results
-
-        Raises:
-            ValueError: If query invalid or embedding fails
         """
         start_time = time.time()
 
         try:
-            # 1. Generate query embedding (with LRU cache)
+            # 1. Step 1: Conversation-Aware Query Rewriting
+            # Before embedding, rewrite the query into a standalone question using chat history
+            rewritten_query = query.rewritten_query
+            was_rewritten = False
+
+            if not rewritten_query and getattr(query, "history", None):
+                rewritten_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
+                    current_query=query.query,
+                    history=query.history
+                )
+
+            effective_retrieval_query = rewritten_query or query.query
+
+            # 2. Step 2: Generate query embedding for the standalone rewritten query
             emb_start = time.time()
-            query_embedding = self.embedding_gen.generate_single(query.query)
+            query_embedding = self.embedding_gen.generate_single(effective_retrieval_query)
             emb_time_ms = (time.time() - emb_start) * 1000
 
-            # 2. Define filter function based on query filters
+            # 3. Define filter function based on query filters
             filter_func = self._build_filter(query.filters) if query.filters else None
 
-            # 3. Dense FAISS Search (Candidate Pool: top_k * 3)
+            # 4. Dense FAISS Search (Candidate Pool: top_k * 3)
             search_start = time.time()
             candidate_k = max(query.top_k * 3, 10)
             dense_results = self.vector_store.search(
@@ -83,27 +97,30 @@ class RAGRetriever:
             )
             dense_time_ms = (time.time() - search_start) * 1000
 
-            # 4. Lexical / Keyword Search (BM25-style token matching)
+            # 5. Lexical / Keyword Search (BM25-style token matching on rewritten query)
             lex_start = time.time()
             lexical_results = self._lexical_search(
-                query.query,
+                effective_retrieval_query,
                 k=candidate_k,
                 filter_func=filter_func
             )
             lex_time_ms = (time.time() - lex_start) * 1000
 
-            # 5. Reciprocal Rank Fusion (RRF)
+            # 6. Reciprocal Rank Fusion (RRF)
             fused_candidates = self._reciprocal_rank_fusion(
                 dense_results,
                 lexical_results,
                 k=60
             )
 
-            # 5.1 Page-Aware Candidate Injection:
-            # If user query specifically asks for a page (e.g., 'page 42', 'pg 5'),
-            # ensure all chunks from that page are guaranteed in the candidate pool.
+            # 6.1 Page-Aware Candidate Injection:
+            # Inspect both the raw query and the rewritten query for explicit page numbers
             import re
-            pm = re.search(r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', query.query, re.IGNORECASE)
+            pm = re.search(
+                r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b',
+                f"{query.query} {effective_retrieval_query}",
+                re.IGNORECASE
+            )
             target_page = int(pm.group(1)) if pm else (query.filters.get("page_number") if query.filters else None)
 
             if target_page is not None:
@@ -120,7 +137,8 @@ class RAGRetriever:
                                 "chunk_id": cid,
                                 "document_id": meta_item.get("document_id", ""),
                                 "org_id": meta_item.get("org_id", ""),
-                                "text": meta_item.get("text", ""),
+                                "text": meta_item.get("display_text") or meta_item.get("text", ""),
+                                "embedded_text": meta_item.get("embedded_text"),
                                 "metadata": m,
                                 "similarity_score": 1.0,
                                 "rrf_score": 1.0,
@@ -128,23 +146,23 @@ class RAGRetriever:
                 if page_candidates:
                     fused_candidates = page_candidates + fused_candidates
 
-            # 6. Lightweight Semantic Reranking
+            # 7. Lightweight Semantic Reranking against standalone query
             rerank_start = time.time()
             reranked_results = self._rerank_candidates(
-                query.query,
+                effective_retrieval_query,
                 fused_candidates,
                 top_k=query.top_k,
                 min_score=query.min_score
             )
             rerank_time_ms = (time.time() - rerank_start) * 1000
 
-            # 7. Format results with proper ranks
+            # 8. Format results with proper ranks
             retrieval_results = self._format_results(
                 reranked_results,
                 load_documents=load_documents
             )
 
-            # 8. Build response
+            # 9. Build response (keeps raw query for display/logging)
             query_time = (time.time() - start_time) * 1000
             response = RAGResponse(
                 query=query.query,
@@ -159,13 +177,15 @@ class RAGRetriever:
                     "hybrid_candidates_count": len(fused_candidates),
                     "filters_applied": query.filters if query.filters else None,
                     "top_k_requested": query.top_k,
-                    "org_id": query.org_id
+                    "org_id": query.org_id,
+                    "rewritten_query": effective_retrieval_query if was_rewritten else None,
+                    "was_rewritten": was_rewritten
                 }
             )
 
             logger.info(
-                f"Retrieved {len(retrieval_results)} high-precision results "
-                f"from {len(fused_candidates)} hybrid candidates in {query_time:.1f}ms"
+                f"Retrieved {len(retrieval_results)} results for '{query.query}' "
+                f"(rewritten: '{effective_retrieval_query}' if {was_rewritten}) in {query_time:.1f}ms"
             )
 
             return response
@@ -178,7 +198,7 @@ class RAGRetriever:
                         filter_func: Optional[Callable] = None) -> List[Dict[str, Any]]:
         """
         Fast lexical / keyword search across stored document chunks.
-        Matches exact terms, numbers, acronyms, and codes.
+        Matches exact terms, numbers, acronyms, and codes against chunk text and contextual headers.
         """
         import re
         tokens = set(re.findall(r'[a-zA-Z0-9_\-\.]{2,}', query_text.lower()))
@@ -191,12 +211,13 @@ class RAGRetriever:
             if filter_func and not filter_func(meta):
                 continue
 
-            text = meta.get("text", "").lower()
-            if not text:
+            # Search across contextual embedded_text + raw text for maximum keyword recall
+            searchable_text = (meta.get("embedded_text") or meta.get("text", "")).lower()
+            if not searchable_text:
                 continue
 
             # Compute term overlap score
-            matched_count = sum(1 for t in tokens if t in text)
+            matched_count = sum(1 for t in tokens if t in searchable_text)
             if matched_count > 0:
                 score = matched_count / len(tokens)
                 matches.append({
@@ -204,7 +225,8 @@ class RAGRetriever:
                     "chunk_id": meta.get("chunk_id", str(faiss_id)),
                     "document_id": meta.get("document_id", ""),
                     "org_id": meta.get("org_id", ""),
-                    "text": meta.get("text", ""),
+                    "text": meta.get("display_text") or meta.get("text", ""),
+                    "embedded_text": meta.get("embedded_text"),
                     "metadata": meta.get("metadata", {}),
                     "similarity_score": score
                 })
@@ -257,8 +279,8 @@ class RAGRetriever:
             return candidate_pool
 
         try:
-            # Batch encode candidate texts and calculate cosine similarities with query
-            cand_texts = [c["text"] for c in candidate_pool]
+            # Batch encode candidate texts (using contextual text for rich relevance scoring)
+            cand_texts = [c.get("embedded_text") or c.get("text", "") for c in candidate_pool]
             cand_embs = self.embedding_gen.generate(cand_texts)
             q_emb = self.embedding_gen.generate_single(query_text)
             sims = self.embedding_gen.compute_similarities(q_emb, cand_embs)
@@ -318,19 +340,20 @@ class RAGRetriever:
             load_documents: Whether to include full document data
 
         Returns:
-            List of RetrievalResult objects
+            List of RetrievalResult objects with clean display_text
         """
         results = []
 
         for i, raw in enumerate(raw_results):
-            # Build chunk object
+            # Build chunk object with clean display text and contextual embedded_text
             chunk = DocumentChunk(
                 id=raw["chunk_id"],
                 document_id=raw["document_id"],
                 org_id=raw["org_id"],
                 chunk_index=0,  # Not stored in metadata, could add if needed
-                text=raw["text"],
-                metadata=raw["metadata"],
+                text=raw.get("display_text") or raw.get("text", ""),
+                embedded_text=raw.get("embedded_text"),
+                metadata=raw.get("metadata", {}),
                 embedding=None  # Don't return embeddings to save bandwidth
             )
 
