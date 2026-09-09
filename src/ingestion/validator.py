@@ -146,7 +146,7 @@ class DataValidator:
             low_variance_columns=low_variance_cols
         )
 
-        logger.info(f"Quality metrics: {metrics.dict()}")
+        logger.info(f"Quality metrics: {metrics.model_dump() if hasattr(metrics, 'model_dump') else metrics.dict()}")
 
         return metrics
 

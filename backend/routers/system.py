@@ -4,10 +4,10 @@ InsightForge AI — System & Desktop Onboarding Router
 Provides system diagnostics, health checks, and streaming model downloads for desktop app onboarding.
 """
 
-from fastapi import APIRouter, Query, BackgroundTasks
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Optional
 
 from ..services.ollama_manager import (
     check_model_availability,

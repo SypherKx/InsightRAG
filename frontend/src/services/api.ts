@@ -109,7 +109,7 @@ export async function checkHealth(): Promise<any> {
 export async function uploadRAGDocuments(
   files: File[],
   startPage?: number,
-  endPage?: number
+  endPage?: number,
 ): Promise<any> {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
@@ -133,7 +133,7 @@ export async function queryRAG(
   model = "llama3.2:3b",
   processingMode = "local",
   apiKey?: string,
-  history?: Array<{ role: string; text?: string; content?: string }>
+  history?: Array<{ role: string; text?: string; content?: string }>,
 ): Promise<any> {
   const { data } = await api.post(
     "/rag/query",

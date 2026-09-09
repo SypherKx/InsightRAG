@@ -8,9 +8,8 @@ Provides defense against:
 """
 
 import re
-import os
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Optional, Set
 from fastapi import HTTPException
 
 # Allowed extensions across the platform

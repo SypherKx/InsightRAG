@@ -30,7 +30,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\routers\rag.py (454 lines)
+Module: backend\routers\rag.py (453 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: async def get_rag_stats, async def clear_rag_knowledge_base, async def delete_single_rag_document, async def upload_rag_documents, async def get_diagram_crop

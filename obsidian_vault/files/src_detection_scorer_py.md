@@ -28,7 +28,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\detection\scorer.py (289 lines)
+Module: src\detection\scorer.py (288 lines)
 Tags: #code, #anomaly
 Hub: 03_Statistical_Anomaly_Hub
 Exports: def calculate_confidence, def calculate_severity, def get_severity_label, def score_anomalies, def filter_by_severity

@@ -28,7 +28,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\detection\models.py (116 lines)
+Module: src\detection\models.py (112 lines)
 Tags: #code, #anomaly
 Hub: 03_Statistical_Anomaly_Hub
 Exports: class AnomalyType, class Severity, class Anomaly:, class DetectionConfig:, def to_dict

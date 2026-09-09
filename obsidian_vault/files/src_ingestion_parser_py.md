@@ -29,7 +29,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\ingestion\parser.py (433 lines)
+Module: src\ingestion\parser.py (431 lines)
 Tags: #code
 Hub: 00_Master_Hub
 Exports: class CSVParser:, def __init__, def _detect_encoding, def _infer_column_type, def infer_schema

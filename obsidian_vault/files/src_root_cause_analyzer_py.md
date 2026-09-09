@@ -36,7 +36,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\root_cause\analyzer.py (747 lines)
+Module: src\root_cause\analyzer.py (746 lines)
 Tags: #code, #rootcause
 Hub: 04_Root_Cause_Engine_Hub
 Exports: class RootCauseAnalyzer:, def __init__, def analyze_anomaly, def _convert_segment_contributions, def _convert_correlations

@@ -31,7 +31,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\explainer\generator.py (275 lines)
+Module: src\explainer\generator.py (274 lines)
 Tags: #code
 Hub: 00_Master_Hub
 Exports: class ExplanationGenerator:, def _build_user_prompt, def __init__, def generate, def _generate_with_llm

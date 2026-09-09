@@ -25,7 +25,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\utils\security.py (102 lines)
+Module: backend\utils\security.py (101 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: def sanitize_filename, def validate_safe_path, def validate_file_extension

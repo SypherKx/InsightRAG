@@ -63,7 +63,8 @@ const chapters = [
     category: "Core Engine",
     icon: Sparkles,
     color: "#ec4899",
-    summary: "Systematic page-by-page comprehension, 30px vector drawings, 200 DPI OCR, and diagram auto-cropping.",
+    summary:
+      "Systematic page-by-page comprehension, 30px vector drawings, 200 DPI OCR, and diagram auto-cropping.",
   },
   {
     id: "studio",
@@ -72,7 +73,8 @@ const chapters = [
     category: "User Experience",
     icon: MessageSquare,
     color: "#8b5cf6",
-    summary: "Two-phase workflow, multi-turn conversational context, zoomable diagram cards, and session persistence.",
+    summary:
+      "Two-phase workflow, multi-turn conversational context, zoomable diagram cards, and session persistence.",
   },
   {
     id: "slicing",
@@ -81,7 +83,8 @@ const chapters = [
     category: "Optimization",
     icon: Scissors,
     color: "#3b82f6",
-    summary: "Slice and index only the exact chapters you need from 1,000+ page books with zero vector bloat.",
+    summary:
+      "Slice and index only the exact chapters you need from 1,000+ page books with zero vector bloat.",
   },
   {
     id: "compute",
@@ -90,7 +93,8 @@ const chapters = [
     category: "Intelligence",
     icon: Cpu,
     color: "#10b981",
-    summary: "100% air-gapped local Ollama vs. Turbo Cloud (Groq, Gemini, OpenAI) + speed-tiered embeddings.",
+    summary:
+      "100% air-gapped local Ollama vs. Turbo Cloud (Groq, Gemini, OpenAI) + speed-tiered embeddings.",
   },
   {
     id: "security",
@@ -99,7 +103,8 @@ const chapters = [
     category: "Security",
     icon: Shield,
     color: "#f59e0b",
-    summary: "OWASP headers, path traversal sanitation, decompression bomb limits, and prompt jailbreak isolation.",
+    summary:
+      "OWASP headers, path traversal sanitation, decompression bomb limits, and prompt jailbreak isolation.",
   },
   {
     id: "standalone",
@@ -108,7 +113,8 @@ const chapters = [
     category: "Deployment",
     icon: Box,
     color: "#06b6d4",
-    summary: "Export a self-contained ZIP bundle with pre-indexed vectors and 1-click launchers for any PC.",
+    summary:
+      "Export a self-contained ZIP bundle with pre-indexed vectors and 1-click launchers for any PC.",
   },
   {
     id: "api",
@@ -117,7 +123,8 @@ const chapters = [
     category: "Developers",
     icon: Code,
     color: "#6366f1",
-    summary: "Standard HTTP endpoints to integrate InsightRAG directly into your custom apps, bots, or scripts.",
+    summary:
+      "Standard HTTP endpoints to integrate InsightRAG directly into your custom apps, bots, or scripts.",
   },
 ];
 
@@ -627,14 +634,21 @@ function ChapterContent({
                 onClick={() => copyToClipboard("insightrag", "offline_cmd")}
                 className="bg-[#ffe600] text-black text-[11px] px-3 py-1 rounded-lg border border-black hover:bg-yellow-400 font-black flex items-center gap-1 active:scale-95 transition"
               >
-                {copiedCmd === "offline_cmd" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copiedCmd === "offline_cmd" ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
                 <span>{copiedCmd === "offline_cmd" ? "Copied!" : "Copy"}</span>
               </button>
             </div>
 
             <p className="text-[11px] text-emerald-900 font-mono font-bold flex items-center gap-1.5">
               <span>💡</span>
-              <span>Automatically boots local AI backend pipelines and opens the Live Studio in your default browser.</span>
+              <span>
+                Automatically boots local AI backend pipelines and opens the Live Studio in your
+                default browser.
+              </span>
             </p>
           </div>
 
@@ -646,7 +660,8 @@ function ChapterContent({
                 Zero-Conflict Updates
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Auto-updater fetches git improvements while strictly preserving your local SQLite database and uploads.
+                Auto-updater fetches git improvements while strictly preserving your local SQLite
+                database and uploads.
               </p>
             </div>
 
@@ -656,7 +671,8 @@ function ChapterContent({
                 Lightweight Weights
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Pulls compact on-device sentence transformers once (80MB) and stores them permanently in local cache.
+                Pulls compact on-device sentence transformers once (80MB) and stores them
+                permanently in local cache.
               </p>
             </div>
 
@@ -666,7 +682,9 @@ function ChapterContent({
                 1-Click Desktop
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Prefer double-clicking? Just double-click <code className="bg-gray-100 px-1 rounded font-bold">run.bat</code> in the cloned repository folder.
+                Prefer double-clicking? Just double-click{" "}
+                <code className="bg-gray-100 px-1 rounded font-bold">run.bat</code> in the cloned
+                repository folder.
               </p>
             </div>
           </div>
@@ -694,8 +712,8 @@ function ChapterContent({
 
           <p className="text-sm text-gray-800 leading-relaxed font-sans font-medium">
             Conventional RAG tools strip PDFs down to plain text, completely throwing away diagrams,
-            flowcharts, math equations, and circuit schematics. InsightRAG inspects every single page
-            with an object-level layout detector.
+            flowcharts, math equations, and circuit schematics. InsightRAG inspects every single
+            page with an object-level layout detector.
           </p>
 
           {/* 3 Clean Ingestion Pillars */}
@@ -706,7 +724,9 @@ function ChapterContent({
                 30px Vector Drawing Detection
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                Inspects native PDF vector paths (<code className="font-bold">fitz.get_drawings()</code>). Any drawing larger than 30px is recognized as a technical illustration or graph.
+                Inspects native PDF vector paths (
+                <code className="font-bold">fitz.get_drawings()</code>). Any drawing larger than
+                30px is recognized as a technical illustration or graph.
               </p>
             </div>
 
@@ -716,7 +736,8 @@ function ChapterContent({
                 80-Char Fallback to 200 DPI OCR
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                If a page yields under 80 text characters (e.g. scanned contracts or dirty images), it automatically triggers a sharp 200 DPI OCR render to capture every word.
+                If a page yields under 80 text characters (e.g. scanned contracts or dirty images),
+                it automatically triggers a sharp 200 DPI OCR render to capture every word.
               </p>
             </div>
 
@@ -726,7 +747,8 @@ function ChapterContent({
                 Targeted Diagram Auto-Cropping
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                When you ask about a specific chart, the engine crops only that exact bounding box with clean padding and embeds a high-res interactive preview in chat.
+                When you ask about a specific chart, the engine crops only that exact bounding box
+                with clean padding and embeds a high-res interactive preview in chat.
               </p>
             </div>
           </div>
@@ -738,7 +760,10 @@ function ChapterContent({
               <span>📷 Visual Evidence in Answers (Click to Zoom)</span>
             </div>
             <p className="text-xs text-gray-700 leading-relaxed">
-              Whenever the AI answers a technical query referencing a diagram (e.g., <em>"Transformer Attention Architecture"</em> or <em>"Figure 4 Block Diagram"</em>), a high-resolution visual evidence badge appears below the answer. Clicking the card opens a full-screen zoomable lightbox with exact page citation metadata.
+              Whenever the AI answers a technical query referencing a diagram (e.g.,{" "}
+              <em>"Transformer Attention Architecture"</em> or <em>"Figure 4 Block Diagram"</em>), a
+              high-resolution visual evidence badge appears below the answer. Clicking the card
+              opens a full-screen zoomable lightbox with exact page citation metadata.
             </p>
           </div>
         </div>
@@ -764,8 +789,8 @@ function ChapterContent({
           </h2>
 
           <p className="text-sm text-gray-800 leading-relaxed font-sans font-medium">
-            InsightRAG splits knowledge generation into two distinct, distraction-free phases: thorough
-            background ingestion and a dedicated, full-screen conversation workspace.
+            InsightRAG splits knowledge generation into two distinct, distraction-free phases:
+            thorough background ingestion and a dedicated, full-screen conversation workspace.
           </p>
 
           {/* Ingestion Gating Flow */}
@@ -792,7 +817,8 @@ function ChapterContent({
               </div>
             </div>
             <p className="text-xs text-gray-600 leading-relaxed font-sans">
-              No partial or broken query states: chat unlocks only after document parsing, OCR, and vector indices are 100% verified.
+              No partial or broken query states: chat unlocks only after document parsing, OCR, and
+              vector indices are 100% verified.
             </p>
           </div>
 
@@ -804,7 +830,9 @@ function ChapterContent({
                 Multi-Turn Contextual Memory
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                Ask follow-up questions naturally like <em>"Why did the author suggest this in step 2?"</em>. The engine retains conversational context and cites previous answers seamlessly.
+                Ask follow-up questions naturally like{" "}
+                <em>"Why did the author suggest this in step 2?"</em>. The engine retains
+                conversational context and cites previous answers seamlessly.
               </p>
             </div>
 
@@ -814,7 +842,9 @@ function ChapterContent({
                 LocalStorage Persistence & Back Nav
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                Chats auto-save instantly to your browser storage. Accidental refreshes never erase your questions or diagrams. Use <strong>"← Back to Documents"</strong> anytime to add more files.
+                Chats auto-save instantly to your browser storage. Accidental refreshes never erase
+                your questions or diagrams. Use <strong>"← Back to Documents"</strong> anytime to
+                add more files.
               </p>
             </div>
           </div>
@@ -841,8 +871,9 @@ function ChapterContent({
           </h2>
 
           <p className="text-sm text-gray-800 leading-relaxed font-sans font-medium">
-            Have a 1,200-page textbook or a 600-page enterprise specification manual? You rarely need
-            to index the entire document when you only care about one chapter or syllabus module.
+            Have a 1,200-page textbook or a 600-page enterprise specification manual? You rarely
+            need to index the entire document when you only care about one chapter or syllabus
+            module.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -855,8 +886,12 @@ function ChapterContent({
                 In the upload interface, toggle <strong>"Selective Page Range"</strong> and specify:
               </p>
               <div className="bg-gray-100 p-3 rounded-lg border border-gray-300 font-mono text-xs space-y-1">
-                <div>Start Page: <span className="font-bold text-black">45</span></div>
-                <div>End Page: <span className="font-bold text-black">80</span></div>
+                <div>
+                  Start Page: <span className="font-bold text-black">45</span>
+                </div>
+                <div>
+                  End Page: <span className="font-bold text-black">80</span>
+                </div>
               </div>
               <p className="text-xs text-gray-600">
                 Only pages 45 through 80 are extracted, OCR-parsed, and embedded into FAISS.
@@ -871,15 +906,24 @@ function ChapterContent({
               <ul className="text-xs text-gray-700 space-y-2">
                 <li className="flex items-start gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                  <span><strong>10x Faster Ingestion:</strong> Processes in 5 seconds instead of 2 minutes.</span>
+                  <span>
+                    <strong>10x Faster Ingestion:</strong> Processes in 5 seconds instead of 2
+                    minutes.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                  <span><strong>Zero Memory Bloat:</strong> Keeps RAM footprint minimal even on lightweight laptops.</span>
+                  <span>
+                    <strong>Zero Memory Bloat:</strong> Keeps RAM footprint minimal even on
+                    lightweight laptops.
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                  <span><strong>Higher Precision:</strong> Irrelevant chapters never pollute the vector retrieval rank.</span>
+                  <span>
+                    <strong>Higher Precision:</strong> Irrelevant chapters never pollute the vector
+                    retrieval rank.
+                  </span>
                 </li>
               </ul>
             </div>
@@ -917,9 +961,13 @@ function ChapterContent({
               <span className="bg-emerald-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded">
                 DEFAULT MODE
               </span>
-              <div className="font-mono font-black text-base text-black">💻 100% Local Air-Gapped</div>
+              <div className="font-mono font-black text-base text-black">
+                💻 100% Local Air-Gapped
+              </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                Powered by <strong>Ollama</strong> (<code className="font-bold">llama3.2:3b</code>, <code className="font-bold">qwen2.5</code>) and local CPU FAISS vector storage. Zero network calls, zero telemetry, full privacy.
+                Powered by <strong>Ollama</strong> (<code className="font-bold">llama3.2:3b</code>,{" "}
+                <code className="font-bold">qwen2.5</code>) and local CPU FAISS vector storage. Zero
+                network calls, zero telemetry, full privacy.
               </p>
             </div>
 
@@ -927,9 +975,13 @@ function ChapterContent({
               <span className="bg-black text-[#ffe600] font-mono font-bold text-[10px] px-2 py-0.5 rounded">
                 OPTIONAL BYOK
               </span>
-              <div className="font-mono font-black text-base text-black">⚡ Advance Turbo Server</div>
+              <div className="font-mono font-black text-base text-black">
+                ⚡ Advance Turbo Server
+              </div>
               <p className="text-xs text-gray-700 leading-relaxed">
-                Plug in your own API key for <strong>Groq Llama 3.3 70B</strong> (ultra-low latency), <strong>Google Gemini 1.5 Flash</strong>, or <strong>OpenAI GPT-4o-mini</strong>.
+                Plug in your own API key for <strong>Groq Llama 3.3 70B</strong> (ultra-low
+                latency), <strong>Google Gemini 1.5 Flash</strong>, or{" "}
+                <strong>OpenAI GPT-4o-mini</strong>.
               </p>
             </div>
           </div>
@@ -1005,8 +1057,8 @@ function ChapterContent({
           </h2>
 
           <p className="text-sm text-gray-800 leading-relaxed font-sans font-medium">
-            InsightRAG is audited against standard web and generative AI vulnerability vectors.
-            Your files and system remain protected from malicious inputs.
+            InsightRAG is audited against standard web and generative AI vulnerability vectors. Your
+            files and system remain protected from malicious inputs.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
@@ -1016,7 +1068,9 @@ function ChapterContent({
                 OWASP Security Headers
               </div>
               <p className="text-gray-600 leading-relaxed font-sans">
-                Appends <code className="font-bold">X-Frame-Options: DENY</code>, <code className="font-bold">X-Content-Type-Options: nosniff</code>, and strict Content Security Policies across all responses.
+                Appends <code className="font-bold">X-Frame-Options: DENY</code>,{" "}
+                <code className="font-bold">X-Content-Type-Options: nosniff</code>, and strict
+                Content Security Policies across all responses.
               </p>
             </div>
 
@@ -1026,7 +1080,9 @@ function ChapterContent({
                 Path Traversal & LFI Defense
               </div>
               <p className="text-gray-600 leading-relaxed font-sans">
-                Incoming filenames are sanitized via <code className="font-bold">sanitize_filename</code> to neutralize <code className="font-bold">../</code> directory escapes and protect system drives.
+                Incoming filenames are sanitized via{" "}
+                <code className="font-bold">sanitize_filename</code> to neutralize{" "}
+                <code className="font-bold">../</code> directory escapes and protect system drives.
               </p>
             </div>
 
@@ -1036,7 +1092,9 @@ function ChapterContent({
                 Decompression Bomb Protection
               </div>
               <p className="text-gray-600 leading-relaxed font-sans">
-                Caps image allocations at 25,000,000 pixels (<code className="font-bold">Image.MAX_IMAGE_PIXELS</code>) and limits docx uncompressed XML sizes to prevent memory-flooding DoS.
+                Caps image allocations at 25,000,000 pixels (
+                <code className="font-bold">Image.MAX_IMAGE_PIXELS</code>) and limits docx
+                uncompressed XML sizes to prevent memory-flooding DoS.
               </p>
             </div>
 
@@ -1046,7 +1104,9 @@ function ChapterContent({
                 Prompt Injection Sandboxing
               </div>
               <p className="text-gray-600 leading-relaxed font-sans">
-                RAG contexts are encapsulated within strict <code className="font-bold">&lt;document_context&gt;</code> isolation delimiters to prevent prompt override attacks.
+                RAG contexts are encapsulated within strict{" "}
+                <code className="font-bold">&lt;document_context&gt;</code> isolation delimiters to
+                prevent prompt override attacks.
               </p>
             </div>
           </div>
@@ -1073,8 +1133,8 @@ function ChapterContent({
           </h2>
 
           <p className="text-sm text-gray-800 leading-relaxed font-sans font-medium">
-            Once your documents are indexed, export a completely self-contained ZIP bundle that
-            runs offline on any PC with zero external dependency setup.
+            Once your documents are indexed, export a completely self-contained ZIP bundle that runs
+            offline on any PC with zero external dependency setup.
           </p>
 
           {/* Export Bundle Contents */}
@@ -1187,7 +1247,8 @@ function ChapterContent({
                       /api/sessions/&#123;id&#125;/chat
                     </td>
                     <td className="p-3 text-gray-700 font-sans">
-                      Submits a query with multi-turn conversational context and visual diagram evidence.
+                      Submits a query with multi-turn conversational context and visual diagram
+                      evidence.
                     </td>
                   </tr>
                   <tr>
@@ -1225,4 +1286,3 @@ function ChapterContent({
       return null;
   }
 }
-

@@ -16,13 +16,9 @@ Detection Types:
 - Contextual anomalies: Deviations from expected pattern
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 from enum import Enum
-import numpy as np
-import pandas as pd
-from scipy import stats
-from statsmodels.tsa.seasonal import STL
 
 
 class AnomalyType(Enum):

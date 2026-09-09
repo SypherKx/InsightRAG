@@ -5,17 +5,15 @@ Supports both local filesystem and S3-compatible object storage.
 Manages metadata persistence to PostgreSQL.
 """
 
-import os
 import hashlib
 import logging
 from pathlib import Path
-from typing import Optional, BinaryIO, Tuple
+from typing import Optional
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text, JSON, Boolean
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-import pandas as pd
+from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +271,7 @@ class StorageEngine:
                 file_hash=metadata.file_hash,
                 row_count=metadata.row_count,
                 column_count=metadata.column_count,
-                column_schema=[col.dict() for col in metadata.column_schema],
+                column_schema=[col.model_dump() if hasattr(col, "model_dump") else col.dict() for col in metadata.column_schema],
                 time_column=metadata.time_column,
                 dimensions=metadata.dimensions,
                 status=metadata.status.value,

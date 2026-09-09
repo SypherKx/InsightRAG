@@ -6,7 +6,6 @@ SQLAlchemy ORM with SQLite for metadata storage.
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     create_engine, Column, String, Integer, Float, Text,

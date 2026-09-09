@@ -32,7 +32,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\ingestion\cleaner.py (656 lines)
+Module: src\ingestion\cleaner.py (655 lines)
 Tags: #code
 Hub: 00_Master_Hub
 Exports: class DataCleaner:, def __init__, def _detect_outliers_iqr, def _detect_outliers_zscore, def handle_missing_values

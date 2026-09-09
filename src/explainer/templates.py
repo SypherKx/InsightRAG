@@ -7,7 +7,7 @@ to validate LLM responses against expected structure.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List
 from datetime import datetime
 
 from .models import ExplanationRequest, ExplanationResponse

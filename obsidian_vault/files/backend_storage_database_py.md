@@ -29,7 +29,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\storage\database.py (163 lines)
+Module: backend\storage\database.py (162 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: class DatasetRecord, class AnomalyRecord, class RootCauseRecord, class ExplanationRecord, def generate_uuid

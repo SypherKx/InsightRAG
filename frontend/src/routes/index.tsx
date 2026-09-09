@@ -66,10 +66,16 @@ function LandingPage() {
 
             {/* Desktop / Tablet Navigation Pill — Centered */}
             <nav className="hidden sm:flex items-center gap-1 md:gap-1.5 bg-white/95 backdrop-blur-md px-2 md:px-3 py-1.5 md:py-2 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] font-mono text-[11px] md:text-xs font-bold text-black absolute left-1/2 -translate-x-1/2 z-20">
-              <a href="#capabilities" className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black">
+              <a
+                href="#capabilities"
+                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black"
+              >
                 Capabilities
               </a>
-              <Link to="/docs" className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black font-black">
+              <Link
+                to="/docs"
+                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black font-black"
+              >
                 Docs
               </Link>
               <a
@@ -89,8 +95,14 @@ function LandingPage() {
                 onClick={handleCopyCLI}
                 className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5 text-black" />}
-                <span className="hidden xs:inline">{copied ? "COPIED 1-LINER!" : "COPY 1-LINER"}</span>
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-black" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-black" />
+                )}
+                <span className="hidden xs:inline">
+                  {copied ? "COPIED 1-LINER!" : "COPY 1-LINER"}
+                </span>
                 <span className="xs:hidden">{copied ? "✓" : "COPY"}</span>
               </button>
             </div>
@@ -143,8 +155,8 @@ function LandingPage() {
 
           {/* Subtitle */}
           <p className="max-w-2xl mx-auto text-black font-mono font-bold text-xs sm:text-sm md:text-base leading-relaxed bg-white/80 backdrop-blur-sm p-3 sm:p-4 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000]">
-            Turn complex manuals, technical blueprints, research papers, diagrams, books, and enterprise
-            documents into a turnkey, anti-hallucination AI knowledge studio in seconds.
+            Turn complex manuals, technical blueprints, research papers, diagrams, books, and
+            enterprise documents into a turnkey, anti-hallucination AI knowledge studio in seconds.
           </p>
 
           {/* Interactive Command Box with Multi-Platform Tabs */}
@@ -177,7 +189,9 @@ function LandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400 font-mono pt-0.5">
-              <span>💡 Paste &amp; run this in <strong className="text-white">PowerShell</strong></span>
+              <span>
+                💡 Paste &amp; run this in <strong className="text-white">PowerShell</strong>
+              </span>
               <span className="text-gray-500">Auto-launches browser on completion</span>
             </div>
           </div>
@@ -188,7 +202,11 @@ function LandingPage() {
               onClick={handleCopyCLI}
               className="w-full sm:w-auto bg-[#ffe600] text-black hover:bg-yellow-400 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
             >
-              {copied ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" /> : <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-black" />}
+              {copied ? (
+                <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+              ) : (
+                <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+              )}
               <span>{copied ? "COPIED 1-LINE COMMAND!" : "⚡ COPY 1-LINE LAUNCHER"}</span>
             </button>
 
@@ -225,14 +243,14 @@ function LandingPage() {
             }}
           >
             <span>
-              ⚡ UNIVERSAL MULTIMODAL RAG • TECHNICAL BLUEPRINTS & MANUALS • SCIENTIFIC RESEARCH PAPERS •
-              ENTERPRISE BOOKS & REPORTS • FOCUSED DIAGRAM & ROI OCR • 100% PRIVATE ON-DEVICE FAISS •
-              ZERO DATA LEAKS • HARDWARE ACCELERATED
+              ⚡ UNIVERSAL MULTIMODAL RAG • TECHNICAL BLUEPRINTS & MANUALS • SCIENTIFIC RESEARCH
+              PAPERS • ENTERPRISE BOOKS & REPORTS • FOCUSED DIAGRAM & ROI OCR • 100% PRIVATE
+              ON-DEVICE FAISS • ZERO DATA LEAKS • HARDWARE ACCELERATED
             </span>
             <span>
-              ⚡ UNIVERSAL MULTIMODAL RAG • TECHNICAL BLUEPRINTS & MANUALS • SCIENTIFIC RESEARCH PAPERS •
-              ENTERPRISE BOOKS & REPORTS • FOCUSED DIAGRAM & ROI OCR • 100% PRIVATE ON-DEVICE FAISS •
-              ZERO DATA LEAKS • HARDWARE ACCELERATED
+              ⚡ UNIVERSAL MULTIMODAL RAG • TECHNICAL BLUEPRINTS & MANUALS • SCIENTIFIC RESEARCH
+              PAPERS • ENTERPRISE BOOKS & REPORTS • FOCUSED DIAGRAM & ROI OCR • 100% PRIVATE
+              ON-DEVICE FAISS • ZERO DATA LEAKS • HARDWARE ACCELERATED
             </span>
           </motion.div>
         </div>
@@ -243,7 +261,10 @@ function LandingPage() {
         NEO-BRUTALIST 3-CARD SECTION
         ========================================================================
       */}
-      <section id="capabilities" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-6xl mx-auto space-y-8 sm:space-y-12">
+      <section
+        id="capabilities"
+        className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-6xl mx-auto space-y-8 sm:space-y-12"
+      >
         <div className="text-center space-y-2 sm:space-y-3">
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-black font-sans text-white tracking-tight">
             Deterministic Precision. Zero Fluff.
@@ -265,7 +286,8 @@ function LandingPage() {
                 <span className="w-3.5 h-3.5 bg-black rounded-sm" />
               </div>
               <p className="font-mono text-xs font-bold leading-relaxed text-black/90">
-                Deep visual extraction for complex schematics, diagrams, flowcharts, and multilingual scans via local Vision LLMs and sub-region ROI slicing.
+                Deep visual extraction for complex schematics, diagrams, flowcharts, and
+                multilingual scans via local Vision LLMs and sub-region ROI slicing.
               </p>
             </div>
 
@@ -284,7 +306,8 @@ function LandingPage() {
                 <span className="w-3.5 h-3.5 bg-black rounded-sm" />
               </div>
               <p className="font-mono text-xs font-bold leading-relaxed text-black/90">
-                Strict cosine distance gating, HyDE query expansion, and zero-evidence refusal protocols eliminate hallucinations completely.
+                Strict cosine distance gating, HyDE query expansion, and zero-evidence refusal
+                protocols eliminate hallucinations completely.
               </p>
             </div>
 
@@ -303,7 +326,8 @@ function LandingPage() {
                 <span className="w-3.5 h-3.5 bg-black rounded-sm" />
               </div>
               <p className="font-mono text-xs font-bold leading-relaxed text-black/90">
-                Compile and export your indexed knowledge into a standalone, air-gapped production package with embedded ChromaDB, FastAPI, and UI.
+                Compile and export your indexed knowledge into a standalone, air-gapped production
+                package with embedded ChromaDB, FastAPI, and UI.
               </p>
             </div>
 
@@ -331,8 +355,8 @@ function LandingPage() {
               THE CREATION OF THE INSIGHTRAG ENGINE WAS DRIVEN BY THE NEED FOR PRIVATE, ZERO-COST,
               AND UNCOMPROMISING LOCAL ARTIFICIAL INTELLIGENCE. WE BUILT A HIGH-PERFORMANCE
               ARCHITECTURE CAPABLE OF PROCESSING MULTI-FORMAT DOCUMENTS, TECHNICAL BLUEPRINTS,
-              RESEARCH PAPERS, AND VISUAL MEDIA WITH STRICT ANTI-HALLUCINATION GUARDRAILS AND 1-CLICK STANDALONE
-              DEPLOYMENT.
+              RESEARCH PAPERS, AND VISUAL MEDIA WITH STRICT ANTI-HALLUCINATION GUARDRAILS AND
+              1-CLICK STANDALONE DEPLOYMENT.
             </p>
 
             <button

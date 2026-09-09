@@ -31,7 +31,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\main.py (212 lines)
+Module: backend\main.py (211 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: class SecurityHeadersMiddleware, async def lifespan, async def dispatch, async def global_exception_handler, async def serve_spa

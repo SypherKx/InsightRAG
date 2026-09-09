@@ -5,9 +5,8 @@ Combines multiple algorithm outputs into a unified confidence score (0-100).
 Calculates severity based on anomaly magnitude and confidence.
 """
 
-import numpy as np
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from .models import Anomaly, AnomalyType
 
 

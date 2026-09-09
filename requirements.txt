@@ -15,28 +15,28 @@ pydantic-settings>=2.0.0
 
 # Database
 sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0  # PostgreSQL
-alembic>=1.11.0  # Migrations
+# psycopg2-binary>=2.9.0  # Optional: PostgreSQL (SQLite used by default)
 
 # Storage
 boto3>=1.28.0  # S3/MinIO support
 
-# Date parsing
+# Date parsing & encoding
 python-dateutil>=2.8.0
-
-# Encoding detection
 chardet>=5.0.0
 
 # Statistical operations
 scipy>=1.10.0
 
+# Multimodal RAG & Embeddings
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4; platform_system != "Darwin"
+pypdf>=3.0.0
+pdfminer.six>=20221105; python_version >= "3.9"
+
 # Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 pytest-cov>=4.1.0
-
-# Logging
-structlog>=23.0.0
 
 # Optional: Excel support (for future extension)
 # openpyxl>=3.1.0

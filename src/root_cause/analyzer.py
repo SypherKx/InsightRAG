@@ -13,7 +13,7 @@ Principles:
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 import logging
 import time
@@ -25,11 +25,10 @@ from .models import (
     CorrelationResult,
     ChangePoint,
     AnalysisMethod,
-    RootCauseInsight as RootCauseInsightModel,
 )
 from .segmenter import SegmentationAnalyzer, calculate_segment_contributions
 from .correlator import CorrelationAnalyzer
-from .attribution import AttributionAnalyzer, calculate_shapley_values
+from .attribution import AttributionAnalyzer
 
 logger = logging.getLogger(__name__)
 

@@ -20,7 +20,7 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 import pandas as pd
 
@@ -458,7 +458,7 @@ class IngestionPipeline:
                     "dataset_id": dataset_id,
                     "org_id": org_id,
                     "storage_path": storage_path,
-                    "schema": [col.dict() for col in column_schemas],
+                    "schema": [col.model_dump() if hasattr(col, "model_dump") else col.dict() for col in column_schemas],
                     "time_column": time_column,
                     "dimensions": dimensions,
                     "row_count": len(df),

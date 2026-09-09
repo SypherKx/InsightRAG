@@ -4,7 +4,6 @@ InsightForge AI — FastAPI Backend
 Main application entry point.
 """
 
-import os
 import sys
 import logging
 from pathlib import Path

@@ -3,7 +3,6 @@ RAG router — Document upload and context retrieval.
 """
 
 import logging
-import tempfile
 from pathlib import Path
 from typing import List, Optional
 

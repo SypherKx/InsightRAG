@@ -5,7 +5,7 @@ Uses sentence-transformers to generate dense vector embeddings.
 Default model: all-MiniLM-L6-v2 (384 dimensions)
 """
 
-from typing import List, Optional, Union
+from typing import List, Optional
 import numpy as np
 from dataclasses import dataclass
 import logging

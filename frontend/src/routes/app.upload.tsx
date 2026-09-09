@@ -243,7 +243,9 @@ function KnowledgeBaseStudioPage() {
   const handleSwitchHardware = async (targetMode: "cpu" | "gpu") => {
     if (targetMode === activeHardwareMode || switchingHardware) return;
     if (targetMode === "gpu" && !specs.has_gpu_access) {
-      setHardwareNotice(`⚠️ Cannot switch to GPU: ${specs.gpu_disabled_reason || "No compatible CUDA/ROCm GPU available on this laptop."}`);
+      setHardwareNotice(
+        `⚠️ Cannot switch to GPU: ${specs.gpu_disabled_reason || "No compatible CUDA/ROCm GPU available on this laptop."}`,
+      );
       setTimeout(() => setHardwareNotice(null), 6000);
       return;
     }
@@ -260,7 +262,7 @@ function KnowledgeBaseStudioPage() {
       setHardwareNotice(
         targetMode === "gpu"
           ? `🚀 Shifted to GPU! Backend terminal log printed: Ollama layers (99) and embeddings accelerated on ${specs.gpu_name}.`
-          : `💻 Shifted to CPU Standard! Backend terminal log printed: 100% CPU multi-threaded parallel execution active.`
+          : `💻 Shifted to CPU Standard! Backend terminal log printed: 100% CPU multi-threaded parallel execution active.`,
       );
       setTimeout(() => setHardwareNotice(null), 7000);
     } catch (err: any) {
@@ -315,8 +317,10 @@ function KnowledgeBaseStudioPage() {
     }, 500);
 
     try {
-      const sPage = usePageRange && typeof startPage === "number" && startPage > 0 ? startPage : undefined;
-      const ePage = usePageRange && typeof endPage === "number" && endPage > 0 ? endPage : undefined;
+      const sPage =
+        usePageRange && typeof startPage === "number" && startPage > 0 ? startPage : undefined;
+      const ePage =
+        usePageRange && typeof endPage === "number" && endPage > 0 ? endPage : undefined;
 
       const res = await uploadRAGDocuments(fileList, sPage, ePage);
       clearInterval(interval);
@@ -325,8 +329,10 @@ function KnowledgeBaseStudioPage() {
       setProcessingStep(5);
       setUploadProgress(100);
 
-      const rangeNotice = (sPage || ePage) ? ` [Pages ${sPage || 1} to ${ePage || 'End'}]` : "";
-      setUploadStatusMsg(`✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`);
+      const rangeNotice = sPage || ePage ? ` [Pages ${sPage || 1} to ${ePage || "End"}]` : "";
+      setUploadStatusMsg(
+        `✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`,
+      );
 
       await loadSpecsAndStats();
 
@@ -346,21 +352,28 @@ function KnowledgeBaseStudioPage() {
       const isNetErr = err?.message?.includes("Network Error") || err?.code === "ERR_NETWORK";
       const errMsg = isNetErr
         ? "Backend connection failed. Please ensure the backend is running via run.bat or insightrag."
-        : (err?.response?.data?.detail || err?.message || "Failed to process files");
+        : err?.response?.data?.detail || err?.message || "Failed to process files";
       setUploadStatusMsg(`⚠️ Upload error: ${errMsg}`);
       loadSpecsAndStats();
     }
   };
 
   const handleDeleteSingleDoc = async (docName: string) => {
-    if (!confirm(`Are you sure you want to remove '${docName}' from the knowledge base? Vector index will be recalculated.`)) return;
+    if (
+      !confirm(
+        `Are you sure you want to remove '${docName}' from the knowledge base? Vector index will be recalculated.`,
+      )
+    )
+      return;
     setDeletingDocName(docName);
     try {
       await deleteRAGDocument(docName);
       setUploadStatusMsg(`✓ Deleted '${docName}' and updated vector index.`);
       loadSpecsAndStats();
     } catch (err: any) {
-      setUploadStatusMsg(`⚠️ Failed to delete '${docName}': ${err?.response?.data?.detail || err?.message || "Error"}`);
+      setUploadStatusMsg(
+        `⚠️ Failed to delete '${docName}': ${err?.response?.data?.detail || err?.message || "Error"}`,
+      );
     } finally {
       setDeletingDocName(null);
       setTimeout(() => setUploadStatusMsg(null), 5000);
@@ -416,22 +429,34 @@ function KnowledgeBaseStudioPage() {
     if (isCloud) {
       try {
         const res = await queryRAG(
-          textToSend, 5, 0.0, modelToUse, "cloud", cloudApiKey, historyPayload
+          textToSend,
+          5,
+          0.0,
+          modelToUse,
+          "cloud",
+          cloudApiKey,
+          historyPayload,
         );
-        setChatMessages((prev) => [...prev, {
-          role: "assistant" as const,
-          text: res.answer || res.response || "No answer generated.",
-          sources: res.sources || res.results || [],
-          visual_snippet: res.visual_snippet,
-          model: res.llm_model || modelToUse,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        }]);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant" as const,
+            text: res.answer || res.response || "No answer generated.",
+            sources: res.sources || res.results || [],
+            visual_snippet: res.visual_snippet,
+            model: res.llm_model || modelToUse,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
       } catch (err: any) {
-        setChatMessages((prev) => [...prev, {
-          role: "assistant" as const,
-          text: `⚠️ Cloud query failed: ${err?.response?.data?.detail || err?.message || "Error"}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        }]);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant" as const,
+            text: `⚠️ Cloud query failed: ${err?.response?.data?.detail || err?.message || "Error"}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
       } finally {
         setQuerying(false);
       }
@@ -449,77 +474,77 @@ function KnowledgeBaseStudioPage() {
     // Add empty assistant message placeholder
     setChatMessages((prev) => {
       streamMsgIndex.current = prev.length;
-      return [...prev, {
-        role: "assistant" as const,
-        text: "▍",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      }];
+      return [
+        ...prev,
+        {
+          role: "assistant" as const,
+          text: "▍",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ];
     });
 
     try {
-      await streamRAGQuery(
-        textToSend, 5, 0.0, modelToUse, "local", cloudApiKey, historyPayload,
-        {
-          onToken: (token: string) => {
-            streamedText += token;
-            setChatMessages((prev) => {
-              const updated = [...prev];
-              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-                updated[streamMsgIndex.current] = {
-                  ...updated[streamMsgIndex.current],
-                  text: streamedText + "▍",
-                };
-              }
-              return updated;
-            });
-          },
-          onMetadata: (data: any) => {
-            streamSources = data.results || [];
-            streamVisual = data.visual_snippet || null;
-            // Update sources immediately so visual preview appears early
-            setChatMessages((prev) => {
-              const updated = [...prev];
-              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-                updated[streamMsgIndex.current] = {
-                  ...updated[streamMsgIndex.current],
-                  sources: streamSources,
-                  visual_snippet: streamVisual,
-                };
-              }
-              return updated;
-            });
-          },
-          onDone: (data: any) => {
-            streamModel = data.llm_model || modelToUse;
-            // Finalize: remove cursor, set final text
-            setChatMessages((prev) => {
-              const updated = [...prev];
-              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-                updated[streamMsgIndex.current] = {
-                  ...updated[streamMsgIndex.current],
-                  text: streamedText || "No answer generated.",
-                  sources: streamSources,
-                  visual_snippet: streamVisual,
-                  model: streamModel,
-                };
-              }
-              return updated;
-            });
-          },
-          onError: (error: string) => {
-            setChatMessages((prev) => {
-              const updated = [...prev];
-              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-                updated[streamMsgIndex.current] = {
-                  ...updated[streamMsgIndex.current],
-                  text: `⚠️ Stream error: ${error}\n\n💡 Check that Ollama is running and try again.`,
-                };
-              }
-              return updated;
-            });
-          },
-        }
-      );
+      await streamRAGQuery(textToSend, 5, 0.0, modelToUse, "local", cloudApiKey, historyPayload, {
+        onToken: (token: string) => {
+          streamedText += token;
+          setChatMessages((prev) => {
+            const updated = [...prev];
+            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+              updated[streamMsgIndex.current] = {
+                ...updated[streamMsgIndex.current],
+                text: streamedText + "▍",
+              };
+            }
+            return updated;
+          });
+        },
+        onMetadata: (data: any) => {
+          streamSources = data.results || [];
+          streamVisual = data.visual_snippet || null;
+          // Update sources immediately so visual preview appears early
+          setChatMessages((prev) => {
+            const updated = [...prev];
+            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+              updated[streamMsgIndex.current] = {
+                ...updated[streamMsgIndex.current],
+                sources: streamSources,
+                visual_snippet: streamVisual,
+              };
+            }
+            return updated;
+          });
+        },
+        onDone: (data: any) => {
+          streamModel = data.llm_model || modelToUse;
+          // Finalize: remove cursor, set final text
+          setChatMessages((prev) => {
+            const updated = [...prev];
+            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+              updated[streamMsgIndex.current] = {
+                ...updated[streamMsgIndex.current],
+                text: streamedText || "No answer generated.",
+                sources: streamSources,
+                visual_snippet: streamVisual,
+                model: streamModel,
+              };
+            }
+            return updated;
+          });
+        },
+        onError: (error: string) => {
+          setChatMessages((prev) => {
+            const updated = [...prev];
+            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+              updated[streamMsgIndex.current] = {
+                ...updated[streamMsgIndex.current],
+                text: `⚠️ Stream error: ${error}\n\n💡 Check that Ollama is running and try again.`,
+              };
+            }
+            return updated;
+          });
+        },
+      });
     } catch (err: any) {
       setChatMessages((prev) => {
         const updated = [...prev];
@@ -568,7 +593,9 @@ function KnowledgeBaseStudioPage() {
         backgroundColor: "#e6f0fa",
       }}
     >
-      <div className={`mx-auto space-y-4 sm:space-y-6 w-full ${activeView === "chat" ? "max-w-6xl" : "max-w-5xl"}`}>
+      <div
+        className={`mx-auto space-y-4 sm:space-y-6 w-full ${activeView === "chat" ? "max-w-6xl" : "max-w-5xl"}`}
+      >
         {/* 1. TOP SYSTEM SPECS BADGE */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-black text-white p-3 sm:px-5 sm:py-3 rounded-2xl shadow-xl border-2 border-black font-mono text-xs">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-bold">
@@ -611,7 +638,8 @@ function KnowledgeBaseStudioPage() {
                   </h2>
                 </div>
                 <p className="text-xs text-gray-600 mt-1 font-bold">
-                  Thoroughly extracting every page, table, image & diagram before entering the Chat Studio.
+                  Thoroughly extracting every page, table, image & diagram before entering the Chat
+                  Studio.
                 </p>
               </div>
 
@@ -634,10 +662,13 @@ function KnowledgeBaseStudioPage() {
                 </div>
                 <div>
                   <div className="text-xs font-black uppercase text-black">
-                    Currently Ingesting ({currentUploadingFiles.length || files.length} Document{currentUploadingFiles.length > 1 ? "s" : ""})
+                    Currently Ingesting ({currentUploadingFiles.length || files.length} Document
+                    {currentUploadingFiles.length > 1 ? "s" : ""})
                   </div>
                   <div className="text-xs text-gray-800 font-bold truncate max-w-md">
-                    {currentUploadingFiles.length > 0 ? currentUploadingFiles.join(", ") : files.map((f) => f.name).join(", ")}
+                    {currentUploadingFiles.length > 0
+                      ? currentUploadingFiles.join(", ")
+                      : files.map((f) => f.name).join(", ")}
                   </div>
                 </div>
               </div>
@@ -671,12 +702,13 @@ function KnowledgeBaseStudioPage() {
                   return (
                     <div
                       key={sIdx}
-                      className={`p-3.5 rounded-xl border-2 transition-all flex items-start gap-3.5 ${isDone
+                      className={`p-3.5 rounded-xl border-2 transition-all flex items-start gap-3.5 ${
+                        isDone
                           ? "bg-emerald-50/70 border-emerald-500 shadow-[2px_2px_0px_#10b981]"
                           : isCurrent
                             ? "bg-yellow-50 border-black shadow-[3px_3px_0px_#000] ring-2 ring-[#ffe600]"
                             : "bg-gray-50/70 border-gray-200 opacity-50"
-                        }`}
+                      }`}
                     >
                       <div className="mt-0.5 shrink-0">
                         {isDone ? (
@@ -720,7 +752,8 @@ function KnowledgeBaseStudioPage() {
             <div className="p-3 bg-gray-100 rounded-xl border border-gray-300 text-[11px] text-gray-700 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-black shrink-0" />
               <span>
-                Deep comprehension running. You will be automatically redirected to the <strong>Full-Screen Chat Studio</strong> once ready.
+                Deep comprehension running. You will be automatically redirected to the{" "}
+                <strong>Full-Screen Chat Studio</strong> once ready.
               </span>
             </div>
           </div>
@@ -753,7 +786,8 @@ function KnowledgeBaseStudioPage() {
                       </span>
                     </div>
                     <div className="text-[11px] font-mono text-gray-500">
-                      {ragStats.files?.length || 0} doc(s) loaded • {ragStats.total_vectors || 0} vectors grounded
+                      {ragStats.files?.length || 0} doc(s) loaded • {ragStats.total_vectors || 0}{" "}
+                      vectors grounded
                     </div>
                   </div>
                 </div>
@@ -763,9 +797,16 @@ function KnowledgeBaseStudioPage() {
                 <span className="hidden md:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
                   ⚡ {embeddingModel}
                 </span>
-                <span className={`px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] ${processingMode === "local" ? "bg-black text-white" : "bg-purple-600 text-white animate-pulse"
-                  }`}>
-                  {processingMode === "local" ? `💻 ${selectedLLM}` : `⚡ ${processingMode.split(':')[0].toUpperCase()}`}
+                <span
+                  className={`px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] ${
+                    processingMode === "local"
+                      ? "bg-black text-white"
+                      : "bg-purple-600 text-white animate-pulse"
+                  }`}
+                >
+                  {processingMode === "local"
+                    ? `💻 ${selectedLLM}`
+                    : `⚡ ${processingMode.split(":")[0].toUpperCase()}`}
                 </span>
                 {chatMessages.length > 0 && (
                   <button
@@ -810,9 +851,12 @@ function KnowledgeBaseStudioPage() {
                     <Sparkles className="w-7 h-7 text-black" />
                   </div>
                   <div>
-                    <p className="font-extrabold text-sm text-black">Start your grounded document consultation</p>
+                    <p className="font-extrabold text-sm text-black">
+                      Start your grounded document consultation
+                    </p>
                     <p className="text-[11px] text-gray-600 mt-0.5">
-                      Multi-turn memory enabled • Answers grounded strictly on your {ragStats.total_vectors} indexed vectors
+                      Multi-turn memory enabled • Answers grounded strictly on your{" "}
+                      {ragStats.total_vectors} indexed vectors
                     </p>
                   </div>
                 </div>
@@ -826,10 +870,11 @@ function KnowledgeBaseStudioPage() {
                     className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                   >
                     <div
-                      className={`p-3.5 sm:p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2 max-w-[92%] sm:max-w-[85%] ${msg.role === "user"
+                      className={`p-3.5 sm:p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2 max-w-[92%] sm:max-w-[85%] ${
+                        msg.role === "user"
                           ? "bg-[#ffe600] text-black font-bold ml-auto"
                           : "bg-white text-black"
-                        }`}
+                      }`}
                     >
                       {/* Message Meta Header */}
                       <div className="flex items-center justify-between gap-3 text-[10px] font-mono border-b border-black/10 pb-1.5">
@@ -855,7 +900,9 @@ function KnowledgeBaseStudioPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {msg.timestamp && (
-                            <span className="text-[9px] text-gray-500 font-normal">{msg.timestamp}</span>
+                            <span className="text-[9px] text-gray-500 font-normal">
+                              {msg.timestamp}
+                            </span>
                           )}
                           {msg.role === "assistant" && (
                             <button
@@ -886,7 +933,9 @@ function KnowledgeBaseStudioPage() {
                           <div className="flex items-center justify-between font-mono text-[10px] font-bold text-black border-b border-gray-200 pb-1.5">
                             <span className="flex items-center gap-1.5 text-black font-black">
                               <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
-                              <span>📷 FOCUSED VISUAL EVIDENCE (PAGE {msg.visual_snippet.page})</span>
+                              <span>
+                                📷 FOCUSED VISUAL EVIDENCE (PAGE {msg.visual_snippet.page})
+                              </span>
                             </span>
                             <span className="bg-[#ffe600] px-1.5 py-0.5 rounded border border-black text-[9px] font-mono font-bold">
                               ROI Crop
@@ -897,13 +946,25 @@ function KnowledgeBaseStudioPage() {
                               src={`http://localhost:8000${msg.visual_snippet.crop_url}`}
                               alt={msg.visual_snippet.caption || "Diagram snippet"}
                               className="max-h-60 w-full object-contain cursor-pointer hover:scale-105 transition-transform duration-200 rounded"
-                              onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                              onClick={() =>
+                                window.open(
+                                  `http://localhost:8000${msg.visual_snippet.crop_url}`,
+                                  "_blank",
+                                )
+                              }
                             />
                           </div>
                           <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 font-medium pt-1">
-                            <span className="truncate max-w-[70%] font-bold text-gray-800">{msg.visual_snippet.caption}</span>
+                            <span className="truncate max-w-[70%] font-bold text-gray-800">
+                              {msg.visual_snippet.caption}
+                            </span>
                             <button
-                              onClick={() => window.open(`http://localhost:8000${msg.visual_snippet.crop_url}`, '_blank')}
+                              onClick={() =>
+                                window.open(
+                                  `http://localhost:8000${msg.visual_snippet.crop_url}`,
+                                  "_blank",
+                                )
+                              }
                               className="text-black hover:text-blue-600 flex items-center gap-1 font-black cursor-pointer bg-white hover:bg-gray-100 px-2 py-0.5 rounded border border-black shadow-[1px_1px_0px_#000]"
                             >
                               <span>Open High-Res</span>
@@ -912,7 +973,6 @@ function KnowledgeBaseStudioPage() {
                           </div>
                         </div>
                       )}
-
                     </div>
                   </motion.div>
                 ))
@@ -1027,16 +1087,22 @@ function KnowledgeBaseStudioPage() {
 
             {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
               {/* COMPUTE ARCHITECTURE (100% LOCAL VS ADVANCE TURBO CLOUD) */}
               <div className="space-y-1.5 md:col-span-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
                     COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
                   </label>
-                  <span className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${processingMode === "local" ? "bg-emerald-400 text-black" : "bg-purple-400 text-black animate-pulse"
-                    }`}>
-                    {processingMode === "local" ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)" : "⚡ CLOUD TURBO ACCELERATED"}
+                  <span
+                    className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${
+                      processingMode === "local"
+                        ? "bg-emerald-400 text-black"
+                        : "bg-purple-400 text-black animate-pulse"
+                    }`}
+                  >
+                    {processingMode === "local"
+                      ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)"
+                      : "⚡ CLOUD TURBO ACCELERATED"}
                   </span>
                 </div>
                 <select
@@ -1045,7 +1111,8 @@ function KnowledgeBaseStudioPage() {
                   className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
                 >
                   <option value="local">
-                    💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
+                    💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama)
+                    [DEFAULT]
                   </option>
                   <option value="groq:llama-3.3-70b-versatile">
                     ⚡ Advance Turbo Server (Groq Llama-3.3 70B • 500+ Page Fast Cloud Processing)
@@ -1064,7 +1131,10 @@ function KnowledgeBaseStudioPage() {
                     <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
                       <span className="flex items-center gap-1.5">
                         <Zap className="w-3.5 h-3.5 text-purple-600" />
-                        <span>⚡ Advance Cloud Mode Active — Large PDFs & books will process at lightning speed on cloud server.</span>
+                        <span>
+                          ⚡ Advance Cloud Mode Active — Large PDFs & books will process at
+                          lightning speed on cloud server.
+                        </span>
                       </span>
                     </div>
                     <input
@@ -1077,7 +1147,8 @@ function KnowledgeBaseStudioPage() {
                   </div>
                 ) : (
                   <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1">
-                    🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
+                    🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave
+                    your PC. All embedding and inference runs completely on-device.
                   </div>
                 )}
               </div>
@@ -1092,14 +1163,16 @@ function KnowledgeBaseStudioPage() {
                         LOCAL HARDWARE ACCELERATION ENGINE (CPU VS. GPU)
                       </span>
                       <p className="text-[10px] font-mono text-gray-500">
-                        Instantly shift embeddings and local Ollama inference between Multi-Threaded CPU and GPU.
+                        Instantly shift embeddings and local Ollama inference between Multi-Threaded
+                        CPU and GPU.
                       </p>
                     </div>
                     <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-black uppercase w-fit ${activeHardwareMode === "gpu"
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-black uppercase w-fit ${
+                        activeHardwareMode === "gpu"
                           ? "bg-[#ffe600] text-black shadow-[1px_1px_0px_#000]"
                           : "bg-white text-black"
-                        }`}
+                      }`}
                     >
                       {activeHardwareMode === "gpu" ? "⚡ GPU ACCELERATED" : "💻 CPU STANDARD"}
                     </span>
@@ -1112,24 +1185,33 @@ function KnowledgeBaseStudioPage() {
                       type="button"
                       onClick={() => handleSwitchHardware("cpu")}
                       disabled={switchingHardware}
-                      className={`flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left cursor-pointer ${activeHardwareMode === "cpu"
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left cursor-pointer ${
+                        activeHardwareMode === "cpu"
                           ? "bg-black text-white border-black shadow-[3px_3px_0px_#000]"
                           : "bg-white text-black border-black hover:bg-gray-100"
-                        }`}
+                      }`}
                     >
-                      <div className={`p-2 rounded-lg border ${activeHardwareMode === "cpu" ? "bg-gray-800 border-gray-700 text-amber-300" : "bg-gray-100 border-gray-300 text-black"
-                        }`}>
+                      <div
+                        className={`p-2 rounded-lg border ${
+                          activeHardwareMode === "cpu"
+                            ? "bg-gray-800 border-gray-700 text-amber-300"
+                            : "bg-gray-100 border-gray-300 text-black"
+                        }`}
+                      >
                         <Cpu className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="font-mono font-black text-xs uppercase">CPU Engine</span>
                           {activeHardwareMode === "cpu" && (
-                            <span className="text-[10px] font-mono font-bold bg-amber-300 text-black px-1.5 py-0.2 rounded">ACTIVE</span>
+                            <span className="text-[10px] font-mono font-bold bg-amber-300 text-black px-1.5 py-0.2 rounded">
+                              ACTIVE
+                            </span>
                           )}
                         </div>
                         <p className="font-mono text-[10px] opacity-80 mt-0.5">
-                          Multi-threaded CPU parallel execution ({specs.cpu_threads || 8} Threads). 100% universal across all laptops.
+                          Multi-threaded CPU parallel execution ({specs.cpu_threads || 8} Threads).
+                          100% universal across all laptops.
                         </p>
                       </div>
                     </button>
@@ -1140,20 +1222,29 @@ function KnowledgeBaseStudioPage() {
                         type="button"
                         onClick={() => handleSwitchHardware("gpu")}
                         disabled={switchingHardware || !specs.has_gpu_access}
-                        title={!specs.has_gpu_access ? (specs.gpu_disabled_reason || "GPU acceleration disabled on this laptop.") : "Click to shift processing & Ollama to GPU"}
-                        className={`w-full h-full flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left ${!specs.has_gpu_access
+                        title={
+                          !specs.has_gpu_access
+                            ? specs.gpu_disabled_reason ||
+                              "GPU acceleration disabled on this laptop."
+                            : "Click to shift processing & Ollama to GPU"
+                        }
+                        className={`w-full h-full flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left ${
+                          !specs.has_gpu_access
                             ? "bg-gray-100/90 text-gray-400 border-gray-300 cursor-not-allowed"
                             : activeHardwareMode === "gpu"
                               ? "bg-[#ffe600] text-black border-black shadow-[3px_3px_0px_#000] cursor-pointer"
                               : "bg-white text-black border-black hover:bg-amber-50 cursor-pointer"
-                          }`}
+                        }`}
                       >
-                        <div className={`p-2 rounded-lg border ${!specs.has_gpu_access
-                            ? "bg-gray-200 border-gray-300 text-gray-400"
-                            : activeHardwareMode === "gpu"
-                              ? "bg-black text-[#ffe600] border-black"
-                              : "bg-amber-100 text-amber-900 border-amber-300"
-                          }`}>
+                        <div
+                          className={`p-2 rounded-lg border ${
+                            !specs.has_gpu_access
+                              ? "bg-gray-200 border-gray-300 text-gray-400"
+                              : activeHardwareMode === "gpu"
+                                ? "bg-black text-[#ffe600] border-black"
+                                : "bg-amber-100 text-amber-900 border-amber-300"
+                          }`}
+                        >
                           <Zap className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1161,11 +1252,15 @@ function KnowledgeBaseStudioPage() {
                             <span className="font-mono font-black text-xs uppercase flex items-center gap-1">
                               <span>GPU Acceleration</span>
                               {!specs.has_gpu_access && (
-                                <span className="text-[9px] font-mono bg-gray-300 text-gray-700 px-1 py-0.2 rounded border border-gray-400">LOCKED</span>
+                                <span className="text-[9px] font-mono bg-gray-300 text-gray-700 px-1 py-0.2 rounded border border-gray-400">
+                                  LOCKED
+                                </span>
                               )}
                             </span>
                             {activeHardwareMode === "gpu" && specs.has_gpu_access && (
-                              <span className="text-[10px] font-mono font-bold bg-black text-[#ffe600] px-1.5 py-0.2 rounded">ACTIVE</span>
+                              <span className="text-[10px] font-mono font-bold bg-black text-[#ffe600] px-1.5 py-0.2 rounded">
+                                ACTIVE
+                              </span>
                             )}
                           </div>
                           <p className="font-mono text-[10px] opacity-80 mt-0.5">
@@ -1183,7 +1278,8 @@ function KnowledgeBaseStudioPage() {
                             <span>🔒 GPU Acceleration Disabled</span>
                           </div>
                           <p className="text-gray-300 leading-tight">
-                            {specs.gpu_disabled_reason || "No dedicated CUDA/ROCm GPU available on this laptop. The system automatically routes all processing through your multi-threaded CPU for maximum stability."}
+                            {specs.gpu_disabled_reason ||
+                              "No dedicated CUDA/ROCm GPU available on this laptop. The system automatically routes all processing through your multi-threaded CPU for maximum stability."}
                           </p>
                         </div>
                       )}
@@ -1199,13 +1295,15 @@ function KnowledgeBaseStudioPage() {
                     <div className="text-[10px] font-mono text-gray-600 bg-gray-100 p-2 rounded-lg border border-gray-300 flex items-start gap-1.5">
                       <span className="text-amber-600 font-bold shrink-0">ℹ️ Hardware Status:</span>
                       <span>
-                        {specs.gpu_disabled_reason || "GPU compute runtime not found. System is safely locked to CPU Multi-Threaded Engine to avoid execution errors."}
+                        {specs.gpu_disabled_reason ||
+                          "GPU compute runtime not found. System is safely locked to CPU Multi-Threaded Engine to avoid execution errors."}
                       </span>
                     </div>
                   ) : (
                     <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-300 flex items-center justify-between">
                       <span>
-                        ✅ <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} ({specs.vram_gb} GB VRAM) is supported and ready for instant activation.
+                        ✅ <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} (
+                        {specs.vram_gb} GB VRAM) is supported and ready for instant activation.
                       </span>
                     </div>
                   )}
@@ -1287,8 +1385,8 @@ function KnowledgeBaseStudioPage() {
                 <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
                   {embeddingModel === "all-MiniLM-L6-v2" && (
                     <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold">
-                      ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB). Recommended
-                      for laptops, CPU mode & rapid indexing.
+                      ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB).
+                      Recommended for laptops, CPU mode & rapid indexing.
                     </span>
                   )}
                   {embeddingModel === "bge-small-en-v1.5" && (
@@ -1348,8 +1446,9 @@ function KnowledgeBaseStudioPage() {
                   onSelectFiles(e.dataTransfer.files);
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
-                  }`}
+                className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${
+                  drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
+                }`}
               >
                 <input
                   ref={fileInputRef}
@@ -1376,10 +1475,11 @@ function KnowledgeBaseStudioPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_#000] ${uploadStatusMsg.startsWith("✓")
+                  className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_#000] ${
+                    uploadStatusMsg.startsWith("✓")
                       ? "bg-emerald-400 text-black"
                       : "bg-red-400 text-black"
-                    }`}
+                  }`}
                 >
                   <span>{uploadStatusMsg}</span>
                   <button
@@ -1458,9 +1558,12 @@ function KnowledgeBaseStudioPage() {
                     >
                       <div className="flex items-center gap-2 min-w-0 pr-2">
                         <span className="bg-black text-[#ffe600] text-[9px] font-black px-1.5 py-0.5 rounded border border-black uppercase shrink-0">
-                          {file.extension ? file.extension.replace('.', '') : 'DOC'}
+                          {file.extension ? file.extension.replace(".", "") : "DOC"}
                         </span>
-                        <span className="truncate text-xs font-bold text-gray-900" title={file.name}>
+                        <span
+                          className="truncate text-xs font-bold text-gray-900"
+                          title={file.name}
+                        >
                           {file.name}
                         </span>
                         <span className="text-[10px] text-gray-500 shrink-0">
@@ -1495,7 +1598,9 @@ function KnowledgeBaseStudioPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-mono font-black text-sm sm:text-base text-black uppercase tracking-tight">
-                      {ragStats.total_vectors > 0 ? "Document Knowledge Base Ready" : "Document Knowledge Base Ready For Ingestion"}
+                      {ragStats.total_vectors > 0
+                        ? "Document Knowledge Base Ready"
+                        : "Document Knowledge Base Ready For Ingestion"}
                     </h3>
                     {ragStats.total_vectors > 0 && (
                       <span className="bg-black text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-black uppercase">
@@ -1595,10 +1700,11 @@ function KnowledgeBaseStudioPage() {
                   <button
                     type="button"
                     onClick={() => setUsePageRange(false)}
-                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${!usePageRange
+                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${
+                      !usePageRange
                         ? "bg-[#ffe600] shadow-[3px_3px_0px_#000] font-black"
                         : "bg-white hover:bg-gray-50 shadow-[1px_1px_0px_#000] font-bold text-gray-700"
-                      }`}
+                    }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-xs font-black">All Pages</span>
@@ -1612,10 +1718,11 @@ function KnowledgeBaseStudioPage() {
                   <button
                     type="button"
                     onClick={() => setUsePageRange(true)}
-                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${usePageRange
+                    className={`p-3 rounded-xl border-2 border-black text-left transition flex flex-col justify-between cursor-pointer ${
+                      usePageRange
                         ? "bg-[#ffe600] shadow-[3px_3px_0px_#000] font-black"
                         : "bg-white hover:bg-gray-50 shadow-[1px_1px_0px_#000] font-bold text-gray-700"
-                      }`}
+                    }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-xs font-black">Custom Page Range</span>
@@ -1652,7 +1759,11 @@ function KnowledgeBaseStudioPage() {
                           min={1}
                           value={startPage}
                           onChange={(e) =>
-                            setStartPage(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))
+                            setStartPage(
+                              e.target.value === ""
+                                ? ""
+                                : Math.max(1, parseInt(e.target.value) || 1),
+                            )
                           }
                           placeholder="1"
                           className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none shadow-[2px_2px_0px_#000]"
@@ -1667,7 +1778,11 @@ function KnowledgeBaseStudioPage() {
                           min={1}
                           value={endPage}
                           onChange={(e) =>
-                            setEndPage(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))
+                            setEndPage(
+                              e.target.value === ""
+                                ? ""
+                                : Math.max(1, parseInt(e.target.value) || 1),
+                            )
                           }
                           placeholder="e.g. 50 (or leave empty)"
                           className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none shadow-[2px_2px_0px_#000]"
@@ -1675,7 +1790,8 @@ function KnowledgeBaseStudioPage() {
                       </div>
                     </div>
                     <p className="text-[10px] text-gray-600 font-bold leading-tight">
-                      💡 InsightRAG will only parse, extract text/tables/visuals, and embed vectors within pages {startPage || 1} to {endPage || "End"}.
+                      💡 InsightRAG will only parse, extract text/tables/visuals, and embed vectors
+                      within pages {startPage || 1} to {endPage || "End"}.
                     </p>
                   </motion.div>
                 )}
