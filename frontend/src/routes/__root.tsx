@@ -63,18 +63,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "InsightRAG" },
+      { title: "InsightRAG — Autonomous Zero-Budget Multimodal Local RAG Factory" },
       {
         name: "description",
         content:
           "Autonomous, zero-budget local Multimodal RAG factory with 100% on-device FAISS vector privacy, Vision OCR, and local compute.",
       },
+      { name: "keywords", content: "InsightRAG, Local RAG, Multimodal RAG, Document Intelligence, FAISS Vector, Ollama, Zero-Budget AI, Private LLM, PDF Vision OCR, AI Knowledge Base" },
       { name: "author", content: "InsightRAG" },
-      { property: "og:title", content: "InsightRAG" },
-      { property: "og:description", content: "Autonomous Multimodal Local RAG Factory" },
+      { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+      { name: "google-site-verification", content: "google3b5551cafe32772d" },
+      { name: "google-site-verification", content: "3b5551cafe32772d" },
+      { property: "og:title", content: "InsightRAG — Autonomous Zero-Budget Multimodal Local RAG Factory" },
+      { property: "og:description", content: "Autonomous Multimodal Local RAG Factory with 100% on-device FAISS vector privacy, Vision OCR, and local compute." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://www.insightrag.tech/" },
+      { property: "og:image", content: "https://www.insightrag.tech/hero_banner.png" },
+      { property: "og:site_name", content: "InsightRAG AI" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "InsightRAG — Autonomous Zero-Budget Multimodal Local RAG Factory" },
+      { name: "twitter:description", content: "Autonomous, zero-budget local Multimodal RAG factory with 100% on-device FAISS vector privacy." },
+      { name: "twitter:image", content: "https://www.insightrag.tech/hero_banner.png" },
     ],
     links: [
+      {
+        rel: "canonical",
+        href: "https://www.insightrag.tech/",
+      },
       {
         rel: "icon",
         type: "image/png",

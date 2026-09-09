@@ -131,7 +131,7 @@ app.include_router(system.router, prefix="/api/v1")
 
 # Serve static frontend bundle for 100% standalone local execution
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 
 # Always prefer dist/client (new Vite TanStack build) over dist root (old build)
 DIST_DIR = Path(ROOT_DIR) / "frontend" / "dist"
@@ -167,6 +167,11 @@ if DIST_CLIENT_DIR.exists():
         if target_file.exists() and target_file.is_file():
             return FileResponse(str(target_file))
 
+        # Check frontend/public directory as well
+        pub_file = Path(ROOT_DIR) / "frontend" / "public" / full_path
+        if pub_file.exists() and pub_file.is_file():
+            return FileResponse(str(pub_file))
+
         # Always serve SPA index.html from dist/client
         index_file = DIST_CLIENT_DIR / "index.html"
         if index_file.exists():
@@ -175,6 +180,27 @@ if DIST_CLIENT_DIR.exists():
         return {"name": settings.app_name, "version": settings.app_version}
 
 else:
+    @app.get("/google3b5551cafe32772d.html")
+    async def serve_google_verify():
+        pub_file = Path(ROOT_DIR) / "frontend" / "public" / "google3b5551cafe32772d.html"
+        if pub_file.exists():
+            return FileResponse(str(pub_file))
+        return PlainTextResponse("google-site-verification: google3b5551cafe32772d.html")
+
+    @app.get("/robots.txt")
+    async def serve_robots():
+        pub_file = Path(ROOT_DIR) / "frontend" / "public" / "robots.txt"
+        if pub_file.exists():
+            return FileResponse(str(pub_file))
+        return PlainTextResponse("User-agent: *\nAllow: /\n")
+
+    @app.get("/sitemap.xml")
+    async def serve_sitemap():
+        pub_file = Path(ROOT_DIR) / "frontend" / "public" / "sitemap.xml"
+        if pub_file.exists():
+            return FileResponse(str(pub_file), media_type="application/xml")
+        return {"error": "Sitemap not found"}
+
     @app.get("/")
     async def root():
         """Root endpoint fallback."""
