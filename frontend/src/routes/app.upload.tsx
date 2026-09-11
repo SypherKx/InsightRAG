@@ -883,11 +883,28 @@ function KnowledgeBaseStudioPage() {
                 <span>
                   CPU: <span className="text-amber-300">{specs.cpu_threads} Threads</span>
                 </span>
+
+                <span className="hidden md:inline-block text-gray-500">|</span>
+                <span className="hidden md:inline-flex items-center gap-1.5">
+                  <span className="text-gray-400">LLM:</span>
+                  <span className="text-[#ffe600] font-black">{selectedLLM}</span>
+                </span>
               </>
             )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            {backendOnline && (
+              <button
+                type="button"
+                onClick={() => setShowModelHubModal(true)}
+                className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-[10px] sm:text-xs px-2.5 py-1 rounded-md border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                title="Browse & Install Open-Source Models"
+              >
+                <Sparkles className="w-3 h-3 text-black" />
+                <span>Model Hub</span>
+              </button>
+            )}
             {backendOnline === false && (
               <button
                 onClick={loadSpecsAndStats}
@@ -1692,176 +1709,56 @@ function KnowledgeBaseStudioPage() {
                 </div>
               )}
 
-              {/* OPEN-SOURCE MODEL HUB & SEAMLESS SWITCHER */}
-              <div className="space-y-3 md:col-span-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-black pb-2">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-black" />
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-black font-mono uppercase tracking-wide text-black">
-                        Open-Source Model Hub & Active Engine
-                      </h4>
-                      <p className="text-[10px] font-mono text-gray-600">
-                        Direct 1-click install top open-source models & seamlessly switch active LLM on the fly
-                      </p>
-                    </div>
+              {/* LOCAL LLM MODEL (OLLAMA) - CLEAN & AESTHETIC */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                    <Bot className="w-3.5 h-3.5 text-black" />
+                    <span>LOCAL LLM MODEL (OLLAMA)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelHubModal(true)}
+                    className="text-[10px] font-mono font-black text-black bg-[#ffe600] hover:bg-yellow-400 px-2.5 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1 cursor-pointer active:translate-x-[1px] active:translate-y-[1px]"
+                    title="Open Model Hub to install or switch models"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Model Hub</span>
+                  </button>
+                </div>
+
+                <select
+                  value={selectedLLM}
+                  onChange={(e) => handleSwitchModel(e.target.value)}
+                  disabled={processingMode !== "local"}
+                  className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
+                >
+                  {specs.installed_models && specs.installed_models.length > 0 ? (
+                    specs.installed_models.map((m: string) => (
+                      <option key={m} value={m}>
+                        💻 {m} {m === "qwen2.5vl:3b" ? "🖼️ (Vision & OCR SOTA)" : m === "llama3.2:3b" ? "⚡ (Fast & Lightweight)" : ""}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="llama3.2:3b">💻 llama3.2:3b (Fast & Lightweight)</option>
+                  )}
+                </select>
+
+                <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-300">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="font-bold text-black truncate">{selectedLLM}</span>
+                    <span className="text-gray-500 truncate hidden xs:inline">
+                      • {CURATED_MODELS.find((m) => m.id === selectedLLM)?.tagline || "Local Private Inference"}
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowModelHubModal(true)}
-                    className="bg-[#ffe600] hover:bg-yellow-400 text-black font-mono font-black text-xs px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 self-start sm:self-auto cursor-pointer active:translate-x-[1px] active:translate-y-[1px]"
+                    className="text-[10px] font-black underline text-blue-700 hover:text-blue-900 shrink-0 ml-1.5 cursor-pointer"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Browse All Models</span>
+                    + Install
                   </button>
-                </div>
-
-                {/* ACTIVE MODEL STATUS CARD & QUICK SWITCHER */}
-                <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-                      <span className="text-[10px] font-mono font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300">
-                        Active Query Model
-                      </span>
-                      {CURATED_MODELS.find((m) => m.id === selectedLLM)?.badge && (
-                        <span
-                          className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md border border-black ${
-                            CURATED_MODELS.find((m) => m.id === selectedLLM)?.badgeColor || "bg-gray-200 text-black"
-                          }`}
-                        >
-                          {CURATED_MODELS.find((m) => m.id === selectedLLM)?.badge}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-base sm:text-lg font-black font-mono text-black">
-                      {selectedLLM}
-                    </div>
-                    <div className="text-[11px] font-mono text-gray-600">
-                      {CURATED_MODELS.find((m) => m.id === selectedLLM)?.tagline ||
-                        "Locally running via Ollama daemon. Zero cloud API costs & complete data privacy."}
-                    </div>
-                  </div>
-
-                  {/* Quick Switch Dropdown & Action */}
-                  <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black font-mono uppercase text-gray-500 block">
-                        Quick Switch Installed
-                      </label>
-                      <select
-                        value={selectedLLM}
-                        onChange={(e) => handleSwitchModel(e.target.value)}
-                        disabled={processingMode !== "local"}
-                        className="w-full sm:w-56 bg-gray-50 border-2 border-black rounded-xl p-2 font-mono text-xs font-bold shadow-[2px_2px_0px_#000] cursor-pointer focus:outline-none"
-                      >
-                        {specs.installed_models && specs.installed_models.length > 0 ? (
-                          specs.installed_models.map((m: string) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))
-                        ) : (
-                          <option value="llama3.2:3b">llama3.2:3b</option>
-                        )}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CURATED MODELS FAST ACCESS TILES */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                  {CURATED_MODELS.map((model) => {
-                    const isInstalled = isModelInstalled(model.id);
-                    const isActive = selectedLLM === model.id;
-                    const isPulling = pullingModelId === model.id;
-                    const progress = pullProgress[model.id] || 0;
-                    const statusText = pullStatusText[model.id] || "";
-
-                    return (
-                      <div
-                        key={model.id}
-                        className={`border-2 border-black rounded-2xl p-3.5 flex flex-col justify-between transition-all shadow-[3px_3px_0px_#000] ${
-                          isActive
-                            ? "bg-emerald-50/80 ring-2 ring-emerald-500"
-                            : "bg-white hover:bg-gray-50/80"
-                        }`}
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-1">
-                            <span
-                              className={`text-[9px] font-mono font-black px-2 py-0.5 rounded-md border border-black ${model.badgeColor}`}
-                            >
-                              {model.badge}
-                            </span>
-                            <span className="text-[10px] font-mono font-black text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">
-                              {model.size}
-                            </span>
-                          </div>
-
-                          <div>
-                            <div className="font-mono font-black text-xs text-black flex items-center gap-1.5">
-                              <span>{model.name}</span>
-                              {model.isVisionCapable && (
-                                <span title="Multimodal Vision & OCR Capable" className="text-xs">
-                                  🖼️
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[10px] font-mono text-gray-500 line-clamp-1 font-semibold">
-                              {model.tagline}
-                            </div>
-                          </div>
-
-                          <p className="text-[10px] font-mono text-gray-600 line-clamp-2 leading-relaxed">
-                            {model.description}
-                          </p>
-                        </div>
-
-                        {/* Card Action / Progress */}
-                        <div className="mt-3 pt-2 border-t border-gray-200">
-                          {isPulling ? (
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-[10px] font-mono font-bold text-black">
-                                <span className="truncate max-w-[140px]">{statusText || "Pulling..."}</span>
-                                <span>{progress}%</span>
-                              </div>
-                              <div className="w-full bg-gray-200 h-2.5 rounded-full border border-black overflow-hidden">
-                                <div
-                                  className="bg-[#ffe600] h-full transition-all duration-200"
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                            </div>
-                          ) : isActive ? (
-                            <div className="flex items-center justify-center gap-1.5 bg-emerald-400 text-black py-1.5 rounded-xl border-2 border-black font-mono font-black text-[11px] shadow-[1px_1px_0px_#000]">
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              <span>ACTIVE MODEL</span>
-                            </div>
-                          ) : isInstalled ? (
-                            <button
-                              type="button"
-                              onClick={() => handleSwitchModel(model.id)}
-                              className="w-full bg-black hover:bg-gray-800 text-white py-1.5 rounded-xl border-2 border-black font-mono font-black text-[11px] shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
-                            >
-                              <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
-                              <span>Switch to Model</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleInstallModel(model.id)}
-                              disabled={pullingModelId !== null}
-                              className="w-full bg-[#ffe600] hover:bg-yellow-400 disabled:opacity-50 text-black py-1.5 rounded-xl border-2 border-black font-mono font-black text-[11px] shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>1-Click Install</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
 
