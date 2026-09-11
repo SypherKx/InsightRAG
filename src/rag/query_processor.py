@@ -267,11 +267,12 @@ class QueryProcessor:
 
         try:
             import httpx
+            use_model = "llama3.2:3b" if ("vl" in str(model).lower() or "vision" in str(model).lower()) else model
             with httpx.Client(timeout=timeout_seconds) as client:
                 res = client.post(
                     f"{ollama_url.rstrip('/')}/api/generate",
                     json={
-                        "model": model,
+                        "model": use_model,
                         "prompt": prompt,
                         "stream": False,
                         "keep_alive": "10m",
@@ -321,27 +322,40 @@ class QueryProcessor:
         q_lower = current_query.lower()
         words = set(re.findall(r'\b\w+\b', q_lower))
 
-        # Check if query contains ambiguous follow-up phrasing
+        # Check if query contains ambiguous follow-up phrasing or referential visual follow-up
         has_pronoun = bool(words.intersection(cls.PRONOUNS))
-        is_short_followup = len(words) <= 6 and ("why" in words or "how" in words or "what about" in q_lower or has_pronoun)
+        is_visual_followup = bool(re.search(
+            r'\b(the\s+(?:photo|image|picture|diagram|figure|chart|graph|plot|table|schematic)|'
+            r'(?:show|send|provide|give|display)\s+(?:me\s+)?(?:the\s+)?(?:photo|image|picture|diagram|figure|chart|graph|plot|it|them))\b',
+            q_lower
+        ))
+        is_short_followup = len(words) <= 7 and ("why" in words or "how" in words or "what about" in q_lower or has_pronoun or is_visual_followup)
 
-        if not (has_pronoun or is_short_followup):
+        if not (has_pronoun or is_short_followup or is_visual_followup):
             return current_query, False
 
-        # Extract dominant topic entity from recent history
+        # Extract dominant topic entity and antecedent page from recent history
         antecedent_topic = ""
+        antecedent_page = None
         for turn in reversed(history[-4:]):
             text = (turn.get("text") or turn.get("content") or "").strip()
-            if turn.get("role") == "user" and text and text != current_query:
-                # Extract key phrases from previous user question
-                clean = re.sub(r'^(what is|explain|tell me about|how does|why is|describe)\s+', '', text, flags=re.IGNORECASE).strip('?. ')
-                if len(clean) > 2:
+            if not text or text == current_query:
+                continue
+            if antecedent_page is None:
+                p = cls.extract_target_page(text)
+                if p is not None:
+                    antecedent_page = p
+            if not antecedent_topic and turn.get("role") == "user":
+                clean = re.sub(r'^(what is|explain|tell me about|how does|why is|describe|send me|provide me|show me)\s+', '', text, flags=re.IGNORECASE).strip('?. ')
+                clean = re.sub(r'\b(?:on\s+)?(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*\d+\b', '', clean, flags=re.IGNORECASE).strip('?. ')
+                if len(clean) > 2 and clean.lower() not in q_lower:
                     antecedent_topic = clean
-                    break
 
-        if antecedent_topic:
-            # Construct expanded search query
-            rewritten = f"{current_query.rstrip('?.')} regarding {antecedent_topic}"
+        page_suffix = f" on page {antecedent_page}" if (antecedent_page and cls.extract_target_page(current_query) is None) else ""
+        topic_suffix = f" regarding {antecedent_topic}" if antecedent_topic and antecedent_topic.lower() not in q_lower else ""
+
+        if page_suffix or topic_suffix:
+            rewritten = f"{current_query.rstrip('?.')}{page_suffix}{topic_suffix}".strip()
             logger.info(f"Conversational query rewritten: '{current_query}' -> '{rewritten}'")
             return rewritten, True
 

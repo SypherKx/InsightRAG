@@ -498,11 +498,11 @@ async def query_rag_stream(request: RAGQueryRequest):
                 images=request.images,
             ):
                 event_type = event_item.get("event", "message")
-                payload = json.dumps(event_item.get("data", {}))
+                payload = json.dumps(event_item.get("data", {}), default=str)
                 yield f"event: {event_type}\ndata: {payload}\n\n"
         except Exception as e:
             logger.exception(f"SSE stream error: {e}")
-            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+            yield f"event: error\ndata: {json.dumps({'error': str(e)}, default=str)}\n\n"
 
     return StreamingResponse(
         sse_event_generator(),

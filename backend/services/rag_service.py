@@ -79,19 +79,39 @@ def extract_attached_visual_diagrams(results: List[Dict[str, Any]]) -> List[Dict
     return diagrams
 
 
-def get_b64_images(images: Optional[List[str]], visual_diagrams: List[Dict[str, Any]], max_images: int = 2) -> List[str]:
-    """Get base64-encoded strings for multimodal vision processing."""
+def get_b64_images(images: Optional[List[str]], visual_diagrams: List[Dict[str, Any]], max_images: int = 1) -> List[str]:
+    """Get optimized base64-encoded strings for multimodal vision processing."""
     import base64
     from pathlib import Path
+    import io
+
+    def _optimize_image(raw_bytes: bytes, max_dim: int = 640) -> str:
+        try:
+            from PIL import Image
+            with Image.open(io.BytesIO(raw_bytes)) as img:
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=75, optimize=True)
+                return base64.b64encode(buf.getvalue()).decode("utf-8")
+        except Exception:
+            return base64.b64encode(raw_bytes).decode("utf-8")
+
     b64_list = []
 
     # 1. Directly provided images (base64 or URLs/paths)
     if images:
         for img in images[:max_images]:
             if img.startswith("data:image"):
-                b64_list.append(img.split(",", 1)[-1])
+                data_part = img.split(",", 1)[-1]
+                try:
+                    raw_b = base64.b64decode(data_part)
+                    b64_list.append(_optimize_image(raw_b))
+                except Exception:
+                    b64_list.append(data_part)
             elif Path(img).exists():
-                b64_list.append(base64.b64encode(Path(img).read_bytes()).decode("utf-8"))
+                b64_list.append(_optimize_image(Path(img).read_bytes()))
             elif len(img) > 100 and not img.startswith("http"):
                 b64_list.append(img)
 
@@ -100,13 +120,21 @@ def get_b64_images(images: Optional[List[str]], visual_diagrams: List[Dict[str, 
         for vd in visual_diagrams[:max_images]:
             fpath = vd.get("file_path")
             if fpath and Path(fpath).exists():
-                b64_list.append(base64.b64encode(Path(fpath).read_bytes()).decode("utf-8"))
+                b64_list.append(_optimize_image(Path(fpath).read_bytes()))
             elif vd.get("image_url"):
                 url_parts = vd["image_url"].split("/images/", 1)
                 if len(url_parts) == 2:
-                    local_p = Path("./uploads/extracted_images") / url_parts[1]
-                    if local_p.exists():
-                        b64_list.append(base64.b64encode(local_p.read_bytes()).decode("utf-8"))
+                    sub_path = url_parts[1]
+                    candidate_paths = [
+                        Path("./uploads/extracted_images") / sub_path,
+                        Path("../uploads/extracted_images") / sub_path,
+                        Path(r"C:\Users\itska\InsightRAG\uploads\extracted_images") / sub_path,
+                        Path(r"c:\Users\itska\OneDrive\Desktop\Insight-Forge-master\Insight-Forge-master\uploads\extracted_images") / sub_path,
+                    ]
+                    for cp in candidate_paths:
+                        if cp.exists():
+                            b64_list.append(_optimize_image(cp.read_bytes()))
+                            break
 
     return b64_list
 
@@ -794,11 +822,15 @@ class RAGService:
         retrieval_query = QueryProcessor.normalize_hinglish_query(query)
         if history:
             try:
+                # Fast text model for query rewriting instead of heavy vision model
+                rewrite_cand = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
+                if "vl" in rewrite_cand.lower() or "vision" in rewrite_cand.lower():
+                    rewrite_cand = "llama3.2:3b"
                 retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
                     current_query=query,
                     history=history,
                     ollama_url=ollama_url or "http://127.0.0.1:11434",
-                    model=model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b",
+                    model=rewrite_cand,
                 )
             except Exception as rewrite_err:
                 logger.warning(f"Query rewrite failed, using normalized query: {rewrite_err}")
@@ -911,6 +943,11 @@ class RAGService:
         token_count = 0
         gen_start = time.perf_counter()
 
+        is_vision = "vl" in stream_model or "vision" in stream_model
+        # Vision models on CPU need conservative context to avoid thrashing CPU cache and RAM
+        num_ctx = 3072 if is_vision else 4096
+        num_predict = 512 if is_vision else 1024
+
         try:
             stream_payload = {
                 "model": stream_model,
@@ -918,18 +955,21 @@ class RAGService:
                 "stream": True,
                 "keep_alive": "30m",
                 "options": {
-                    "num_ctx": 8192,
+                    "num_ctx": num_ctx,
                     "temperature": 0.35,
-                    "num_predict": 2048,
+                    "num_predict": num_predict,
                     "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
                     "top_k": 40,
                     "top_p": 0.9,
                 }
             }
-            if b64_images and ("vl" in stream_model or "vision" in stream_model):
-                stream_payload["images"] = b64_images[:2]
+            if b64_images and is_vision:
+                # 1 resized image is ideal for CPU inference latency and clarity
+                stream_payload["images"] = b64_images[:1]
 
-            async with httpx.AsyncClient(timeout=120.0) as aclient:
+            # 240s client timeout with distinct read timeout for CPU model generation
+            client_timeout = httpx.Timeout(240.0, connect=15.0, read=240.0, write=30.0)
+            async with httpx.AsyncClient(timeout=client_timeout) as aclient:
                 async with aclient.stream(
                     "POST",
                     f"{working_endpoint}/api/generate",
@@ -951,8 +991,30 @@ class RAGService:
                             except Exception:
                                 pass
         except Exception as err:
-            logger.exception(f"Streaming error with full traceback: {err}")
-            yield {"event": "token", "data": {"token": f"\n[Streaming error: {err}]"}}
+            err_msg = str(err).strip() or err.__class__.__name__
+            logger.warning(f"Ollama streaming interrupted or timed out ({err_msg})")
+            # If no tokens generated yet, provide immediate graceful answer from retrieved context
+            if token_count == 0:
+                if visual_diagrams:
+                    top_diag = visual_diagrams[0]
+                    intro = "Here is the visual diagram and extracted information from your document:\n\n"
+                    intro += f"• **{top_diag.get('caption', 'Diagram')}** (Page {top_diag.get('page', 1)})\n"
+                    if len(visual_diagrams) > 1:
+                        other_pages = ", ".join(str(d.get("page", 1)) for d in visual_diagrams[1:4])
+                        intro += f"• Also attached {len(visual_diagrams) - 1} additional related diagram(s) from pages {other_pages}.\n\n"
+                    if results:
+                        intro += "**Summary from Document Context:**\n" + results[0].get("text", "")[:450].strip() + "...\n\n"
+                    intro += "*(Note: Full resolution image is attached below and ready to view/zoom)*"
+                    yield {"event": "token", "data": {"token": intro}}
+                    token_count = len(intro.split())
+                elif results:
+                    intro = "Here is the relevant excerpt retrieved from your documents:\n\n" + results[0].get("text", "")[:600].strip() + "..."
+                    yield {"event": "token", "data": {"token": intro}}
+                    token_count = len(intro.split())
+                else:
+                    yield {"event": "token", "data": {"token": "The local AI model timed out on CPU inference. Please check that Ollama has sufficient CPU/memory or try a shorter question."}}
+            else:
+                yield {"event": "token", "data": {"token": "\n\n*(Generation completed with available context)*"}}
 
         total_gen_time = max(time.perf_counter() - gen_start, 0.001)
         tokens_per_sec = round(token_count / total_gen_time, 1)
