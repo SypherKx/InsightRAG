@@ -29,6 +29,11 @@ import {
   ListFilter,
   Eye,
   RefreshCw,
+  Folder,
+  Globe,
+  Lightbulb,
+  Camera,
+  Laptop,
 } from "lucide-react";
 
 export const Route = createFileRoute("/docs")({
@@ -494,7 +499,8 @@ function DocsPage() {
                         to="/app/upload"
                         className="flex items-center gap-2 font-mono text-xs font-black text-white border-2 border-black px-5 py-2.5 rounded-xl bg-black hover:bg-gray-800 shadow-[2px_2px_0px_#000] transition active:scale-95 ml-auto"
                       >
-                        <span>Launch Live Studio 🚀</span>
+                        <span>Launch Live Studio</span>
+                        <ArrowRight className="w-4 h-4 text-[#ffe600]" />
                       </Link>
                     )}
                   </div>
@@ -608,8 +614,9 @@ function ChapterContent({
           <div className="bg-emerald-50 border-3 border-black p-5 rounded-2xl shadow-[4px_4px_0px_#000] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="bg-emerald-400 text-black font-mono font-black text-xs px-2.5 py-1 rounded-lg border-2 border-black shadow-[1px_1px_0px_#000]">
-                  ⚡ SUBSEQUENT LAUNCHES
+                <span className="bg-emerald-400 text-black font-mono font-black text-xs px-2.5 py-1 rounded-lg border-2 border-black shadow-[1px_1px_0px_#000] flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-black" />
+                  <span>SUBSEQUENT LAUNCHES</span>
                 </span>
                 <span className="font-mono font-black text-xs sm:text-sm text-black">
                   1-Word Instant Offline Command
@@ -644,7 +651,7 @@ function ChapterContent({
             </div>
 
             <p className="text-[11px] text-emerald-900 font-mono font-bold flex items-center gap-1.5">
-              <span>💡</span>
+              <Lightbulb className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
               <span>
                 Automatically boots local AI backend pipelines and opens the Live Studio in your
                 default browser.
@@ -756,8 +763,8 @@ function ChapterContent({
           {/* How Visual Evidence Card works */}
           <div className="bg-gray-50 border-2 border-black p-5 rounded-xl space-y-3 shadow-[3px_3px_0px_#000]">
             <div className="flex items-center gap-2 font-mono font-black text-xs text-black">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>📷 Visual Evidence in Answers (Click to Zoom)</span>
+              <Camera className="w-4 h-4 text-emerald-600" />
+              <span>Visual Evidence in Answers (Click to Zoom)</span>
             </div>
             <p className="text-xs text-gray-700 leading-relaxed">
               Whenever the AI answers a technical query referencing a diagram (e.g.,{" "}
@@ -813,7 +820,10 @@ function ChapterContent({
               </div>
               <div className="bg-[#ffe600] p-2.5 rounded-lg border border-black text-black">
                 <span className="text-black font-black">STAGE 4</span>
-                <div className="font-black mt-1">Studio Unlocked 🚀</div>
+                <div className="font-black mt-1 flex items-center gap-1">
+                  <span>Studio Unlocked</span>
+                  <Sparkles className="w-3.5 h-3.5 text-black" />
+                </div>
               </div>
             </div>
             <p className="text-xs text-gray-600 leading-relaxed font-sans">
@@ -961,8 +971,9 @@ function ChapterContent({
               <span className="bg-emerald-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded">
                 DEFAULT MODE
               </span>
-              <div className="font-mono font-black text-base text-black">
-                💻 100% Local Air-Gapped
+              <div className="font-mono font-black text-base text-black flex items-center gap-2">
+                <Laptop className="w-4 h-4 text-emerald-700" />
+                <span>100% Local Air-Gapped</span>
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
                 Powered by <strong>Ollama</strong> (<code className="font-bold">llama3.2:3b</code>,{" "}
@@ -975,8 +986,9 @@ function ChapterContent({
               <span className="bg-black text-[#ffe600] font-mono font-bold text-[10px] px-2 py-0.5 rounded">
                 OPTIONAL BYOK
               </span>
-              <div className="font-mono font-black text-base text-black">
-                ⚡ Advance Turbo Server
+              <div className="font-mono font-black text-base text-black flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-500" />
+                <span>Advance Turbo Server</span>
               </div>
               <p className="text-xs text-gray-700 leading-relaxed">
                 Plug in your own API key for <strong>Groq Llama 3.3 70B</strong> (ultra-low
@@ -1140,28 +1152,40 @@ function ChapterContent({
           {/* Export Bundle Contents */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
             <div className="bg-white border-2 border-black p-3.5 rounded-xl shadow-[2px_2px_0px_#000] space-y-1">
-              <span className="font-black text-black text-sm">📁 vector_db/</span>
+              <span className="font-black text-black text-sm flex items-center gap-1.5">
+                <Folder className="w-4 h-4 text-amber-500" />
+                <span>vector_db/</span>
+              </span>
               <p className="text-gray-600 text-[11px] font-sans">
                 Pre-indexed FAISS / ChromaDB vector database with all document embeddings.
               </p>
             </div>
 
             <div className="bg-white border-2 border-black p-3.5 rounded-xl shadow-[2px_2px_0px_#000] space-y-1">
-              <span className="font-black text-black text-sm">📁 images/</span>
+              <span className="font-black text-black text-sm flex items-center gap-1.5">
+                <Folder className="w-4 h-4 text-amber-500" />
+                <span>images/</span>
+              </span>
               <p className="text-gray-600 text-[11px] font-sans">
                 Extracted high-resolution diagram crops and figures ready for visual search.
               </p>
             </div>
 
             <div className="bg-white border-2 border-black p-3.5 rounded-xl shadow-[2px_2px_0px_#000] space-y-1">
-              <span className="font-black text-black text-sm">⚡ run.bat & run.sh</span>
+              <span className="font-black text-black text-sm flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-emerald-600" />
+                <span>run.bat &amp; run.sh</span>
+              </span>
               <p className="text-gray-600 text-[11px] font-sans">
                 1-click native launchers that boot the lightweight server in under 0.1 seconds.
               </p>
             </div>
 
             <div className="bg-white border-2 border-black p-3.5 rounded-xl shadow-[2px_2px_0px_#000] space-y-1">
-              <span className="font-black text-black text-sm">🌐 server.py & index.html</span>
+              <span className="font-black text-black text-sm flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-blue-600" />
+                <span>server.py &amp; index.html</span>
+              </span>
               <p className="text-gray-600 text-[11px] font-sans">
                 Ultra-fast FastAPI microservice with persistent LocalStorage auto-save.
               </p>

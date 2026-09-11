@@ -533,7 +533,7 @@ class RAGService:
                                         data = g_resp.json()
                                         answer = data["choices"][0]["message"]["content"].strip()
                                         used_llm = True
-                                        llm_model = f"⚡ Turbo Cloud ({g_model})"
+                                        llm_model = f"Turbo Cloud ({g_model})"
 
                         # 1B. Google Gemini Cloud Inference
                         if not answer and (model.startswith("gemini") or "gemini" in processing_mode):
@@ -548,7 +548,7 @@ class RAGService:
                                         data = gem_resp.json()
                                         answer = data["candidates"][0]["content"]["parts"][0]["text"].strip()
                                         used_llm = True
-                                        llm_model = "⚡ Gemini 1.5 Flash (Cloud)"
+                                        llm_model = "Gemini 1.5 Flash (Cloud)"
 
                         # 1C. OpenAI GPT Cloud Inference
                         if not answer and (model.startswith("openai") or "openai" in processing_mode):
@@ -568,7 +568,7 @@ class RAGService:
                                         data = oai_resp.json()
                                         answer = data["choices"][0]["message"]["content"].strip()
                                         used_llm = True
-                                        llm_model = "⚡ OpenAI GPT-4o-mini (Cloud)"
+                                        llm_model = "OpenAI GPT-4o-mini (Cloud)"
                     except Exception as cloud_err:
                         logger.exception(f"Cloud turbo processing failed, falling back to local: {cloud_err}")
                     finally:
@@ -647,17 +647,17 @@ class RAGService:
                                 used_llm = True
                                 is_vision_used = "vl" in successful_model or "vision" in successful_model
                                 tag = "Local Vision" if is_vision_used else "Local Ollama"
-                                llm_model = f"💻 {tag} ({successful_model})"
+                                llm_model = f"[Local] {tag} ({successful_model})"
                                 tokens_generated = data.get("eval_count", 0)
                                 eval_duration = data.get("eval_duration", 0)
                                 if eval_duration > 0:
                                     tokens_per_sec = round((tokens_generated / (eval_duration / 1e9)), 1)
                             elif results:
                                 answer = (
-                                    f"💻 [Local Mode Active]\n\n"
+                                    f"[Local Mode Active]\n\n"
                                     f"Here are the top retrieved passages from your indexed documents:\n\n"
                                     + "\n\n".join(
-                                        f"📄 [{i+1}] {r.get('text', '')[:500]}"
+                                        f"[{i+1}] {r.get('text', '')[:500]}"
                                         for i, r in enumerate(results[:3])
                                     )
                                 )
@@ -665,7 +665,7 @@ class RAGService:
                         logger.exception(f"Local Ollama generation failed: {ollama_err}")
                         if results:
                             answer = (
-                                f"📄 Relevant passages from your local documents:\n\n"
+                                f"Relevant passages from your local documents:\n\n"
                                 + "\n\n".join(
                                     f"[{i+1}] {r.get('text', '')[:500]}"
                                     for i, r in enumerate(results[:3])
@@ -971,7 +971,7 @@ class RAGService:
             "event": "done",
             "data": {
                 "metrics": metrics,
-                "llm_model": f"💻 {tag} ({stream_model})"
+                "llm_model": f"[Local] {tag} ({stream_model})"
             }
         }
 

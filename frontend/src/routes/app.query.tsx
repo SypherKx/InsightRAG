@@ -321,8 +321,9 @@ function QueryPage() {
 
                     <div className="pt-2 flex items-center justify-between text-xs text-[#b2b6bd] border-t border-[rgba(178,182,189,0.12)]">
                       <span>Grounded strictly on retrieved context</span>
-                      <span className="text-[11px] font-mono text-[#00bcff]">
-                        {usedLlm ? "✓ Live Ollama Inference" : "FAISS Context Fallback"}
+                      <span className="text-[11px] font-mono text-[#00bcff] flex items-center gap-1">
+                        {usedLlm && <CheckCircle2 className="w-3 h-3 text-[#00bcff]" />}
+                        <span>{usedLlm ? "Live Ollama Inference" : "FAISS Context Fallback"}</span>
                       </span>
                     </div>
                   </div>

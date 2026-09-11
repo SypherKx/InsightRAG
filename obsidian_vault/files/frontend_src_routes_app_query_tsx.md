@@ -23,7 +23,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.query.tsx (396 lines)
+Module: frontend\src\routes\app.query.tsx (397 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
 Exports: System Execution

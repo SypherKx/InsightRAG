@@ -28,6 +28,17 @@ import {
   CheckCheck,
   RefreshCw,
   SlidersHorizontal,
+  ShieldCheck,
+  Shield,
+  Info,
+  Lock,
+  Monitor,
+  Brain,
+  Scale,
+  AlertTriangle,
+  Camera,
+  Image as ImageIcon,
+  Terminal,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -58,7 +69,7 @@ const EMBEDDING_OPTIONS = [
     id: "all-MiniLM-L6-v2",
     label: "all-MiniLM-L6-v2",
     fullName: "sentence-transformers/all-MiniLM-L6-v2",
-    speedTier: "⚡ ULTRA-FAST (5x)",
+    speedTier: "ULTRA-FAST (5x)",
     speedBadgeColor: "bg-emerald-400 text-black",
     ramReq: "4GB+ RAM (80MB Model)",
     hardwareLabel: "CPU & Laptop Friendly",
@@ -69,7 +80,7 @@ const EMBEDDING_OPTIONS = [
     id: "bge-small-en-v1.5",
     label: "bge-small-en-v1.5",
     fullName: "BAAI/bge-small-en-v1.5",
-    speedTier: "⚖️ BALANCED (3x)",
+    speedTier: "BALANCED (3x)",
     speedBadgeColor: "bg-sky-400 text-black",
     ramReq: "6GB+ RAM (130MB Model)",
     hardwareLabel: "Standard Workstations",
@@ -80,7 +91,7 @@ const EMBEDDING_OPTIONS = [
     id: "bge-base-en-v1.5",
     label: "bge-base-en-v1.5",
     fullName: "BAAI/bge-base-en-v1.5",
-    speedTier: "🧠 SOTA HIGH PRECISION",
+    speedTier: "SOTA HIGH PRECISION",
     speedBadgeColor: "bg-[#ffe600] text-black",
     ramReq: "8GB-16GB RAM / GPU (430MB Model)",
     hardwareLabel: "High-Accuracy Research",
@@ -91,7 +102,7 @@ const EMBEDDING_OPTIONS = [
     id: "nomic-embed-text",
     label: "nomic-embed-text",
     fullName: "nomic-embed-text",
-    speedTier: "🚀 OLLAMA NATIVE 8K",
+    speedTier: "OLLAMA NATIVE 8K",
     speedBadgeColor: "bg-purple-400 text-black",
     ramReq: "8GB+ RAM (270MB Model)",
     hardwareLabel: "Ollama Long-Context",
@@ -121,7 +132,7 @@ export const CURATED_MODELS: CuratedModel[] = [
       "Deep visual reasoning for document diagrams, figures, flowchart OCR, architecture schematics and tables.",
     size: "3.2 GB",
     category: "multimodal",
-    badge: "🖼️ VISION & OCR SOTA",
+    badge: "VISION & OCR SOTA",
     badgeColor: "bg-purple-400 text-black",
     isVisionCapable: true,
   },
@@ -133,7 +144,7 @@ export const CURATED_MODELS: CuratedModel[] = [
       "Engineered for instantaneous local generation, dense semantic synthesis, and zero-latency Q&A.",
     size: "2.0 GB",
     category: "fast",
-    badge: "⚡ FAST & EFFICIENT",
+    badge: "FAST & EFFICIENT",
     badgeColor: "bg-emerald-400 text-black",
   },
   {
@@ -144,7 +155,7 @@ export const CURATED_MODELS: CuratedModel[] = [
       "Unmatched coding precision, mathematical derivation, and structured reasoning in compact size.",
     size: "1.9 GB",
     category: "reasoning",
-    badge: "🧠 REASONING & CODE",
+    badge: "REASONING & CODE",
     badgeColor: "bg-[#ffe600] text-black",
   },
   {
@@ -155,7 +166,7 @@ export const CURATED_MODELS: CuratedModel[] = [
       "Deep step-by-step thinking process, ideal for complex logic, root-cause queries, and analytical breakdown.",
     size: "1.1 GB",
     category: "reasoning",
-    badge: "💡 REASONING ENGINE",
+    badge: "REASONING ENGINE",
     badgeColor: "bg-sky-400 text-black",
   },
   {
@@ -166,7 +177,7 @@ export const CURATED_MODELS: CuratedModel[] = [
       "Massive 128,000 token context window support. Perfect for cross-document synthesis and long manuals.",
     size: "2.2 GB",
     category: "standard",
-    badge: "🔬 128K LONG-CONTEXT",
+    badge: "128K LONG-CONTEXT",
     badgeColor: "bg-amber-400 text-black",
   },
   {
@@ -177,7 +188,7 @@ export const CURATED_MODELS: CuratedModel[] = [
       "High-parameter density instruction tuned model with superior prose quality and nuanced fact retrieval.",
     size: "4.1 GB",
     category: "standard",
-    badge: "🛡️ HEAVYWEIGHT SOTA",
+    badge: "HEAVYWEIGHT SOTA",
     badgeColor: "bg-pink-400 text-black",
   },
 ];
@@ -187,37 +198,37 @@ const PARSING_STAGES = [
     step: 0,
     title: "Document Buffer & Format Validation",
     desc: "Validating file headers (PDF/DOCX/Images), parsing byte streams & initializing on-device memory pipelines.",
-    icon: "📄",
+    icon: "01",
   },
   {
     step: 1,
     title: "Deep Page Rasterization & Scanned Text OCR",
     desc: "Extracting complete native typography, boundary coordinates, and running high-res OCR on scanned text.",
-    icon: "🔍",
+    icon: "02",
   },
   {
     step: 2,
     title: "Tabular Structure Extraction & Grid Conversion",
     desc: "Detecting tables via PyMuPDF find_tables and converting them into clean structured Markdown grids.",
-    icon: "📊",
+    icon: "03",
   },
   {
     step: 3,
     title: "Computer Vision & Diagram Edge Inspection",
     desc: "Extracting embedded figures, computing Sobel edge density, and classifying charts, plots, and schematics.",
-    icon: "📐",
+    icon: "04",
   },
   {
     step: 4,
     title: "Multimodal Contextualization & Figure Captioning",
     desc: "Associating nearby captions with diagrams and generating ROI coordinates for high-res visual retrieval.",
-    icon: "🖼️",
+    icon: "05",
   },
   {
     step: 5,
     title: "Semantic Chunking & FAISS Vector Indexing",
     desc: "Compiling text and visual chunks into dense vector embeddings and persisting to the FAISS index.",
-    icon: "⚡",
+    icon: "06",
   },
 ];
 
@@ -360,7 +371,7 @@ function KnowledgeBaseStudioPage() {
     if (targetMode === activeHardwareMode || switchingHardware) return;
     if (targetMode === "gpu" && !specs.has_gpu_access) {
       setHardwareNotice(
-        `⚠️ Cannot switch to GPU: ${specs.gpu_disabled_reason || "No compatible CUDA/ROCm GPU available on this laptop."}`,
+        `Cannot switch to GPU: ${specs.gpu_disabled_reason || "No compatible CUDA/ROCm GPU available on this laptop."}`,
       );
       setTimeout(() => setHardwareNotice(null), 6000);
       return;
@@ -377,8 +388,8 @@ function KnowledgeBaseStudioPage() {
       }));
       setHardwareNotice(
         targetMode === "gpu"
-          ? `🚀 Shifted to GPU! Backend terminal log printed: Ollama layers (99) and embeddings accelerated on ${specs.gpu_name}.`
-          : `💻 Shifted to CPU Standard! Backend terminal log printed: 100% CPU multi-threaded parallel execution active.`,
+          ? `Shifted to GPU Acceleration! Ollama layers and embeddings accelerated on ${specs.gpu_name}.`
+          : `Shifted to CPU Standard! 100% CPU multi-threaded parallel execution active.`,
       );
       setTimeout(() => setHardwareNotice(null), 7000);
     } catch (err: any) {
@@ -413,7 +424,7 @@ function KnowledgeBaseStudioPage() {
   const startUpload = async (fileList: File[]) => {
     if (backendOnline === false) {
       setUploadStatusMsg(
-        "⚠️ Local RAG Engine is offline. InsightRAG is 100% on-device for total privacy — please launch the engine via run.bat or install.ps1 before uploading files.",
+        "Local RAG Engine is offline. InsightRAG is 100% on-device for total privacy — please launch the engine via run.bat or install.ps1 before uploading files.",
       );
       return;
     }
@@ -457,7 +468,7 @@ function KnowledgeBaseStudioPage() {
               setUploadProgress(100);
               setUploadStatusMsg(
                 statusData.message ||
-                  `✓ Successfully indexed ${statusData.documents_ingested || fileList.length} document(s)${rangeNotice} (${statusData.chunks_created || 0} chunks)!`,
+                  `Successfully indexed ${statusData.documents_ingested || fileList.length} document(s)${rangeNotice} (${statusData.chunks_created || 0} chunks)!`,
               );
               await loadSpecsAndStats();
 
@@ -478,7 +489,7 @@ function KnowledgeBaseStudioPage() {
               setUploadProgress(0);
               setActiveView("upload");
               setUploadStatusMsg(
-                `⚠️ Ingestion failed: ${statusData.error_message || statusData.message || "Unknown error during parsing"}`,
+                `Ingestion failed: ${statusData.error_message || statusData.message || "Unknown error during parsing"}`,
               );
               await loadSpecsAndStats();
               return;
@@ -492,7 +503,7 @@ function KnowledgeBaseStudioPage() {
         setProcessingStep(5);
         setUploadProgress(100);
         setUploadStatusMsg(
-          `✓ Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`,
+          `Successfully indexed ${res?.documents_ingested || fileList.length} document(s)${rangeNotice} (${res?.chunks_created || 0} chunks)!`,
         );
         await loadSpecsAndStats();
 
@@ -517,7 +528,7 @@ function KnowledgeBaseStudioPage() {
       const errMsg = isNetErr
         ? "Backend connection failed. InsightRAG runs 100% locally on your machine for zero-cloud privacy. Please ensure the backend is running via run.bat or install.ps1."
         : err?.response?.data?.detail || err?.message || "Failed to process files";
-      setUploadStatusMsg(`⚠️ Upload error: ${errMsg}`);
+      setUploadStatusMsg(`Upload error: ${errMsg}`);
       loadSpecsAndStats();
     }
   };
@@ -532,11 +543,11 @@ function KnowledgeBaseStudioPage() {
     setDeletingDocName(docName);
     try {
       await deleteRAGDocument(docName);
-      setUploadStatusMsg(`✓ Deleted '${docName}' and updated vector index.`);
+      setUploadStatusMsg(`Deleted '${docName}' and updated vector index.`);
       loadSpecsAndStats();
     } catch (err: any) {
       setUploadStatusMsg(
-        `⚠️ Failed to delete '${docName}': ${err?.response?.data?.detail || err?.message || "Error"}`,
+        `Failed to delete '${docName}': ${err?.response?.data?.detail || err?.message || "Error"}`,
       );
     } finally {
       setDeletingDocName(null);
@@ -618,7 +629,7 @@ function KnowledgeBaseStudioPage() {
           ...prev,
           {
             role: "assistant" as const,
-            text: `⚠️ Cloud query failed: ${err?.response?.data?.detail || err?.message || "Error"}`,
+            text: `Cloud query failed: ${err?.response?.data?.detail || err?.message || "Error"}`,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
         ]);
@@ -707,7 +718,7 @@ function KnowledgeBaseStudioPage() {
             if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
               updated[streamMsgIndex.current] = {
                 ...updated[streamMsgIndex.current],
-                text: `⚠️ Stream error: ${error}\n\n💡 Check that Ollama is running and try again.`,
+                text: `Stream error: ${error}\n\nPlease check that Ollama is running and try again.`,
               };
             }
             return updated;
@@ -722,7 +733,7 @@ function KnowledgeBaseStudioPage() {
             ...updated[streamMsgIndex.current],
             text: streamedText
               ? streamedText
-              : `⚠️ Connection error: ${err?.message || "Ollama unreachable"}`,
+              : `Connection error: ${err?.message || "Ollama unreachable"}`,
           };
         }
         return updated;
@@ -1102,8 +1113,9 @@ function KnowledgeBaseStudioPage() {
               </div>
 
               <div className="flex items-center gap-2 font-mono text-[11px] font-bold">
-                <span className="hidden lg:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
-                  ⚡ {embeddingModel}
+                <span className="hidden lg:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000] items-center gap-1">
+                  <Zap className="w-3 h-3 text-black" />
+                  <span>{embeddingModel}</span>
                 </span>
 
                 {/* Model Quick Switcher in Chat Header */}
@@ -1118,12 +1130,12 @@ function KnowledgeBaseStudioPage() {
                       {specs?.installed_models && specs.installed_models.length > 0 ? (
                         specs.installed_models.map((m: string) => (
                           <option key={m} value={m} className="bg-white text-black font-bold">
-                            💻 {m}
+                            {m}
                           </option>
                         ))
                       ) : (
                         <option value={selectedLLM} className="bg-white text-black font-bold">
-                          💻 {selectedLLM}
+                          {selectedLLM}
                         </option>
                       )}
                     </select>
@@ -1139,8 +1151,9 @@ function KnowledgeBaseStudioPage() {
                     </button>
                   </div>
                 ) : (
-                  <span className="bg-purple-600 text-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] animate-pulse">
-                    ⚡ {processingMode.split(":")[0].toUpperCase()}
+                  <span className="bg-purple-600 text-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] animate-pulse flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-white" />
+                    <span>{processingMode.split(":")[0].toUpperCase()}</span>
                   </span>
                 )}
 
@@ -1268,9 +1281,9 @@ function KnowledgeBaseStudioPage() {
                         <div className="mt-3 p-3 bg-gray-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2">
                           <div className="flex items-center justify-between font-mono text-[10px] font-bold text-black border-b border-gray-200 pb-1.5">
                             <span className="flex items-center gap-1.5 text-black font-black">
-                              <Sparkles className="w-3.5 h-3.5 text-[#ec4899]" />
+                              <Camera className="w-3.5 h-3.5 text-[#ec4899]" />
                               <span>
-                                📷 FOCUSED VISUAL EVIDENCE (PAGE {msg.visual_snippet.page})
+                                FOCUSED VISUAL EVIDENCE (PAGE {msg.visual_snippet.page})
                               </span>
                             </span>
                             <span className="bg-[#ffe600] px-1.5 py-0.5 rounded border border-black text-[9px] font-mono font-bold">
@@ -1315,9 +1328,9 @@ function KnowledgeBaseStudioPage() {
                         <div className="mt-3 p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-3">
                           <div className="flex items-center justify-between font-mono text-[10px] font-black text-black border-b-2 border-black pb-1.5">
                             <span className="flex items-center gap-1.5 text-black">
-                              <Sparkles className="w-3.5 h-3.5 text-[#a855f7]" />
+                              <Eye className="w-3.5 h-3.5 text-[#a855f7]" />
                               <span>
-                                🖼️ ATTACHED VISUAL DIAGRAMS ({msg.visual_diagrams.length})
+                                ATTACHED VISUAL DIAGRAMS ({msg.visual_diagrams.length})
                               </span>
                             </span>
                             <span className="bg-[#a855f7] text-white px-2 py-0.5 rounded border border-black text-[9px] font-mono font-black">
@@ -1501,15 +1514,23 @@ function KnowledgeBaseStudioPage() {
                     COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
                   </label>
                   <span
-                    className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase ${
+                    className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase flex items-center gap-1 ${
                       processingMode === "local"
                         ? "bg-emerald-400 text-black"
                         : "bg-purple-400 text-black animate-pulse"
                     }`}
                   >
-                    {processingMode === "local"
-                      ? "🛡️ 100% LOCAL (AIR-GAPPED OFFLINE)"
-                      : "⚡ CLOUD TURBO ACCELERATED"}
+                    {processingMode === "local" ? (
+                      <>
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>100% LOCAL (AIR-GAPPED OFFLINE)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>CLOUD TURBO ACCELERATED</span>
+                      </>
+                    )}
                   </span>
                 </div>
                 <select
@@ -1518,17 +1539,16 @@ function KnowledgeBaseStudioPage() {
                   className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
                 >
                   <option value="local">
-                    💻 100% Local Mode (Zero Budget • Offline • Privacy Guaranteed • Ollama)
-                    [DEFAULT]
+                    [Local] 100% On-Device (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
                   </option>
                   <option value="groq:llama-3.3-70b-versatile">
-                    ⚡ Advance Turbo Server (Groq Llama-3.3 70B • 500+ Page Fast Cloud Processing)
+                    [Cloud Turbo] Groq Llama-3.3 70B (500+ Page Fast Cloud Processing)
                   </option>
                   <option value="gemini:gemini-1.5-flash">
-                    🧠 High-Reasoning Cloud Server (Google Gemini 1.5 Flash • 1M Long Context)
+                    [Cloud Reasoning] Google Gemini 1.5 Flash (1M Long Context)
                   </option>
                   <option value="openai:gpt-4o-mini">
-                    🚀 Enterprise Cloud Server (OpenAI GPT-4o-mini • High-Speed Multimodal)
+                    [Cloud Enterprise] OpenAI GPT-4o-mini (High-Speed Multimodal)
                   </option>
                 </select>
 
@@ -1537,9 +1557,9 @@ function KnowledgeBaseStudioPage() {
                   <div className="p-3 bg-purple-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2 mt-2">
                     <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
                       <span className="flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-purple-600" />
+                        <Zap className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                         <span>
-                          ⚡ Advance Cloud Mode Active — Large PDFs & books will process at
+                          Advance Cloud Mode Active — Large PDFs & books will process at
                           lightning speed on cloud server.
                         </span>
                       </span>
@@ -1553,164 +1573,121 @@ function KnowledgeBaseStudioPage() {
                     />
                   </div>
                 ) : (
-                  <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1">
-                    🛡️ <strong>100% Local Mode Active:</strong> Documents and vectors never leave
-                    your PC. All embedding and inference runs completely on-device.
+                  <div className="text-[11px] font-mono text-emerald-900 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>
+                      <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
+                    </span>
                   </div>
                 )}
               </div>
 
-              {/* LOCAL HARDWARE ACCELERATOR (CPU vs GPU SWITCH) */}
+              {/* COMPACT & AESTHETIC HARDWARE ACCELERATION ENGINE */}
               {processingMode === "local" && (
-                <div className="space-y-2 md:col-span-2 p-3 sm:p-4 bg-gray-50/90 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000]">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div>
-                      <span className="text-[11px] font-black font-mono uppercase tracking-wider text-black flex items-center gap-1.5">
-                        <Cpu className="w-3.5 h-3.5 text-black" />
-                        LOCAL HARDWARE ACCELERATION ENGINE (CPU VS. GPU)
-                      </span>
-                      <p className="text-[10px] font-mono text-gray-500">
-                        Instantly shift embeddings and local Ollama inference between Multi-Threaded
-                        CPU and GPU.
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-black uppercase w-fit ${
-                        activeHardwareMode === "gpu"
-                          ? "bg-[#ffe600] text-black shadow-[1px_1px_0px_#000]"
-                          : "bg-white text-black"
-                      }`}
-                    >
-                      {activeHardwareMode === "gpu" ? "⚡ GPU ACCELERATED" : "💻 CPU STANDARD"}
-                    </span>
-                  </div>
-
-                  {/* 2-Button Toggle Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                    {/* CPU Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchHardware("cpu")}
-                      disabled={switchingHardware}
-                      className={`flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left cursor-pointer ${
-                        activeHardwareMode === "cpu"
-                          ? "bg-black text-white border-black shadow-[3px_3px_0px_#000]"
-                          : "bg-white text-black border-black hover:bg-gray-100"
-                      }`}
-                    >
-                      <div
-                        className={`p-2 rounded-lg border ${
-                          activeHardwareMode === "cpu"
-                            ? "bg-gray-800 border-gray-700 text-amber-300"
-                            : "bg-gray-100 border-gray-300 text-black"
-                        }`}
-                      >
+                <div className="space-y-1.5 md:col-span-2">
+                  <div className="p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-black text-[#ffe600] flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000]">
                         <Cpu className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-black text-xs uppercase">CPU Engine</span>
-                          {activeHardwareMode === "cpu" && (
-                            <span className="text-[10px] font-mono font-bold bg-amber-300 text-black px-1.5 py-0.2 rounded">
-                              ACTIVE
-                            </span>
-                          )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black font-mono uppercase tracking-wide text-black truncate">
+                            Hardware Engine
+                          </span>
+                          <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded border border-black bg-emerald-100 text-emerald-900 shrink-0 flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
+                            <span>{activeHardwareMode === "gpu" ? "GPU Active" : "CPU Active"}</span>
+                          </span>
                         </div>
-                        <p className="font-mono text-[10px] opacity-80 mt-0.5">
-                          Multi-threaded CPU parallel execution ({specs.cpu_threads || 8} Threads).
-                          100% universal across all laptops.
+                        <p className="text-[10px] font-mono text-gray-500 truncate mt-0.5">
+                          {activeHardwareMode === "cpu"
+                            ? `Multi-threaded CPU execution (${specs.cpu_threads || 8} Threads) • Universal stability`
+                            : `Hardware CUDA offload on ${specs.gpu_name || "GPU"}`}
                         </p>
                       </div>
-                    </button>
+                    </div>
 
-                    {/* GPU Button with Strict Eligibility Check & Tooltip */}
-                    <div className="relative group">
+                    {/* Compact Segmented Switch */}
+                    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border-2 border-black shrink-0 self-start sm:self-auto">
+                      {/* CPU Toggle */}
                       <button
                         type="button"
-                        onClick={() => handleSwitchHardware("gpu")}
-                        disabled={switchingHardware || !specs.has_gpu_access}
-                        title={
-                          !specs.has_gpu_access
-                            ? specs.gpu_disabled_reason ||
-                              "GPU acceleration disabled on this laptop."
-                            : "Click to shift processing & Ollama to GPU"
-                        }
-                        className={`w-full h-full flex items-start gap-2.5 p-3 rounded-xl border-2 transition text-left ${
-                          !specs.has_gpu_access
-                            ? "bg-gray-100/90 text-gray-400 border-gray-300 cursor-not-allowed"
-                            : activeHardwareMode === "gpu"
-                              ? "bg-[#ffe600] text-black border-black shadow-[3px_3px_0px_#000] cursor-pointer"
-                              : "bg-white text-black border-black hover:bg-amber-50 cursor-pointer"
+                        onClick={() => handleSwitchHardware("cpu")}
+                        disabled={switchingHardware}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-black transition cursor-pointer ${
+                          activeHardwareMode === "cpu"
+                            ? "bg-black text-white shadow-[2px_2px_0px_#000]"
+                            : "text-gray-700 hover:text-black hover:bg-white/60"
                         }`}
                       >
-                        <div
-                          className={`p-2 rounded-lg border ${
-                            !specs.has_gpu_access
-                              ? "bg-gray-200 border-gray-300 text-gray-400"
-                              : activeHardwareMode === "gpu"
-                                ? "bg-black text-[#ffe600] border-black"
-                                : "bg-amber-100 text-amber-900 border-amber-300"
-                          }`}
-                        >
-                          <Zap className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-black text-xs uppercase flex items-center gap-1">
-                              <span>GPU Acceleration</span>
-                              {!specs.has_gpu_access && (
-                                <span className="text-[9px] font-mono bg-gray-300 text-gray-700 px-1 py-0.2 rounded border border-gray-400">
-                                  LOCKED
-                                </span>
-                              )}
-                            </span>
-                            {activeHardwareMode === "gpu" && specs.has_gpu_access && (
-                              <span className="text-[10px] font-mono font-bold bg-black text-[#ffe600] px-1.5 py-0.2 rounded">
-                                ACTIVE
-                              </span>
-                            )}
-                          </div>
-                          <p className="font-mono text-[10px] opacity-80 mt-0.5">
-                            {specs.has_gpu_access
-                              ? `Hardware CUDA offload on ${specs.gpu_name} (${specs.vram_gb} GB VRAM). Fastest embedding & inference.`
-                              : `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected (No CUDA compute access).`}
-                          </p>
-                        </div>
+                        <Cpu className="w-3.5 h-3.5" />
+                        <span>CPU ({specs.cpu_threads || 8}T)</span>
                       </button>
 
-                      {/* Hover Tooltip when GPU is disabled */}
-                      {!specs.has_gpu_access && (
-                        <div className="hidden group-hover:block absolute z-30 bottom-full left-0 right-0 mb-2 p-2.5 bg-black text-white text-[10px] font-mono rounded-lg border border-gray-700 shadow-xl pointer-events-none">
-                          <div className="font-bold text-amber-300 flex items-center gap-1 mb-0.5">
-                            <span>🔒 GPU Acceleration Disabled</span>
+                      {/* GPU Toggle with Tooltip */}
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchHardware("gpu")}
+                          disabled={switchingHardware || !specs.has_gpu_access}
+                          title={
+                            !specs.has_gpu_access
+                              ? specs.gpu_disabled_reason || "GPU acceleration disabled on this device."
+                              : "Switch computation & Ollama to GPU"
+                          }
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-black transition ${
+                            !specs.has_gpu_access
+                              ? "text-gray-400 bg-gray-200/60 cursor-not-allowed"
+                              : activeHardwareMode === "gpu"
+                                ? "bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] cursor-pointer"
+                                : "text-gray-700 hover:text-black hover:bg-white/60 cursor-pointer"
+                          }`}
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>GPU Offload</span>
+                          {!specs.has_gpu_access && (
+                            <Lock className="w-3 h-3 text-gray-400 ml-0.5" />
+                          )}
+                        </button>
+
+                        {!specs.has_gpu_access && (
+                          <div className="hidden group-hover:block absolute z-30 bottom-full right-0 mb-2 w-64 p-2.5 bg-black text-white text-[10px] font-mono rounded-lg border border-gray-700 shadow-xl pointer-events-none">
+                            <div className="font-bold text-amber-300 flex items-center gap-1 mb-0.5">
+                              <Lock className="w-3 h-3" />
+                              <span>GPU Acceleration Locked</span>
+                            </div>
+                            <p className="text-gray-300 leading-tight">
+                              {specs.gpu_disabled_reason ||
+                                "No CUDA runtime detected. Automatically routed through CPU engine for stability."}
+                            </p>
                           </div>
-                          <p className="text-gray-300 leading-tight">
-                            {specs.gpu_disabled_reason ||
-                              "No dedicated CUDA/ROCm GPU available on this laptop. The system automatically routes all processing through your multi-threaded CPU for maximum stability."}
-                          </p>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Status Notice / Feedback Banner */}
+                  {/* Compact Status / Feedback Line (only if notice or locked) */}
                   {hardwareNotice ? (
-                    <div className="text-[10px] sm:text-xs font-mono font-bold p-2.5 rounded-lg border-2 border-black bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] animate-pulse">
-                      {hardwareNotice}
+                    <div className="text-[10px] font-mono font-bold p-2 rounded-lg border-2 border-black bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 animate-pulse">
+                      <Info className="w-3.5 h-3.5 shrink-0" />
+                      <span>{hardwareNotice}</span>
                     </div>
                   ) : !specs.has_gpu_access ? (
-                    <div className="text-[10px] font-mono text-gray-600 bg-gray-100 p-2 rounded-lg border border-gray-300 flex items-start gap-1.5">
-                      <span className="text-amber-600 font-bold shrink-0">ℹ️ Hardware Status:</span>
+                    <div className="text-[10px] font-mono text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-300 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                       <span>
+                        <strong>Hardware Status:</strong>{" "}
                         {specs.gpu_disabled_reason ||
-                          "GPU compute runtime not found. System is safely locked to CPU Multi-Threaded Engine to avoid execution errors."}
+                          `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected without CUDA runtime. CPU engine active for error-free stability.`}
                       </span>
                     </div>
                   ) : (
-                    <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-300 flex items-center justify-between">
+                    <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>
-                        ✅ <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} (
-                        {specs.vram_gb} GB VRAM) is supported and ready for instant activation.
+                        <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} (
+                        {specs.vram_gb} GB VRAM) supported and available for hardware offload.
                       </span>
                     </div>
                   )}
@@ -1744,11 +1721,11 @@ function KnowledgeBaseStudioPage() {
                   {specs.installed_models && specs.installed_models.length > 0 ? (
                     specs.installed_models.map((m: string) => (
                       <option key={m} value={m}>
-                        💻 {m} {m === "qwen2.5vl:3b" ? "🖼️ (Vision & OCR SOTA)" : m === "llama3.2:3b" ? "⚡ (Fast & Lightweight)" : ""}
+                        {m} {m === "qwen2.5vl:3b" ? "[Vision & OCR SOTA]" : m === "llama3.2:3b" ? "[Fast & Lightweight]" : ""}
                       </option>
                     ))
                   ) : (
-                    <option value="llama3.2:3b">💻 llama3.2:3b (Fast & Lightweight)</option>
+                    <option value="llama3.2:3b">llama3.2:3b [Fast & Lightweight]</option>
                   )}
                 </select>
 
@@ -1803,43 +1780,55 @@ function KnowledgeBaseStudioPage() {
                   className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
                 >
                   <option value="all-MiniLM-L6-v2">
-                    ⚡ all-MiniLM-L6-v2 (Ultra-Fast 5x • 4GB+ RAM • 384-dim • CPU Friendly)
+                    all-MiniLM-L6-v2 (Ultra-Fast 5x • 4GB+ RAM • 384-dim • CPU Friendly)
                   </option>
                   <option value="bge-small-en-v1.5">
-                    ⚖️ bge-small-en-v1.5 (Balanced 3x • 6GB+ RAM • 384-dim • Standard PC)
+                    bge-small-en-v1.5 (Balanced 3x • 6GB+ RAM • 384-dim • Standard PC)
                   </option>
                   <option value="bge-base-en-v1.5">
-                    🧠 bge-base-en-v1.5 (SOTA High Precision • 8-16GB RAM/GPU • 768-dim • Research)
+                    bge-base-en-v1.5 (SOTA High Precision • 8-16GB RAM/GPU • 768-dim • Research)
                   </option>
                   <option value="nomic-embed-text">
-                    🚀 nomic-embed-text (Ollama Native 8K • 8GB+ RAM • 768-dim • Long Context)
+                    nomic-embed-text (Ollama Native 8K • 8GB+ RAM • 768-dim • Long Context)
                   </option>
                 </select>
 
                 {/* Dynamic Helper Note */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
                   {embeddingModel === "all-MiniLM-L6-v2" && (
-                    <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold">
-                      ⚡ <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB).
-                      Recommended for laptops, CPU mode & rapid indexing.
+                    <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span>
+                        <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB).
+                        Recommended for laptops, CPU mode & rapid indexing.
+                      </span>
                     </span>
                   )}
                   {embeddingModel === "bge-small-en-v1.5" && (
-                    <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-lg border border-sky-400 font-bold">
-                      ⚖️ <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high
-                      accuracy across standard documents.
+                    <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-lg border border-sky-400 font-bold flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-sky-700 shrink-0" />
+                      <span>
+                        <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high
+                        accuracy across standard documents.
+                      </span>
                     </span>
                   )}
                   {embeddingModel === "bge-base-en-v1.5" && (
-                    <span className="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-lg border border-yellow-400 font-bold">
-                      🧠 <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense
-                      medical research, legal & technical books.
+                    <span className="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-lg border border-yellow-400 font-bold flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5 text-yellow-700 shrink-0" />
+                      <span>
+                        <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense
+                        medical research, legal & technical books.
+                      </span>
                     </span>
                   )}
                   {embeddingModel === "nomic-embed-text" && (
-                    <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg border border-purple-400 font-bold">
-                      🚀 <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama
-                      service. Supports large chunks up to 8192 tokens.
+                    <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg border border-purple-400 font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                      <span>
+                        <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama
+                        service. Supports large chunks up to 8192 tokens.
+                      </span>
                     </span>
                   )}
                 </div>
@@ -1852,8 +1841,9 @@ function KnowledgeBaseStudioPage() {
                     <Eye className="w-3.5 h-3.5 text-black" />
                     <span>VISION OCR & DIAGRAM REASONING PIPELINE</span>
                   </label>
-                  <span className="text-[10px] font-mono font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                    🖼️ Active Ingestion
+                  <span className="text-[10px] font-mono font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                    <span>Active Ingestion</span>
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -1912,7 +1902,10 @@ function KnowledgeBaseStudioPage() {
 
                 <div className="bg-black text-white p-3 sm:p-3.5 rounded-xl border-2 border-black space-y-2">
                   <div className="flex items-center justify-between text-[11px] font-bold text-gray-300">
-                    <span>⚡ Quick 1-Line Setup (Windows PowerShell):</span>
+                    <span className="flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-[#ffe600]" />
+                      <span>Quick 1-Line Setup (Windows PowerShell):</span>
+                    </span>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText("irm https://www.insightrag.tech/install.ps1 | iex");
@@ -1921,7 +1914,17 @@ function KnowledgeBaseStudioPage() {
                       }}
                       className="text-[#ffe600] hover:underline flex items-center gap-1 text-[11px] font-black cursor-pointer"
                     >
-                      {copiedInstall ? "✓ Copied!" : "📋 Copy Command"}
+                      {copiedInstall ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Command</span>
+                        </>
+                      )}
                     </button>
                   </div>
                   <code className="block bg-[#1a1a1a] p-2 rounded text-[#ffe600] text-xs font-mono select-all overflow-x-auto">
@@ -1998,8 +2001,9 @@ function KnowledgeBaseStudioPage() {
                   <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md border border-purple-300">
                     PNG / JPG / WEBP
                   </span>
-                  <span className="bg-[#ffe600] text-black px-2 py-0.5 rounded-md border border-black shadow-[1px_1px_0px_#000]">
-                    ✂️ Custom Page-Range Slicing
+                  <span className="bg-[#ffe600] text-black px-2 py-0.5 rounded-md border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1">
+                    <SlidersHorizontal className="w-3 h-3" />
+                    <span>Custom Page Slicing</span>
                   </span>
                 </div>
               </div>
@@ -2010,14 +2014,27 @@ function KnowledgeBaseStudioPage() {
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`p-3.5 rounded-xl border-2 border-black font-mono text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-[2px_2px_0px_#000] ${
-                    uploadStatusMsg.startsWith("✓")
+                    !uploadStatusMsg.toLowerCase().includes("failed") &&
+                    !uploadStatusMsg.toLowerCase().includes("error") &&
+                    !uploadStatusMsg.toLowerCase().includes("offline")
                       ? "bg-emerald-400 text-black"
                       : "bg-red-400 text-black"
                   }`}
                 >
-                  <span>{uploadStatusMsg}</span>
+                  <div className="flex items-center gap-2">
+                    {!uploadStatusMsg.toLowerCase().includes("failed") &&
+                    !uploadStatusMsg.toLowerCase().includes("error") &&
+                    !uploadStatusMsg.toLowerCase().includes("offline") ? (
+                      <CheckCircle2 className="w-4 h-4 text-black shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-black shrink-0" />
+                    )}
+                    <span>{uploadStatusMsg}</span>
+                  </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                    {!uploadStatusMsg.startsWith("✓") && (
+                    {(uploadStatusMsg.toLowerCase().includes("failed") ||
+                      uploadStatusMsg.toLowerCase().includes("error") ||
+                      uploadStatusMsg.toLowerCase().includes("offline")) && (
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(
@@ -2026,16 +2043,27 @@ function KnowledgeBaseStudioPage() {
                           setCopiedInstall(true);
                           setTimeout(() => setCopiedInstall(false), 2000);
                         }}
-                        className="cursor-pointer bg-black text-[#ffe600] hover:bg-neutral-800 text-[10px] font-black px-2 py-1 rounded border border-black shadow-[1px_1px_0px_#000]"
+                        className="cursor-pointer bg-black text-[#ffe600] hover:bg-neutral-800 text-[10px] font-black px-2 py-1 rounded border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1"
                       >
-                        {copiedInstall ? "✓ Copied Launch Command" : "📋 Copy Launch Command"}
+                        {copiedInstall ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span>Copied Launch Command</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Launch Command</span>
+                          </>
+                        )}
                       </button>
                     )}
                     <button
                       onClick={() => setUploadStatusMsg(null)}
-                      className="cursor-pointer font-black text-xs hover:opacity-75 px-1"
+                      className="cursor-pointer font-black text-xs hover:opacity-75 p-1 rounded-md hover:bg-black/10 transition"
+                      title="Dismiss notice"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </motion.div>
@@ -2368,9 +2396,12 @@ function KnowledgeBaseStudioPage() {
                         />
                       </div>
                     </div>
-                    <p className="text-[10px] text-gray-600 font-bold leading-tight">
-                      💡 InsightRAG will only parse, extract text/tables/visuals, and embed vectors
-                      within pages {startPage || 1} to {endPage || "End"}.
+                    <p className="text-[10px] text-gray-600 font-bold leading-tight flex items-center gap-1">
+                      <Info className="w-3.5 h-3.5 inline text-black shrink-0" />
+                      <span>
+                        InsightRAG will only parse, extract text/tables/visuals, and embed vectors
+                        within pages {startPage || 1} to {endPage || "End"}.
+                      </span>
                     </p>
                   </motion.div>
                 )}
@@ -2445,8 +2476,9 @@ function KnowledgeBaseStudioPage() {
 
               {/* Modal Curated Grid */}
               <div className="space-y-3">
-                <div className="text-xs font-black uppercase tracking-wider text-gray-700">
-                  ⚡ Curated Top-Tier Open-Source LLMs
+                <div className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-black" />
+                  <span>Curated Top-Tier Open-Source LLMs</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {CURATED_MODELS.map((model) => {
@@ -2483,7 +2515,9 @@ function KnowledgeBaseStudioPage() {
                             <div className="font-mono font-black text-sm text-black flex items-center gap-1.5">
                               <span>{model.name}</span>
                               {model.isVisionCapable && (
-                                <span title="Multimodal Vision & OCR Capable">🖼️</span>
+                                <span title="Multimodal Vision & OCR Capable" className="inline-flex items-center text-purple-700">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </span>
                               )}
                             </div>
                             <div className="text-[11px] font-mono text-gray-500 font-bold">
@@ -2581,7 +2615,10 @@ function KnowledgeBaseStudioPage() {
       {/* Bottom Footer */}
       <footer className="w-full border-2 border-black bg-white/95 backdrop-blur-md py-4 px-4 sm:px-6 mt-8 font-mono text-[11px] sm:text-xs text-gray-600 rounded-2xl shadow-[3px_3px_0px_#000]">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
-          <div className="font-bold text-black">⚡ InsightRAG AI — Knowledge Base Studio</div>
+          <div className="font-bold text-black flex items-center gap-1.5 justify-center sm:justify-start">
+            <Sparkles className="w-3.5 h-3.5 text-black" />
+            <span>InsightRAG AI — Knowledge Base Studio</span>
+          </div>
           <div className="bg-gray-100 px-3 py-1 rounded-full border border-gray-300">
             Made by <span className="font-bold text-black">Karan Pratap Singh</span>
           </div>
