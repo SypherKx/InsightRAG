@@ -23,6 +23,11 @@ import {
   User,
   MessageSquarePlus,
   ArrowLeft,
+  ArrowRight,
+  Eye,
+  CheckCheck,
+  RefreshCw,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -36,6 +41,8 @@ import {
   getSystemSpecs,
   setHardwareMode,
   pullModel,
+  streamPullModel,
+  listInstalledModels,
   checkBackendHealth,
 } from "../services/api";
 
@@ -90,6 +97,88 @@ const EMBEDDING_OPTIONS = [
     hardwareLabel: "Ollama Long-Context",
     dim: "768-dim (8192 context)",
     desc: "100% on-device Ollama native pipeline. Supports massive document chunks up to 8192 tokens per vector.",
+  },
+];
+
+export interface CuratedModel {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  size: string;
+  category: "multimodal" | "reasoning" | "fast" | "code" | "standard";
+  badge: string;
+  badgeColor: string;
+  isVisionCapable?: boolean;
+}
+
+export const CURATED_MODELS: CuratedModel[] = [
+  {
+    id: "qwen2.5vl:3b",
+    name: "Qwen 2.5 Vision 3B",
+    tagline: "Multimodal Vision, OCR & Visual QA SOTA",
+    description:
+      "Deep visual reasoning for document diagrams, figures, flowchart OCR, architecture schematics and tables.",
+    size: "3.2 GB",
+    category: "multimodal",
+    badge: "🖼️ VISION & OCR SOTA",
+    badgeColor: "bg-purple-400 text-black",
+    isVisionCapable: true,
+  },
+  {
+    id: "llama3.2:3b",
+    name: "Llama 3.2 3B",
+    tagline: "Ultra-Fast Meta Lightweight Architecture",
+    description:
+      "Engineered for instantaneous local generation, dense semantic synthesis, and zero-latency Q&A.",
+    size: "2.0 GB",
+    category: "fast",
+    badge: "⚡ FAST & EFFICIENT",
+    badgeColor: "bg-emerald-400 text-black",
+  },
+  {
+    id: "qwen2.5:3b",
+    name: "Qwen 2.5 3B",
+    tagline: "Alibaba High-Reasoning & Code SOTA",
+    description:
+      "Unmatched coding precision, mathematical derivation, and structured reasoning in compact size.",
+    size: "1.9 GB",
+    category: "reasoning",
+    badge: "🧠 REASONING & CODE",
+    badgeColor: "bg-[#ffe600] text-black",
+  },
+  {
+    id: "deepseek-r1:1.5b",
+    name: "DeepSeek R1 1.5B",
+    tagline: "Open-Source Chain-of-Thought Reasoning",
+    description:
+      "Deep step-by-step thinking process, ideal for complex logic, root-cause queries, and analytical breakdown.",
+    size: "1.1 GB",
+    category: "reasoning",
+    badge: "💡 REASONING ENGINE",
+    badgeColor: "bg-sky-400 text-black",
+  },
+  {
+    id: "phi3.5:3.8b",
+    name: "Phi 3.5 Mini 3.8B",
+    tagline: "Microsoft 128k Long-Context Powerhouse",
+    description:
+      "Massive 128,000 token context window support. Perfect for cross-document synthesis and long manuals.",
+    size: "2.2 GB",
+    category: "standard",
+    badge: "🔬 128K LONG-CONTEXT",
+    badgeColor: "bg-amber-400 text-black",
+  },
+  {
+    id: "mistral:7b",
+    name: "Mistral 7B Instruct",
+    tagline: "Industry Standard Analytical Accuracy",
+    description:
+      "High-parameter density instruction tuned model with superior prose quality and nuanced fact retrieval.",
+    size: "4.1 GB",
+    category: "standard",
+    badge: "🛡️ HEAVYWEIGHT SOTA",
+    badgeColor: "bg-pink-400 text-black",
   },
 ];
 
@@ -151,12 +240,25 @@ function KnowledgeBaseStudioPage() {
   const [hardwareNotice, setHardwareNotice] = useState<string | null>(null);
 
   // Model & Config Selection States
-  const [selectedLLM, setSelectedLLM] = useState("llama3.2:3b");
+  const [selectedLLM, setSelectedLLM] = useState<string>(() => {
+    try {
+      return localStorage.getItem("insightrag_selected_model") || "llama3.2:3b";
+    } catch {
+      return "llama3.2:3b";
+    }
+  });
   const [sessionLifetime, setSessionLifetime] = useState("3 Hours");
   const [embeddingModel, setEmbeddingModel] = useState("all-MiniLM-L6-v2");
   const [visionOCR, setVisionOCR] = useState(true);
   const [processingMode, setProcessingMode] = useState("local");
   const [cloudApiKey, setCloudApiKey] = useState("");
+
+  // Model Hub & Switching States
+  const [pullingModelId, setPullingModelId] = useState<string | null>(null);
+  const [pullProgress, setPullProgress] = useState<Record<string, number>>({});
+  const [pullStatusText, setPullStatusText] = useState<Record<string, string>>({});
+  const [switchToast, setSwitchToast] = useState<string | null>(null);
+  const [showModelHubModal, setShowModelHubModal] = useState<boolean>(false);
 
   // Upload & Scope Selection Modal States
   const [drag, setDrag] = useState(false);
@@ -630,36 +732,121 @@ function KnowledgeBaseStudioPage() {
     }
   };
 
+  // Check if a given model tag or base model name is installed
+  const isModelInstalled = (modelId: string): boolean => {
+    if (!specs?.installed_models || !Array.isArray(specs.installed_models)) return false;
+    return specs.installed_models.some((m: string) => {
+      if (m === modelId) return true;
+      const baseM = m.split(":")[0];
+      const baseTarget = modelId.split(":")[0];
+      if (
+        baseM === baseTarget &&
+        (m.includes("3b") ||
+          m.includes("7b") ||
+          m.includes("mini") ||
+          m.includes("latest") ||
+          m.includes("1.5b") ||
+          m.includes("3.8b"))
+      ) {
+        return true;
+      }
+      return false;
+    });
+  };
+
+  // Instant Model Switcher with localStorage persistence
+  const handleSwitchModel = (modelId: string) => {
+    setSelectedLLM(modelId);
+    try {
+      localStorage.setItem("insightrag_selected_model", modelId);
+    } catch (e) {
+      console.warn("Could not save selected model to localStorage", e);
+    }
+    setSwitchToast(`Active model switched to: ${modelId}`);
+    setTimeout(() => setSwitchToast(null), 4000);
+  };
+
+  // 1-Click Streamed Model Pull with real-time progress bar & auto-switch
+  const handleInstallModel = async (modelId: string) => {
+    if (!modelId.trim() || pullingModelId) return;
+    const targetModel = modelId.trim();
+    setPullingModelId(targetModel);
+    setPullProgress((prev) => ({ ...prev, [targetModel]: 2 }));
+    setPullStatusText((prev) => ({ ...prev, [targetModel]: "Connecting to Ollama library..." }));
+
+    try {
+      await streamPullModel(targetModel, {
+        onProgress: (pct, status) => {
+          setPullProgress((prev) => ({ ...prev, [targetModel]: pct }));
+          setPullStatusText((prev) => ({ ...prev, [targetModel]: status }));
+        },
+        onDone: async () => {
+          setPullProgress((prev) => ({ ...prev, [targetModel]: 100 }));
+          setPullStatusText((prev) => ({ ...prev, [targetModel]: "Installation Complete!" }));
+          setPullingModelId(null);
+
+          // Refresh dynamic model inventory
+          try {
+            const data = await listInstalledModels();
+            if (data?.installed_models && data.installed_models.length > 0) {
+              setSpecs((prev: any) => ({
+                ...prev,
+                installed_models: data.installed_models,
+              }));
+            }
+          } catch {}
+
+          // Auto-switch to newly installed model instantly
+          handleSwitchModel(targetModel);
+        },
+        onError: (err) => {
+          setPullingModelId(null);
+          setPullStatusText((prev) => ({ ...prev, [targetModel]: `Error: ${err}` }));
+        },
+      });
+    } catch (err: any) {
+      setPullingModelId(null);
+      setPullStatusText((prev) => ({
+        ...prev,
+        [targetModel]: `Error: ${err?.message || "Failed to pull"}`,
+      }));
+    }
+  };
+
   const handleDownloadModel = async () => {
     if (!customModel.trim()) return;
-    setPulling(true);
-    setPullStatus("Initiating download from Ollama library...");
-    try {
-      await pullModel(customModel);
-      setPullStatus(`Model ${customModel} downloaded successfully!`);
-      setTimeout(() => {
-        setPulling(false);
-        setShowModal(false);
-        loadSpecsAndStats();
-      }, 1500);
-    } catch (err: any) {
-      setPullStatus(`Model status: ${customModel} is available in local library.`);
-      setTimeout(() => {
-        setPulling(false);
-        setShowModal(false);
-        loadSpecsAndStats();
-      }, 1500);
-    }
+    await handleInstallModel(customModel.trim());
   };
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center bg-no-repeat p-3 sm:p-5 md:p-8 font-sans overflow-x-hidden flex flex-col justify-between"
+      className="min-h-screen bg-cover bg-center bg-no-repeat p-3 sm:p-5 md:p-8 font-sans overflow-x-hidden flex flex-col justify-between relative"
       style={{
         backgroundImage: `url('/assets/skytextured.jpg'), url('/skytextured.jpg')`,
         backgroundColor: "#e6f0fa",
       }}
     >
+      {/* Floating Model Switch Confirmation Toast */}
+      <AnimatePresence>
+        {switchToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#ffe600] text-black font-mono font-black text-xs sm:text-sm px-5 py-3 rounded-2xl border-3 border-black shadow-[5px_5px_0px_#000] flex items-center gap-2.5 max-w-lg"
+          >
+            <CheckCircle2 className="w-5 h-5 text-black shrink-0" />
+            <span className="flex-1">{switchToast}</span>
+            <button
+              onClick={() => setSwitchToast(null)}
+              className="hover:bg-black/10 rounded-md p-1 cursor-pointer"
+            >
+              <X className="w-4 h-4 text-black" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div
         className={`mx-auto space-y-4 sm:space-y-6 w-full ${activeView === "chat" ? "max-w-6xl" : "max-w-5xl"}`}
       >
@@ -898,20 +1085,48 @@ function KnowledgeBaseStudioPage() {
               </div>
 
               <div className="flex items-center gap-2 font-mono text-[11px] font-bold">
-                <span className="hidden md:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+                <span className="hidden lg:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
                   ⚡ {embeddingModel}
                 </span>
-                <span
-                  className={`px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] ${
-                    processingMode === "local"
-                      ? "bg-black text-white"
-                      : "bg-purple-600 text-white animate-pulse"
-                  }`}
-                >
-                  {processingMode === "local"
-                    ? `💻 ${selectedLLM}`
-                    : `⚡ ${processingMode.split(":")[0].toUpperCase()}`}
-                </span>
+
+                {/* Model Quick Switcher in Chat Header */}
+                {processingMode === "local" ? (
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={selectedLLM}
+                      onChange={(e) => handleSwitchModel(e.target.value)}
+                      className="bg-black text-[#ffe600] font-mono text-[11px] font-black px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] cursor-pointer focus:outline-none"
+                      title="Quick Switch Active Local Model"
+                    >
+                      {specs?.installed_models && specs.installed_models.length > 0 ? (
+                        specs.installed_models.map((m: string) => (
+                          <option key={m} value={m} className="bg-white text-black font-bold">
+                            💻 {m}
+                          </option>
+                        ))
+                      ) : (
+                        <option value={selectedLLM} className="bg-white text-black font-bold">
+                          💻 {selectedLLM}
+                        </option>
+                      )}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowModelHubModal(true)}
+                      className="bg-[#ffe600] hover:bg-yellow-400 text-black px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1 font-mono font-black text-[10px] cursor-pointer active:translate-x-[1px] active:translate-y-[1px]"
+                      title="Open Open-Source Model Hub"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span className="hidden sm:inline">Hub</span>
+                    </button>
+                  </div>
+                ) : (
+                  <span className="bg-purple-600 text-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] animate-pulse">
+                    ⚡ {processingMode.split(":")[0].toUpperCase()}
+                  </span>
+                )}
+
                 {chatMessages.length > 0 && (
                   <button
                     onClick={handleClearChatOnly}
@@ -1477,29 +1692,177 @@ function KnowledgeBaseStudioPage() {
                 </div>
               )}
 
-              {/* TEXT LLM MODEL */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                  LOCAL LLM MODEL (OLLAMA)
-                </label>
-                <select
-                  value={selectedLLM}
-                  onChange={(e) => setSelectedLLM(e.target.value)}
-                  disabled={processingMode !== "local"}
-                  className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-                >
-                  {specs.installed_models && specs.installed_models.length > 0 ? (
-                    specs.installed_models.map((m: string) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="llama3.2:3b">llama3.2:3b</option>
-                  )}
-                  <option value="mistral:7b">mistral:7b</option>
-                  <option value="phi3:mini">phi3:mini</option>
-                </select>
+              {/* OPEN-SOURCE MODEL HUB & SEAMLESS SWITCHER */}
+              <div className="space-y-3 md:col-span-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-black pb-2">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-black" />
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black font-mono uppercase tracking-wide text-black">
+                        Open-Source Model Hub & Active Engine
+                      </h4>
+                      <p className="text-[10px] font-mono text-gray-600">
+                        Direct 1-click install top open-source models & seamlessly switch active LLM on the fly
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelHubModal(true)}
+                    className="bg-[#ffe600] hover:bg-yellow-400 text-black font-mono font-black text-xs px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 self-start sm:self-auto cursor-pointer active:translate-x-[1px] active:translate-y-[1px]"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Browse All Models</span>
+                  </button>
+                </div>
+
+                {/* ACTIVE MODEL STATUS CARD & QUICK SWITCHER */}
+                <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span className="text-[10px] font-mono font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300">
+                        Active Query Model
+                      </span>
+                      {CURATED_MODELS.find((m) => m.id === selectedLLM)?.badge && (
+                        <span
+                          className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md border border-black ${
+                            CURATED_MODELS.find((m) => m.id === selectedLLM)?.badgeColor || "bg-gray-200 text-black"
+                          }`}
+                        >
+                          {CURATED_MODELS.find((m) => m.id === selectedLLM)?.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-base sm:text-lg font-black font-mono text-black">
+                      {selectedLLM}
+                    </div>
+                    <div className="text-[11px] font-mono text-gray-600">
+                      {CURATED_MODELS.find((m) => m.id === selectedLLM)?.tagline ||
+                        "Locally running via Ollama daemon. Zero cloud API costs & complete data privacy."}
+                    </div>
+                  </div>
+
+                  {/* Quick Switch Dropdown & Action */}
+                  <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black font-mono uppercase text-gray-500 block">
+                        Quick Switch Installed
+                      </label>
+                      <select
+                        value={selectedLLM}
+                        onChange={(e) => handleSwitchModel(e.target.value)}
+                        disabled={processingMode !== "local"}
+                        className="w-full sm:w-56 bg-gray-50 border-2 border-black rounded-xl p-2 font-mono text-xs font-bold shadow-[2px_2px_0px_#000] cursor-pointer focus:outline-none"
+                      >
+                        {specs.installed_models && specs.installed_models.length > 0 ? (
+                          specs.installed_models.map((m: string) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="llama3.2:3b">llama3.2:3b</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CURATED MODELS FAST ACCESS TILES */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                  {CURATED_MODELS.map((model) => {
+                    const isInstalled = isModelInstalled(model.id);
+                    const isActive = selectedLLM === model.id;
+                    const isPulling = pullingModelId === model.id;
+                    const progress = pullProgress[model.id] || 0;
+                    const statusText = pullStatusText[model.id] || "";
+
+                    return (
+                      <div
+                        key={model.id}
+                        className={`border-2 border-black rounded-2xl p-3.5 flex flex-col justify-between transition-all shadow-[3px_3px_0px_#000] ${
+                          isActive
+                            ? "bg-emerald-50/80 ring-2 ring-emerald-500"
+                            : "bg-white hover:bg-gray-50/80"
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={`text-[9px] font-mono font-black px-2 py-0.5 rounded-md border border-black ${model.badgeColor}`}
+                            >
+                              {model.badge}
+                            </span>
+                            <span className="text-[10px] font-mono font-black text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">
+                              {model.size}
+                            </span>
+                          </div>
+
+                          <div>
+                            <div className="font-mono font-black text-xs text-black flex items-center gap-1.5">
+                              <span>{model.name}</span>
+                              {model.isVisionCapable && (
+                                <span title="Multimodal Vision & OCR Capable" className="text-xs">
+                                  🖼️
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] font-mono text-gray-500 line-clamp-1 font-semibold">
+                              {model.tagline}
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] font-mono text-gray-600 line-clamp-2 leading-relaxed">
+                            {model.description}
+                          </p>
+                        </div>
+
+                        {/* Card Action / Progress */}
+                        <div className="mt-3 pt-2 border-t border-gray-200">
+                          {isPulling ? (
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between text-[10px] font-mono font-bold text-black">
+                                <span className="truncate max-w-[140px]">{statusText || "Pulling..."}</span>
+                                <span>{progress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 h-2.5 rounded-full border border-black overflow-hidden">
+                                <div
+                                  className="bg-[#ffe600] h-full transition-all duration-200"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : isActive ? (
+                            <div className="flex items-center justify-center gap-1.5 bg-emerald-400 text-black py-1.5 rounded-xl border-2 border-black font-mono font-black text-[11px] shadow-[1px_1px_0px_#000]">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>ACTIVE MODEL</span>
+                            </div>
+                          ) : isInstalled ? (
+                            <button
+                              type="button"
+                              onClick={() => handleSwitchModel(model.id)}
+                              className="w-full bg-black hover:bg-gray-800 text-white py-1.5 rounded-xl border-2 border-black font-mono font-black text-[11px] shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
+                              <span>Switch to Model</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleInstallModel(model.id)}
+                              disabled={pullingModelId !== null}
+                              className="w-full bg-[#ffe600] hover:bg-yellow-400 disabled:opacity-50 text-black py-1.5 rounded-xl border-2 border-black font-mono font-black text-[11px] shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>1-Click Install</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* SESSION LIFETIME */}
@@ -2064,77 +2427,176 @@ function KnowledgeBaseStudioPage() {
         )}
       </AnimatePresence>
 
-      {/* 6. OLLAMA MODEL DOWNLOAD MODAL */}
+      {/* 6. OPEN-SOURCE MODEL HUB & DOWNLOAD MODAL */}
       <AnimatePresence>
-        {showModal && (
+        {(showModelHubModal || showModal) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
           >
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-white border-4 border-black rounded-3xl p-6 max-w-md w-full shadow-[10px_10px_0px_#000] space-y-4 font-mono text-black"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white border-4 border-black rounded-3xl p-5 sm:p-7 max-w-3xl w-full shadow-[10px_10px_0px_#000] space-y-5 font-mono text-black my-auto max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between border-b-2 border-gray-200 pb-3">
-                <h3 className="text-lg font-black uppercase">Download Ollama Model</h3>
-                <button onClick={() => setShowModal(false)} className="cursor-pointer">
-                  <X className="w-5 h-5 text-black hover:text-red-600" />
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b-3 border-black pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black uppercase">
+                      Open-Source Model Hub
+                    </h3>
+                    <p className="text-[11px] text-gray-600 font-bold">
+                      Direct 1-Click Install & Seamless Model Switching
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowModelHubModal(false);
+                    setShowModal(false);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded-lg border-2 border-transparent hover:border-black transition cursor-pointer"
+                >
+                  <X className="w-6 h-6 text-black hover:text-red-600" />
                 </button>
               </div>
 
-              <p className="text-xs text-gray-700 font-bold">
-                Enter model tag from Ollama library (e.g.,{" "}
-                <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">
-                  llama3.2:3b
-                </code>
-                ,{" "}
-                <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">
-                  moondream:latest
-                </code>
-                ,{" "}
-                <code className="bg-gray-100 px-1 py-0.5 rounded border border-gray-300">
-                  mistral:7b
-                </code>
-                ):
-              </p>
-
-              <input
-                type="text"
-                value={customModel}
-                onChange={(e) => setCustomModel(e.target.value)}
-                placeholder="e.g. llama3.2:3b"
-                className="w-full bg-gray-50 border-2 border-black rounded-xl p-3 font-bold text-sm focus:outline-none"
-              />
-
-              {pullStatus && (
-                <div className="bg-black text-[#ffe600] p-3 rounded-xl text-xs font-bold border border-black">
-                  {pullStatus}
+              {/* Modal Curated Grid */}
+              <div className="space-y-3">
+                <div className="text-xs font-black uppercase tracking-wider text-gray-700">
+                  ⚡ Curated Top-Tier Open-Source LLMs
                 </div>
-              )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {CURATED_MODELS.map((model) => {
+                    const isInstalled = isModelInstalled(model.id);
+                    const isActive = selectedLLM === model.id;
+                    const isPulling = pullingModelId === model.id;
+                    const progress = pullProgress[model.id] || 0;
+                    const statusText = pullStatusText[model.id] || "";
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="bg-gray-200 hover:bg-gray-300 font-bold text-xs px-4 py-2 rounded-xl border-2 border-black cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDownloadModel}
-                  disabled={pulling}
-                  className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black text-xs px-5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer flex items-center gap-1.5"
-                >
-                  {pulling ? (
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                  ) : (
+                    return (
+                      <div
+                        key={model.id}
+                        className={`border-2 border-black rounded-2xl p-4 flex flex-col justify-between shadow-[3px_3px_0px_#000] ${
+                          isActive
+                            ? "bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500"
+                            : isInstalled
+                              ? "bg-gray-50/80"
+                              : "bg-white"
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md border border-black ${model.badgeColor}`}
+                            >
+                              {model.badge}
+                            </span>
+                            <span className="text-[10px] font-mono font-black text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-300">
+                              {model.size}
+                            </span>
+                          </div>
+
+                          <div>
+                            <div className="font-mono font-black text-sm text-black flex items-center gap-1.5">
+                              <span>{model.name}</span>
+                              {model.isVisionCapable && (
+                                <span title="Multimodal Vision & OCR Capable">🖼️</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] font-mono text-gray-500 font-bold">
+                              {model.tagline}
+                            </div>
+                          </div>
+
+                          <p className="text-[11px] font-mono text-gray-600 leading-relaxed">
+                            {model.description}
+                          </p>
+                        </div>
+
+                        {/* Action Buttons & Progress */}
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                          {isPulling ? (
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between text-[11px] font-mono font-bold text-black">
+                                <span className="truncate max-w-[200px]">
+                                  {statusText || "Downloading from Ollama..."}
+                                </span>
+                                <span>{progress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 h-3 rounded-full border border-black overflow-hidden">
+                                <div
+                                  className="bg-[#ffe600] h-full transition-all duration-200"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : isActive ? (
+                            <div className="flex items-center justify-center gap-2 bg-emerald-400 text-black py-2 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000]">
+                              <CheckCircle2 className="w-4 h-4 text-black" />
+                              <span>CURRENTLY ACTIVE MODEL</span>
+                            </div>
+                          ) : isInstalled ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleSwitchModel(model.id);
+                                setShowModelHubModal(false);
+                                setShowModal(false);
+                              }}
+                              className="w-full bg-black hover:bg-gray-800 text-[#ffe600] py-2 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                            >
+                              <Zap className="w-4 h-4 text-[#ffe600]" />
+                              <span>Switch to this Model</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleInstallModel(model.id)}
+                              disabled={pullingModelId !== null}
+                              className="w-full bg-[#ffe600] hover:bg-yellow-400 disabled:opacity-50 text-black py-2 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                            >
+                              <Download className="w-4 h-4" />
+                              <span>Direct 1-Click Install ({model.size})</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Model Direct Pull */}
+              <div className="pt-3 border-t-2 border-gray-200 space-y-2">
+                <label className="text-xs font-black uppercase text-gray-700 block">
+                  Or Pull Any Custom Ollama Model Tag
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customModel}
+                    onChange={(e) => setCustomModel(e.target.value)}
+                    placeholder="e.g. qwen2.5-coder:7b, gemma2:9b, etc."
+                    className="flex-1 bg-gray-50 border-2 border-black rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleInstallModel(customModel.trim())}
+                    disabled={!customModel.trim() || pullingModelId !== null}
+                    className="bg-[#ffe600] hover:bg-yellow-400 disabled:opacity-50 text-black font-black text-xs px-4 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer flex items-center gap-1.5 shrink-0 active:translate-x-[1px] active:translate-y-[1px]"
+                  >
                     <Download className="w-4 h-4" />
-                  )}
-                  <span>Start Download</span>
-                </button>
+                    <span>Pull Custom</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

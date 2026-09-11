@@ -104,3 +104,28 @@ async def trigger_model_pull(request: PullModelRequest):
         media_type="application/x-ndjson"
     )
 
+
+@router.get("/models")
+async def list_available_models():
+    """List all installed local Ollama models with their metadata."""
+    from ..services.ollama_manager import get_working_ollama_host
+    host = await get_working_ollama_host()
+    if not host:
+        return {"installed_models": [], "models": [], "ollama_running": False}
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.get(f"{host}/api/tags")
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_models = data.get("models", [])
+                names = [m.get("name") for m in raw_models if "name" in m]
+                return {
+                    "installed_models": names,
+                    "models": raw_models,
+                    "ollama_running": True
+                }
+    except Exception:
+        pass
+    return {"installed_models": [], "models": [], "ollama_running": False}
+
+

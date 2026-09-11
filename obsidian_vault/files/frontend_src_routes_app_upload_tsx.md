@@ -17,14 +17,14 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
-*Core logic module*
+- `export interface CuratedModel {`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\routes\app.upload.tsx (2156 lines)
+Module: frontend\src\routes\app.upload.tsx (2618 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
-Exports: System Execution
+Exports: export interface CuratedModel {
 ```

@@ -240,6 +240,76 @@ export async function pullModel(modelName: string): Promise<any> {
   return data;
 }
 
+export async function listInstalledModels(): Promise<{ installed_models: string[]; models: any[]; ollama_running: boolean }> {
+  try {
+    const { data } = await api.get("/system/models");
+    return data;
+  } catch {
+    return { installed_models: [], models: [], ollama_running: false };
+  }
+}
+
+export interface PullModelCallbacks {
+  onProgress?: (pct: number, status: string) => void;
+  onDone?: () => void;
+  onError?: (error: string) => void;
+}
+
+export async function streamPullModel(
+  modelName: string,
+  callbacks?: PullModelCallbacks
+): Promise<void> {
+  const url = `${API_BASE}/system/pull-model`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model_name: modelName }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pull failed with HTTP ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error("No response stream received.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const data = JSON.parse(line);
+          if (data.status === "error") {
+            callbacks?.onError?.(data.message || "Failed to pull model");
+            return;
+          }
+          const pct = typeof data.percent === "number" ? data.percent : 0;
+          const status = data.status || "Downloading...";
+          callbacks?.onProgress?.(pct, status);
+        } catch {
+          // ignore non-json chunk
+        }
+      }
+    }
+
+    callbacks?.onDone?.();
+  } catch (err: any) {
+    callbacks?.onError?.(err?.message || "Failed to download model.");
+  }
+}
+
 export async function setHardwareMode(mode: "gpu" | "cpu"): Promise<any> {
   const { data } = await api.post("/system/hardware-mode", { mode });
   return data;
