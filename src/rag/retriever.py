@@ -79,39 +79,55 @@ class RAGRetriever:
 
             effective_retrieval_query = rewritten_query or query.query
 
-            # 2. Step 2: Generate query embedding for the standalone rewritten query
+            # 2. Step 2: Query Decomposition & Multi-Query Formulation
+            sub_queries = QueryProcessor.decompose_query(effective_retrieval_query)
+            if not sub_queries:
+                sub_queries = [effective_retrieval_query]
+            elif effective_retrieval_query not in sub_queries:
+                sub_queries = [effective_retrieval_query] + sub_queries
+
+            # 3. Generate embeddings in batch for all sub-queries
             emb_start = time.time()
-            query_embedding = self.embedding_gen.generate_single(effective_retrieval_query)
+            if len(sub_queries) == 1:
+                query_embeddings = [self.embedding_gen.generate_single(sub_queries[0])]
+            else:
+                query_embeddings = self.embedding_gen.generate(sub_queries)
             emb_time_ms = (time.time() - emb_start) * 1000
 
-            # 3. Define filter function based on query filters
+            # 4. Define filter function based on query filters
             filter_func = self._build_filter(query.filters) if query.filters else None
 
-            # 4. Dense FAISS Search (Candidate Pool: top_k * 3)
+            # 5. Multi-Query Dense + Lexical Candidate Retrieval
             search_start = time.time()
             candidate_k = max(query.top_k * 3, 10)
-            dense_results = self.vector_store.search(
-                query_embedding,
-                k=candidate_k,
-                filter_func=filter_func
-            )
+            ranking_lists = []
+
+            for sq, q_emb in zip(sub_queries, query_embeddings):
+                dense_hits = self.vector_store.search(
+                    q_emb,
+                    k=candidate_k,
+                    filter_func=filter_func
+                )
+                if dense_hits:
+                    ranking_lists.append(dense_hits)
             dense_time_ms = (time.time() - search_start) * 1000
 
-            # 5. Lexical / Keyword Search (BM25-style token matching on rewritten query)
             lex_start = time.time()
-            lexical_results = self._lexical_search(
-                effective_retrieval_query,
-                k=candidate_k,
-                filter_func=filter_func
-            )
+            for sq in sub_queries:
+                lex_hits = self._lexical_search(
+                    sq,
+                    k=candidate_k,
+                    filter_func=filter_func
+                )
+                if lex_hits:
+                    ranking_lists.append(lex_hits)
             lex_time_ms = (time.time() - lex_start) * 1000
 
-            # 6. Reciprocal Rank Fusion (RRF)
+            # 6. Reciprocal Rank Fusion (RRF) across all sub-query rankings
             fused_candidates = self._reciprocal_rank_fusion(
-                dense_results,
-                lexical_results,
+                *ranking_lists,
                 k=60
-            )
+            ) if ranking_lists else []
 
             # 6.1 Page-Aware Candidate Injection:
             # Inspect both the raw query and the rewritten query for explicit page numbers
@@ -179,7 +195,8 @@ class RAGRetriever:
                     "top_k_requested": query.top_k,
                     "org_id": query.org_id,
                     "rewritten_query": effective_retrieval_query if was_rewritten else None,
-                    "was_rewritten": was_rewritten
+                    "was_rewritten": was_rewritten,
+                    "decomposed_queries": sub_queries,
                 }
             )
 
@@ -234,27 +251,20 @@ class RAGRetriever:
         matches.sort(key=lambda x: x["similarity_score"], reverse=True)
         return matches[:k]
 
-    def _reciprocal_rank_fusion(self, dense_results: List[Dict],
-                               lexical_results: List[Dict],
+    def _reciprocal_rank_fusion(self, *rank_lists: List[Dict],
                                k: int = 60) -> List[Dict[str, Any]]:
         """
-        Reciprocal Rank Fusion (RRF) to merge Dense + Lexical candidate rankings.
+        Reciprocal Rank Fusion (RRF) to merge arbitrary dense and lexical candidate ranking lists.
         """
         scores: Dict[str, float] = {}
         item_map: Dict[str, Dict] = {}
 
-        # 1. Score Dense Ranks
-        for rank, item in enumerate(dense_results):
-            cid = item["chunk_id"]
-            item_map[cid] = item
-            scores[cid] = scores.get(cid, 0.0) + (1.0 / (k + rank + 1))
-
-        # 2. Score Lexical Ranks
-        for rank, item in enumerate(lexical_results):
-            cid = item["chunk_id"]
-            if cid not in item_map:
-                item_map[cid] = item
-            scores[cid] = scores.get(cid, 0.0) + (1.0 / (k + rank + 1))
+        for rank_list in rank_lists:
+            for rank, item in enumerate(rank_list):
+                cid = item["chunk_id"]
+                if cid not in item_map:
+                    item_map[cid] = item
+                scores[cid] = scores.get(cid, 0.0) + (1.0 / (k + rank + 1))
 
         # 3. Sort by combined RRF score
         fused = []

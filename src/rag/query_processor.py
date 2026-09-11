@@ -60,6 +60,14 @@ class QueryProcessor:
         is_visual = bool(words.intersection(cls.VISUAL_KEYWORDS))
         target_page = cls.extract_target_page(query)
         
+        # Check multi-part query patterns
+        is_multi_part = bool(
+            re.search(r'\b(and also|as well as|along with|plus|aur|tatha)\b', q_lower) or
+            ("?" in query and query.count("?") > 1) or
+            re.search(r'\b(what|how|why|where|when|explain)\b.*\b(and|aur)\b.*\b(what|how|why|where|when|explain)\b', q_lower)
+        )
+        is_comparative = bool(re.search(r'\b(compare|comparison|versus|vs\.?|difference between|differences between)\b', q_lower))
+
         if target_page is not None:
             return {
                 "intent": "page_lookup",
@@ -67,22 +75,149 @@ class QueryProcessor:
                 "is_visual": is_visual,
                 "target_page": target_page,
                 "is_page_lookup": True,
+                "is_multi_part": is_multi_part,
             }
 
         if is_visual:
-            return {"intent": "visual", "top_k": 4, "is_visual": True, "target_page": None, "is_page_lookup": False}
+            return {"intent": "visual", "top_k": 4, "is_visual": True, "target_page": None, "is_page_lookup": False, "is_multi_part": is_multi_part}
+
+        if is_comparative:
+            return {"intent": "comparative", "top_k": 6, "is_visual": False, "target_page": None, "is_page_lookup": False, "is_multi_part": True}
+
+        if is_multi_part:
+            return {"intent": "multi_part", "top_k": 6, "is_visual": False, "target_page": None, "is_page_lookup": False, "is_multi_part": True}
         
         if len(words) <= 5 and any(w in words for w in ["what", "who", "when", "where", "define"]):
-            return {"intent": "factual", "top_k": 3, "is_visual": False, "target_page": None, "is_page_lookup": False}
+            return {"intent": "factual", "top_k": 4, "is_visual": False, "target_page": None, "is_page_lookup": False, "is_multi_part": False}
             
         if any(w in words for w in ["compare", "difference", "explain", "why", "how", "analyze", "summarize"]):
-            return {"intent": "analytical", "top_k": 4, "is_visual": False, "target_page": None, "is_page_lookup": False}
+            return {"intent": "analytical", "top_k": 5, "is_visual": False, "target_page": None, "is_page_lookup": False, "is_multi_part": False}
             
         if re.search(r'\b(section|chapter|part|model|v\d+|\d+\.\d+)\b', q_lower):
             has_view_verb = bool(re.search(r'\b(show|give|display|preview|crop|see|view|extract)\b', q_lower))
-            return {"intent": "lookup", "top_k": 4, "is_visual": is_visual or has_view_verb, "target_page": None, "is_page_lookup": False}
+            return {"intent": "lookup", "top_k": 4, "is_visual": is_visual or has_view_verb, "target_page": None, "is_page_lookup": False, "is_multi_part": False}
 
-        return {"intent": "standard", "top_k": 4, "is_visual": False, "target_page": None, "is_page_lookup": False}
+        return {"intent": "standard", "top_k": 5, "is_visual": False, "target_page": None, "is_page_lookup": False, "is_multi_part": False}
+
+    HINGLISH_TRANSLATION_MAP = {
+        "bhai": "",
+        "yaar": "",
+        "isme": "in this",
+        "isme se": "from this",
+        "ye": "this",
+        "yeh": "this",
+        "kaise": "how",
+        "kaam karta hai": "works mechanics architecture",
+        "kaam karti hai": "works mechanics architecture",
+        "karta hai": "does",
+        "karti hai": "does",
+        "kya hai": "what is definition details",
+        "kya": "what",
+        "konsa": "which",
+        "kounsa": "which",
+        "batao": "explain describe details",
+        "samjhao": "explain overview details",
+        "karo": "",
+        "kariye": "",
+        "aur": "and",
+        "tatha": "and",
+        "ke bare me": "about regarding",
+        "bare me": "about regarding",
+        "ke baare mein": "about regarding",
+        "baare mein": "about regarding",
+        "fayde": "benefits advantages",
+        "nuksan": "disadvantages limitations",
+        "antar": "difference comparison",
+        "farq": "difference comparison",
+    }
+
+    @classmethod
+    def normalize_hinglish_query(cls, query: str) -> str:
+        """
+        Translates/normalizes Hinglish & colloquial phrases to English technical keywords
+        to maximize dense FAISS vector and BM25 recall against English documents.
+        """
+        q = query.strip()
+        q_lower = q.lower()
+        has_hinglish = any(
+            re.search(r'\b' + re.escape(k) + r'\b', q_lower)
+            for k in ["bhai", "yaar", "isme", "kaise", "kya", "konsa", "batao", "samjhao", "ke bare", "karta hai", "fayde", "antar"]
+        )
+        if not has_hinglish:
+            return q
+
+        normalized = q_lower
+        for hk, en in cls.HINGLISH_TRANSLATION_MAP.items():
+            normalized = re.sub(r'\b' + re.escape(hk) + r'\b', en, normalized)
+
+        normalized = re.sub(r'\s+', ' ', normalized).strip()
+        return normalized if len(normalized) >= 4 else q
+
+    @classmethod
+    def decompose_query(
+        cls,
+        query: str,
+        history: Optional[List[Dict[str, Any]]] = None
+    ) -> List[str]:
+        """
+        Decomposes complex, compound, comparative, or conversational queries into 2-4 focused sub-queries.
+        Enables multi-query RAG so each part of the user's question retrieves matching context.
+        """
+        sub_queries: List[str] = []
+        raw_clean = query.strip()
+        if not raw_clean:
+            return [query]
+
+        # 1. Primary normalized query
+        normalized = cls.normalize_hinglish_query(raw_clean)
+        sub_queries.append(normalized)
+
+        # 2. Check comparative queries (e.g. "compare X and Y", "difference between X and Y", "X vs Y")
+        comp_match = re.search(
+            r'(?:compare|comparison between|difference between|differences between)\s+([a-zA-Z0-9_\-\s]+?)\s+(?:and|with|versus|vs\.?)\s+([a-zA-Z0-9_\-\s]+)',
+            normalized,
+            re.IGNORECASE
+        )
+        if comp_match:
+            ent1 = comp_match.group(1).strip()
+            ent2 = comp_match.group(2).strip()
+            if ent1 and ent2:
+                sub_queries.append(f"{ent1} specifications features overview")
+                sub_queries.append(f"{ent2} specifications features overview")
+                sub_queries.append(f"comparison difference between {ent1} and {ent2}")
+                return list(dict.fromkeys(sub_queries))[:4]
+
+        # 3. Delimiter & clause splitting (questions with multiple '?', ';', or conjunctions)
+        # Split on question marks or semicolons
+        parts = [p.strip() for p in re.split(r'[\?;]', raw_clean) if len(p.strip()) > 5]
+        if len(parts) > 1:
+            for p in parts[:3]:
+                norm_p = cls.normalize_hinglish_query(p)
+                if norm_p not in sub_queries:
+                    sub_queries.append(norm_p)
+            return list(dict.fromkeys(sub_queries))[:4]
+
+        # 4. Multi-clause conjunction splitting ("and also", "as well as", "and how", "and what", "along with", "and", ",")
+        conjunction_split = re.split(
+            r'\b(?:and also|as well as|along with|plus|and what|and how|and why|and where|and explain|\band\b)\b|,',
+            normalized,
+            flags=re.IGNORECASE
+        )
+        if len(conjunction_split) > 1:
+            for clause in conjunction_split:
+                c_clean = clause.strip().strip(',. ')
+                c_clean = re.sub(r'^(what is|tell me about|how does|why is|explain)\s+', '', c_clean, flags=re.IGNORECASE).strip()
+                if len(c_clean) > 3 and c_clean not in sub_queries and not any(c_clean == w for w in ["this", "that", "it", "how"]):
+                    sub_queries.append(c_clean)
+
+        # Deduplicate while preserving order and limit to max 4 sub-queries
+        clean_sub_queries = []
+        for sq in sub_queries:
+            sq_stripped = sq.strip()
+            if sq_stripped and sq_stripped not in clean_sub_queries:
+                clean_sub_queries.append(sq_stripped)
+
+        return clean_sub_queries[:4]
 
     @classmethod
     def rewrite_query_with_llm(

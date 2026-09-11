@@ -74,12 +74,14 @@ def test_rag_query_end_to_end_with_citations(rag_service):
         "eval_duration": 500000000
     }
 
-    with patch("requests.post", return_value=mock_llm_response):
-        result = rag_service.query(
-            query="What is the throughput capacity?",
-            generate_answer=True,
-            top_k=3
-        )
+    with patch("backend.services.ollama_manager.get_installed_models", return_value=["llama3.2:3b"]):
+        with patch("httpx.Client.post", return_value=mock_llm_response):
+            result = rag_service.query(
+                query="What is the throughput capacity?",
+                generate_answer=True,
+                top_k=3,
+                ollama_url="http://127.0.0.1:11434"
+            )
 
     # 1. Verify no exceptions occurred
     assert "error" not in result or result["error"] is None
@@ -120,13 +122,15 @@ def test_rag_query_multi_turn_rewriting(rag_service):
 
     rewritten_target = "What is the cluster failover threshold?"
 
-    with patch("rag.query_processor.QueryProcessor.rewrite_query_with_llm", return_value=(rewritten_target, True)):
-        with patch("requests.post", return_value=mock_llm_response):
-            result = rag_service.query(
-                query="What is its failover threshold?",
-                history=history,
-                generate_answer=True
-            )
+    with patch("backend.services.ollama_manager.get_installed_models", return_value=["llama3.2:3b"]):
+        with patch("rag.query_processor.QueryProcessor.rewrite_query_with_llm", return_value=(rewritten_target, True)):
+            with patch("httpx.Client.post", return_value=mock_llm_response):
+                result = rag_service.query(
+                    query="What is its failover threshold?",
+                    history=history,
+                    generate_answer=True,
+                    ollama_url="http://127.0.0.1:11434"
+                )
 
     assert result.get("error") is None
     assert result["metrics"]["was_rewritten"] is True
@@ -218,3 +222,58 @@ async def test_rag_query_stream_end_to_end(rag_service):
     assert "tokens_generated" in metrics
     assert "was_rewritten" in metrics
     assert metrics["tokens_generated"] == 4
+
+
+def test_query_decomposition_and_hinglish():
+    """
+    Test 5: Verify QueryProcessor decomposes complex questions and normalizes Hinglish.
+    """
+    from src.rag.query_processor import QueryProcessor
+
+    # 1. Multi-part query decomposition
+    multi_q = "What is the cluster throughput and also how does failover work?"
+    decomposed = QueryProcessor.decompose_query(multi_q)
+    assert len(decomposed) >= 2
+    assert any("throughput" in q.lower() for q in decomposed)
+    assert any("failover" in q.lower() for q in decomposed)
+
+    # 2. Comparative query decomposition
+    comp_q = "Compare primary cluster and secondary cluster"
+    decomposed_comp = QueryProcessor.decompose_query(comp_q)
+    assert len(decomposed_comp) >= 2
+    assert any("primary cluster" in q.lower() for q in decomposed_comp)
+    assert any("secondary cluster" in q.lower() for q in decomposed_comp)
+
+    # 3. Hinglish normalization
+    hinglish_q = "bhai isme failover threshold kya hai aur ye kaise kaam karta hai"
+    normalized = QueryProcessor.normalize_hinglish_query(hinglish_q)
+    assert "bhai" not in normalized.lower()
+    assert "failover" in normalized.lower()
+    assert "works mechanics" in normalized.lower() or "architecture" in normalized.lower()
+
+
+def test_chatgpt_grade_prompt_formatting():
+    """
+    Test 6: Verify build_chatgpt_rag_prompt builds structured, comprehensive prompt with guidelines.
+    """
+    from backend.services.rag_service import build_chatgpt_rag_prompt
+
+    mock_results = [
+        {
+            "text": "Throughput capacity is 1.2M events/sec.",
+            "metadata": {"file_name": "spec.txt", "page_number": 1}
+        }
+    ]
+
+    prompt = build_chatgpt_rag_prompt(
+        query="What is the throughput?",
+        results=mock_results,
+        history_str=""
+    )
+
+    assert "InsightRAG AI" in prompt
+    assert "Executive Summary" in prompt
+    assert "Detailed Breakdown" in prompt
+    assert "spec.txt" in prompt
+    assert "Throughput capacity is 1.2M" in prompt
+

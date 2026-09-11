@@ -29,6 +29,78 @@ except ImportError as e:
 import os
 import httpx
 
+
+def build_chatgpt_rag_prompt(
+    query: str,
+    results: List[Dict[str, Any]],
+    history_str: str = "",
+    target_page: Optional[int] = None,
+    is_visual_query: bool = False
+) -> str:
+    """
+    Constructs an articulate, structured, ChatGPT-grade prompt.
+    Ensures:
+    1. Deep question comprehension and multi-part decomposition.
+    2. Grounded facts with bracketed citations [1], [2].
+    3. Clear structured markdown output (Executive Summary, ### Sections, Bullet points, Tables).
+    4. Seamless understanding of natural language, English, and Hinglish queries.
+    5. Graceful explanation of available information without rigid refusals.
+    """
+    if results:
+        context_blocks = []
+        for i, r in enumerate(results[:8]):
+            r_meta = r.get("metadata", {})
+            p_num = r_meta.get("page_number") or r_meta.get("page")
+            p_str = f"Page {p_num}" if p_num else "Excerpt"
+            f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
+            chunk_text = r.get('text', '').strip()[:2500]
+            context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
+        context_str = "\n\n".join(context_blocks)
+
+        page_instruction = (
+            f"CRITICAL PAGE FOCUS: The user specifically asked about Page {target_page}. You MUST detail the content on Page {target_page} using the context provided below.\n"
+            if target_page else ""
+        )
+        visual_instruction = (
+            "VISUAL DIAGRAMS/SNAPSHOTS: When the user asks for an image, diagram, architecture schematic, or snapshot (e.g. 'photo of the project part'), explain the visual structure and components from the context and note that the focused visual crop snapshot is rendered in the viewer.\n"
+            if is_visual_query else ""
+        )
+
+        return (
+            "You are InsightRAG AI, an elite, articulate, and comprehensive AI document intelligence consultant inspired by the depth, clarity, and helpfulness of ChatGPT.\n"
+            "Your objective is to thoroughly answer the user's question, address every facet or sub-part asked, and provide a rich, well-structured response grounded in the provided document context.\n\n"
+            "CORE OPERATING PRINCIPLES:\n"
+            "1. QUESTION COMPREHENSION & BREAKDOWN:\n"
+            "   - Break down the user's question into its core components and systematically answer each part.\n"
+            "   - If the user asks in Hindi, Hinglish, or English, understand their intent deeply and respond in an articulate, clear, and natural tone (using clear English or natural bilingual explanation as best fits the query).\n\n"
+            "2. FACTUAL GROUNDING & PRECISE CITATIONS:\n"
+            "   - Base all statements, metrics, specifications, and dates on the provided context chunks.\n"
+            "   - You MUST cite every claim using bracketed markers like [1], [2], or [1][3] immediately after the relevant statement.\n"
+            "   - If certain specific details requested are not mentioned in the context, state clearly what the document DOES specify, and politely clarify what details are not present, rather than shutting down or refusing.\n\n"
+            "3. STRUCTURED CHATGPT-GRADE PRESENTATION:\n"
+            "   - **Executive Summary / Direct Answer**: Start with a crisp 1-2 sentence direct overview answering the core question upfront.\n"
+            "   - **Detailed Breakdown**: Structure multi-part or complex answers using clear markdown headings (###), logical sub-sections, bullet points, and **bold** key terms.\n"
+            "   - **Data & Comparisons**: Use markdown tables or bulleted specs when presenting comparative numbers, metrics, or architecture components.\n"
+            "   - **Synthesis & Explanation**: Don't just list raw chunks. Explain *how* and *why* things work, synthesizing details across multiple chunks into a cohesive narrative.\n"
+            "   - **Key Takeaways / Practical Summary**: Conclude with a helpful summary or key takeaway when relevant.\n\n"
+            f"{visual_instruction}"
+            f"{page_instruction}"
+            f"{history_str}"
+            f"DOCUMENT CONTEXT:\n{context_str}\n\n"
+            f"QUESTION: {query}\n"
+            f"ANSWER:"
+        )
+    else:
+        return (
+            "You are InsightRAG AI, a brilliant, articulate, and helpful document intelligence assistant inspired by ChatGPT.\n"
+            "Provide a comprehensive, well-structured, and helpful answer to the user's question using clear markdown formatting.\n"
+            "If the question specifically refers to proprietary document data that has not yet been indexed, provide a helpful conceptual answer and politely remind the user to upload their documents (.pdf, .txt, .md, .docx, .csv) for document-grounded answers.\n\n"
+            f"{history_str}"
+            f"QUESTION: {query}\n"
+            f"ANSWER:"
+        )
+
+
 class RAGService:
     """Manages RAG document ingestion and retrieval."""
 
@@ -256,12 +328,12 @@ class RAGService:
 
         # 1. Query Intent Classification & Conversational Rewriting
         intent_info = QueryProcessor.classify_intent(query)
-        effective_top_k = min(top_k, intent_info.get("top_k", 4))
+        effective_top_k = max(top_k, intent_info.get("top_k", 5))
         history_str, chat_history_turns = QueryProcessor.compress_conversation_history(history, max_turns=4)
 
-        # 1b. Service-level query rewriting for multi-turn conversations
+        # 1b. Service-level query rewriting & Hinglish normalization
         was_rewritten = False
-        retrieval_query = query
+        retrieval_query = QueryProcessor.normalize_hinglish_query(query)
         if history:
             try:
                 retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
@@ -271,13 +343,13 @@ class RAGService:
                     model=model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b",
                 )
             except Exception as rewrite_err:
-                logger.warning(f"Query rewrite failed, using raw query: {rewrite_err}")
-                retrieval_query = query
+                logger.warning(f"Query rewrite failed, using normalized query: {rewrite_err}")
+                retrieval_query = QueryProcessor.normalize_hinglish_query(query)
                 was_rewritten = False
         profiler.end_stage("query_processing_ms")
 
         try:
-            # 2. Hybrid Retrieval + Reranking (using rewritten standalone query)
+            # 2. Hybrid Retrieval + Reranking (using decomposed/rewritten standalone queries)
             profiler.start_stage("retrieval_ms")
             results = self.pipeline.query(
                 query=retrieval_query,
@@ -297,55 +369,13 @@ class RAGService:
 
             if generate_answer:
                 profiler.start_stage("prompt_prep_ms")
-                target_page = intent_info.get("target_page")
-                is_visual_query = intent_info.get("is_visual", False)
-                if results:
-                    context_blocks = []
-                    for i, r in enumerate(results[:6]):
-                        r_meta = r.get("metadata", {})
-                        p_num = r_meta.get("page_number") or r_meta.get("page")
-                        p_str = f"Page {p_num}" if p_num else "Excerpt"
-                        f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                        # Allow generous context allowance (up to 2500 chars) so text, structured tables, and visual descriptions remain fully intact
-                        chunk_text = r.get('text', '').strip()[:2500]
-                        context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
-                    context_str = "\n\n".join(context_blocks)
-                    page_instruction = (
-                        f"CRITICAL: The user asked about Page {target_page}. You MUST detail what is on Page {target_page} using ONLY the context provided below.\n"
-                        if target_page else ""
-                    )
-                    visual_instruction = (
-                        "VISUAL CROPS: When the user asks for a photo, image, picture, preview, or snapshot of a section or diagram (e.g. 'photo of the project part'), explain the content from the context and note that the targeted visual crop snapshot is rendered in the viewer.\n"
-                        if is_visual_query else ""
-                    )
-                    prompt = (
-                        "You are InsightRAG AI, a high-precision enterprise document intelligence assistant.\n"
-                        "Your sole task is to answer the user's question using ONLY the provided document context chunks below.\n\n"
-                        "MANDATORY OPERATING RULES:\n"
-                        "1. GROUNDING & CITATIONS: Base every statement strictly on the provided context. You MUST cite every claim, data point, or fact using bracketed chunk numbers like [1], [2], [1][3] immediately after the claim.\n"
-                        "2. SYNTHESIS: Synthesize information across multiple context chunks into one coherent, structured answer. Do NOT simply list or summarize chunks individually.\n"
-                        "3. STRICT BOUNDARIES (NO OUTSIDE KNOWLEDGE): Answer ONLY from the provided context. You are strictly forbidden from using general knowledge, assumptions, or unverified extrapolations outside the provided text.\n"
-                        "4. INCOMPLETE CONTEXT DISCLOSURE: If the provided context is incomplete, ambiguous, or lacks sufficient information to fully answer the question, explicitly state what specific information is missing instead of guessing or generalizing.\n"
-                        "5. EXACT SPECIFICITY: Match the precision of your answer to the question. Include exact numbers, metrics, dates, page numbers, and diagram/table references whenever present in the context.\n\n"
-                        "RESPONSE FORMAT:\n"
-                        "- Use bullet points or numbered lists for multi-part answers.\n"
-                        "- Use **bold** for key terms and metrics.\n"
-                        "- Keep paragraphs short (2-3 sentences max).\n"
-                        "- Start with a direct answer, then elaborate with supporting details.\n\n"
-                        f"{visual_instruction}"
-                        f"{page_instruction}"
-                        f"{history_str}"
-                        f"DOCUMENT CONTEXT:\n{context_str}\n\n"
-                        f"QUESTION: {query}\n"
-                        f"ANSWER:"
-                    )
-                else:
-                    prompt = (
-                        f"You are InsightRAG AI. Answer concisely and helpfully:\n\n"
-                        f"{history_str}"
-                        f"QUESTION: {query}\n"
-                        f"ANSWER:"
-                    )
+                prompt = build_chatgpt_rag_prompt(
+                    query=query,
+                    results=results,
+                    history_str=history_str,
+                    target_page=intent_info.get("target_page"),
+                    is_visual_query=intent_info.get("is_visual", False)
+                )
                 profiler.end_stage("prompt_prep_ms")
 
                 # =========================================================
@@ -360,12 +390,12 @@ class RAGService:
                             {
                                 "role": "system",
                                 "content": (
-                                    "You are InsightRAG AI, a high-precision enterprise document intelligence assistant.\n"
-                                    "1. Base all statements strictly on provided context and cite chunks like [1][2].\n"
-                                    "2. Synthesize facts across chunks into one coherent answer.\n"
-                                    "3. Forbid general knowledge outside context.\n"
-                                    "4. Explicitly state what is missing if context is incomplete.\n"
-                                    "5. Include exact numbers, metrics, and page references."
+                                    "You are InsightRAG AI, an elite AI document intelligence consultant inspired by ChatGPT.\n"
+                                    "1. Deeply understand and systematically answer all facets of the user's question (supporting English, Hindi, and Hinglish).\n"
+                                    "2. Base factual claims strictly on provided context and cite chunks like [1][2].\n"
+                                    "3. Format with an Executive Summary, clear markdown sections (###), bullet points, and bold key terms.\n"
+                                    "4. Synthesize facts across chunks into coherent, articulate explanations.\n"
+                                    "5. Include exact numbers, metrics, and page references whenever present."
                                 )
                             }
                         ]
@@ -477,12 +507,12 @@ class RAGService:
                                             "stream": False,
                                             "keep_alive": "30m",
                                             "options": {
-                                                "num_ctx": 4096,
-                                                "temperature": 0.1,
-                                                "num_predict": 512,
+                                                "num_ctx": 8192,
+                                                "temperature": 0.35,
+                                                "num_predict": 2048,
                                                 "num_thread": _cpu_threads,
-                                                "top_k": 25,
-                                                "top_p": 0.85,
+                                                "top_k": 40,
+                                                "top_p": 0.9,
                                             }
                                         }
                                     )
@@ -634,12 +664,12 @@ class RAGService:
         profiler.start_stage("retrieval_ms")
 
         intent_info = QueryProcessor.classify_intent(query)
-        effective_top_k = min(top_k, intent_info.get("top_k", 4))
+        effective_top_k = max(top_k, intent_info.get("top_k", 5))
         history_str, _ = QueryProcessor.compress_conversation_history(history, max_turns=4)
 
-        # 1b. Service-level query rewriting for multi-turn conversations
+        # 1b. Service-level query rewriting & Hinglish normalization
         was_rewritten = False
-        retrieval_query = query
+        retrieval_query = QueryProcessor.normalize_hinglish_query(query)
         if history:
             try:
                 retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
@@ -649,8 +679,8 @@ class RAGService:
                     model=model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b",
                 )
             except Exception as rewrite_err:
-                logger.warning(f"Query rewrite failed, using raw query: {rewrite_err}")
-                retrieval_query = query
+                logger.warning(f"Query rewrite failed, using normalized query: {rewrite_err}")
+                retrieval_query = QueryProcessor.normalize_hinglish_query(query)
                 was_rewritten = False
 
         results = self.pipeline.query(
@@ -715,47 +745,14 @@ class RAGService:
             }
         }
 
-        # Build prompt
-        if results:
-            context_blocks = []
-            for i, r in enumerate(results[:6]):
-                r_meta = r.get("metadata", {})
-                p_num = r_meta.get("page_number") or r_meta.get("page")
-                p_str = f"Page {p_num}" if p_num else "Excerpt"
-                f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-                chunk_text = r.get('text', '').strip()[:2500]
-                context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
-            page_instruction = (
-                f"CRITICAL: The user explicitly asked about Page {target_page}. Detail what is on Page {target_page} using the context provided below.\n"
-                if target_page else ""
-            )
-            visual_instruction = (
-                "VISUAL CROPS: When the user asks for a photo, image, picture, preview, or snapshot of a section or diagram (e.g. 'photo of the project part'), explain the content from the context and note that the targeted visual crop snapshot is rendered in the viewer.\n"
-                if is_visual_query else ""
-            )
-            prompt = (
-                "You are InsightRAG AI, a high-precision enterprise document intelligence assistant.\n"
-                "Your sole task is to answer the user's question using ONLY the provided document context chunks below.\n\n"
-                "MANDATORY OPERATING RULES:\n"
-                "1. GROUNDING & CITATIONS: Base every statement strictly on the provided context. You MUST cite every claim, data point, or fact using bracketed chunk numbers like [1], [2], [1][3] immediately after the claim.\n"
-                "2. SYNTHESIS: Synthesize information across multiple context chunks into one coherent, structured answer. Do NOT simply list or summarize chunks individually.\n"
-                "3. STRICT BOUNDARIES (NO OUTSIDE KNOWLEDGE): Answer ONLY from the provided context. You are strictly forbidden from using general knowledge, assumptions, or unverified extrapolations outside the provided text.\n"
-                "4. INCOMPLETE CONTEXT DISCLOSURE: If the provided context is incomplete, ambiguous, or lacks sufficient information to fully answer the question, explicitly state what specific information is missing instead of guessing or generalizing.\n"
-                "5. EXACT SPECIFICITY: Match the precision of your answer to the question. Include exact numbers, metrics, dates, page numbers, and diagram/table references whenever present in the context.\n\n"
-                "RESPONSE FORMAT:\n"
-                "- Use bullet points or numbered lists for multi-part answers.\n"
-                "- Use **bold** for key terms and metrics.\n"
-                "- Keep paragraphs short (2-3 sentences max).\n"
-                "- Start with a direct answer, then elaborate with supporting details.\n\n"
-                f"{visual_instruction}"
-                f"{page_instruction}"
-                f"{history_str}"
-                f"DOCUMENT CONTEXT:\n{chr(10).join(context_blocks)}\n\n"
-                f"QUESTION: {query}\n"
-                f"ANSWER:"
-            )
-        else:
-            prompt = f"You are InsightRAG AI. Answer concisely:\n\n{history_str}QUESTION: {query}\nANSWER:"
+        # Build ChatGPT-grade prompt
+        prompt = build_chatgpt_rag_prompt(
+            query=query,
+            results=results,
+            history_str=history_str,
+            target_page=target_page,
+            is_visual_query=is_visual_query
+        )
 
         # Local Ollama Streaming
         from .ollama_manager import get_working_ollama_host
@@ -778,12 +775,12 @@ class RAGService:
                         "stream": True,
                         "keep_alive": "30m",
                         "options": {
-                            "num_ctx": 4096,
-                            "temperature": 0.1,
-                            "num_predict": 512,
+                            "num_ctx": 8192,
+                            "temperature": 0.35,
+                            "num_predict": 2048,
                             "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
-                            "top_k": 25,
-                            "top_p": 0.85,
+                            "top_k": 40,
+                            "top_p": 0.9,
                         }
                     }
                 ) as resp:

@@ -19,6 +19,7 @@ tags:
 
 ## ⚙️ Key Symbols & Interfaces
 - `class RAGService:`
+- `def build_chatgpt_rag_prompt`
 - `def __init__`
 - `def set_hardware_mode`
 - `def _safe_terminal_print`
@@ -28,14 +29,13 @@ tags:
 - `def start_background_ingestion`
 - `def _run_ingestion_worker`
 - `def progress_hook`
-- `def get_task_status`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\services\rag_service.py (890 lines)
+Module: backend\services\rag_service.py (887 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
-Exports: class RAGService:, def __init__, def set_hardware_mode, def _safe_terminal_print, def get_hardware_mode
+Exports: class RAGService:, def build_chatgpt_rag_prompt, def __init__, def set_hardware_mode, def _safe_terminal_print
 ```
