@@ -186,6 +186,7 @@ class RAGPipeline:
                     "page": int(page_num),
                     "has_images": chunk_dict.get("has_images", doc_meta.get("has_images", False)),
                     "has_drawings": chunk_dict.get("has_drawings", doc_meta.get("has_drawings", False)),
+                    "visual_elements": chunk_dict.get("visual_elements") or doc_meta.get("visual_elements") or [],
                 }
             )
             chunk_objects.append(chunk_obj)

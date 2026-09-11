@@ -157,6 +157,7 @@ class RAGQueryResponse(BaseModel):
     llm_model: Optional[str] = None
     used_llm: bool = False
     visual_snippet: Optional[Dict[str, Any]] = None
+    visual_diagrams: List[Dict[str, Any]] = Field(default_factory=list)
     metrics: Optional[Dict[str, Any]] = None
 
 

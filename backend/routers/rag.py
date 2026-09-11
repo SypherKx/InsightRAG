@@ -444,6 +444,7 @@ async def query_rag(request: RAGQueryRequest):
         processing_mode=request.processing_mode or "local",
         api_key=request.api_key,
         history=request.history,
+        images=request.images,
     )
 
     answer = result.get("answer")
@@ -461,6 +462,7 @@ async def query_rag(request: RAGQueryRequest):
         llm_model=result.get("llm_model"),
         used_llm=result.get("used_llm", False),
         visual_snippet=result.get("visual_snippet"),
+        visual_diagrams=result.get("visual_diagrams", []),
         metrics=result.get("metrics")
     )
 
@@ -492,7 +494,8 @@ async def query_rag_stream(request: RAGQueryRequest):
                 model=request.model or "llama3.2:3b",
                 processing_mode=request.processing_mode or "local",
                 api_key=request.api_key,
-                history=request.history
+                history=request.history,
+                images=request.images,
             ):
                 event_type = event_item.get("event", "message")
                 payload = json.dumps(event_item.get("data", {}))
@@ -510,3 +513,45 @@ async def query_rag_stream(request: RAGQueryRequest):
             "X-Accel-Buffering": "no"
         }
     )
+
+
+@router.get("/images/{doc_name}/{image_name}")
+async def get_extracted_image(doc_name: str, image_name: str):
+    """
+    Serve an extracted diagram, figure, or visual element from the knowledge base safely.
+    Validates path containment to prevent directory traversal.
+    """
+    from fastapi.responses import FileResponse
+    from ..utils.security import sanitize_filename, validate_safe_path
+
+    base_dir = Path("./uploads/extracted_images").resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_doc = sanitize_filename(doc_name)
+    safe_img = sanitize_filename(image_name)
+
+    target_path = base_dir / safe_doc / safe_img
+    try:
+        valid_path = validate_safe_path(base_dir, target_path)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid path traversal attempt.")
+
+    if not valid_path.exists() or not valid_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Image not found: {safe_img}")
+
+    suffix = valid_path.suffix.lower()
+    media_types = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+    }
+    media_type = media_types.get(suffix, "application/octet-stream")
+    return FileResponse(
+        str(valid_path),
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=86400"}
+    )
+

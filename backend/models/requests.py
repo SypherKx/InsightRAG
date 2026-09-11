@@ -33,4 +33,6 @@ class RAGQueryRequest(BaseModel):
     processing_mode: Optional[str] = "local"
     api_key: Optional[str] = None
     history: List[Dict[str, Any]] = Field(default_factory=list)
+    images: Optional[List[str]] = Field(default_factory=list)
+
 

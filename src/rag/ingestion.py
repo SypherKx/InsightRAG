@@ -350,17 +350,28 @@ class DocumentIngester:
                                             "bbox": [round(w[0], 1), round(w[1], 1), round(w[2], 1), round(w[3], 1)]
                                         })
 
-                            visual_elements.append({
-                                "idx": 1,
-                                "visual_type": "Vector Schematic / Architecture Diagram",
-                                "width": int(diagram_rect.width),
-                                "height": int(diagram_rect.height),
-                                "bbox": [round(diagram_rect.x0, 1), round(diagram_rect.y0, 1), round(diagram_rect.x1, 1), round(diagram_rect.y1, 1)],
-                                "aspect_ratio": "Vector Layout",
-                                "caption": d_caption or f"Diagram / Schematic on Page {page_number}",
-                                "description": f"Vector-rendered illustration or flowchart on Page {page_number} with {len(sig_drawings)} geometric components.",
-                                "sub_regions": sub_regions[:20],
-                            })
+                            # Render vector diagram region to image so it can be saved and viewed in UI
+                            v_img_bytes = None
+                            try:
+                                pix = page.get_pixmap(clip=diagram_rect, dpi=150)
+                                if pix and pix.width > 0 and pix.height > 0:
+                                    v_img_bytes = pix.tobytes("png")
+                            except Exception:
+                                pass
+
+                            v_info = _analyze_visual(
+                                img_bytes=v_img_bytes,
+                                w=int(diagram_rect.width),
+                                h=int(diagram_rect.height),
+                                bbox=[round(diagram_rect.x0, 1), round(diagram_rect.y0, 1), round(diagram_rect.x1, 1), round(diagram_rect.y1, 1)],
+                                caption=d_caption or f"Diagram / Schematic on Page {page_number}",
+                                page_num=page_number,
+                                idx=len(visual_elements) + 1,
+                                doc_name=file_path.name
+                            )
+                            v_info["visual_type"] = "Vector Schematic / Architecture Diagram"
+                            v_info["sub_regions"] = sub_regions[:20]
+                            visual_elements.append(v_info)
                 except Exception as draw_err:
                     logger.debug(f"Drawing extraction error on page {page_number}: {draw_err}")
 
@@ -395,7 +406,8 @@ class DocumentIngester:
                                 bbox=bbox,
                                 caption=caption,
                                 page_num=page_number,
-                                idx=len(visual_elements) + 1
+                                idx=len(visual_elements) + 1,
+                                doc_name=file_path.name
                             )
                             visual_elements.append(vis_info)
                 except Exception as img_err:
@@ -412,7 +424,8 @@ class DocumentIngester:
                             bbox=[0, 0, pix.width, pix.height],
                             caption=f"Scanned Document / Graphic Layout on Page {page_number}",
                             page_num=page_number,
-                            idx=len(visual_elements) + 1
+                            idx=len(visual_elements) + 1,
+                            doc_name=file_path.name
                         )
                         visual_elements.append(vis_info)
                     except Exception:
@@ -427,7 +440,9 @@ class DocumentIngester:
                 if visual_elements:
                     vis_lines = []
                     for v in visual_elements:
+                        url_part = f" [Image URL: {v.get('image_url')}]" if v.get('image_url') else ""
                         vis_lines.append(
+                            f"[IMAGE / FIGURE: {v.get('caption', 'Figure')}]{url_part}\n"
                             f"Figure {v.get('idx', 1)} [{v.get('visual_type', 'Diagram')} | Resolution: {v.get('width', 0)}x{v.get('height', 0)} px]:\n"
                             f"- Caption / Context: {v.get('caption', 'Figure')}\n"
                             f"- Visual Details: {v.get('description', '')}"
@@ -628,12 +643,15 @@ class DocumentIngester:
             "page": 1,
         }
 
-        vis_info = _analyze_visual(file_path=file_path, page_num=1, idx=1)
+        vis_info = _analyze_visual(file_path=file_path, page_num=1, idx=1, doc_name=file_path.name)
         metadata.update({
             "width": vis_info.get("width"),
             "height": vis_info.get("height"),
             "visual_type": vis_info.get("visual_type"),
             "aspect_ratio": vis_info.get("aspect_ratio"),
+            "image_url": vis_info.get("image_url"),
+            "file_path": vis_info.get("file_path"),
+            "visual_elements": [vis_info],
         })
 
         content = (
@@ -709,8 +727,8 @@ def _find_caption_near_bbox(page, bbox, margin=60) -> str:
     return ""
 
 
-def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1, idx=1, file_path=None) -> Dict[str, Any]:
-    """Analyze image geometric, computer vision, and multimodal semantic properties."""
+def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1, idx=1, file_path=None, doc_name=None) -> Dict[str, Any]:
+    """Analyze image geometric, computer vision, and multimodal semantic properties, saving to extracted_images."""
     aspect_ratio = "1:1 (Square)"
     if w > 0 and h > 0:
         ratio = w / h
@@ -723,6 +741,34 @@ def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1,
 
     visual_type = "Embedded Graphic / Diagram"
     details = []
+
+    # 1. Save extracted image to disk for static serving & visual attachment
+    image_url = None
+    saved_file_path = None
+    try:
+        if doc_name and (img_bytes or file_path):
+            import re
+            from pathlib import Path
+            safe_doc = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', doc_name)
+            out_dir = Path("./uploads/extracted_images") / safe_doc
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            cap_slug = re.sub(r'[^a-zA-Z0-9_]', '_', (caption or "image")[:25]).strip('_')
+            doc_stem = re.sub(r'[^a-zA-Z0-9_]', '_', Path(doc_name).stem)[:20]
+            img_filename = f"{doc_stem}_p{page_num}_img{idx}_{cap_slug}.jpg"
+            target_path = out_dir / img_filename
+
+            if img_bytes:
+                target_path.write_bytes(img_bytes)
+                image_url = f"/api/v1/rag/images/{safe_doc}/{img_filename}"
+                saved_file_path = str(target_path)
+            elif file_path and Path(file_path).exists():
+                import shutil
+                shutil.copyfile(file_path, target_path)
+                image_url = f"/api/v1/rag/images/{safe_doc}/{img_filename}"
+                saved_file_path = str(target_path)
+    except Exception as save_err:
+        logger.debug(f"Could not persist visual image to disk: {save_err}")
 
     try:
         import io
@@ -796,6 +842,10 @@ def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1,
         "aspect_ratio": aspect_ratio,
         "caption": caption or f"Visual Element {idx} on Page {page_num}",
         "description": desc,
+        "image_url": image_url,
+        "file_path": saved_file_path,
+        "page": page_num,
+        "doc_name": doc_name,
     }
 
 

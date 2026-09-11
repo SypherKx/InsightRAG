@@ -277,3 +277,58 @@ def test_chatgpt_grade_prompt_formatting():
     assert "spec.txt" in prompt
     assert "Throughput capacity is 1.2M" in prompt
 
+
+def test_attached_visual_diagrams_and_b64_extraction(tmp_path):
+    """
+    Test 7: Verify extract_attached_visual_diagrams and get_b64_images.
+    Asserts:
+    - Diagrams extracted from chunk metadata and inline tags.
+    - Base64 encoding returns valid strings for vision models.
+    - build_chatgpt_rag_prompt includes ATTACHED VISUAL DIAGRAMS section.
+    """
+    from backend.services.rag_service import (
+        extract_attached_visual_diagrams,
+        get_b64_images,
+        build_chatgpt_rag_prompt
+    )
+
+    dummy_img = tmp_path / "test_fig.png"
+    dummy_img.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
+
+    mock_results = [
+        {
+            "text": "System architecture [IMAGE / FIGURE: Figure 1: Pipeline Overview] [Image URL: /api/v1/rag/images/doc/fig1.jpg]",
+            "metadata": {
+                "file_name": "paper.pdf",
+                "page_number": 2,
+                "visual_elements": [
+                    {
+                        "caption": "Figure 1: Pipeline Overview",
+                        "image_url": "/api/v1/rag/images/doc/fig1.jpg",
+                        "file_path": str(dummy_img),
+                        "page": 2,
+                        "description": "Overview of RAG pipeline"
+                    }
+                ]
+            }
+        }
+    ]
+
+    diagrams = extract_attached_visual_diagrams(mock_results)
+    assert len(diagrams) == 1
+    assert diagrams[0]["caption"] == "Figure 1: Pipeline Overview"
+    assert diagrams[0]["image_url"] == "/api/v1/rag/images/doc/fig1.jpg"
+
+    b64s = get_b64_images(None, diagrams)
+    assert len(b64s) == 1
+    assert len(b64s[0]) > 10
+
+    prompt = build_chatgpt_rag_prompt(
+        query="Explain the architecture diagram",
+        results=mock_results,
+        visual_diagrams=diagrams
+    )
+    assert "ATTACHED VISUAL DIAGRAMS & FIGURES" in prompt
+    assert "Figure 1: Pipeline Overview" in prompt
+
+

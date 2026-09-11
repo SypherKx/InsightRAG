@@ -195,6 +195,7 @@ function KnowledgeBaseStudioPage() {
       text: string;
       sources?: any[];
       visual_snippet?: any;
+      visual_diagrams?: any[];
       model?: string;
       timestamp?: string;
     }>
@@ -505,6 +506,7 @@ function KnowledgeBaseStudioPage() {
             text: res.answer || res.response || "No answer generated.",
             sources: res.sources || res.results || [],
             visual_snippet: res.visual_snippet,
+            visual_diagrams: res.visual_diagrams || [],
             model: res.llm_model || modelToUse,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
@@ -530,6 +532,7 @@ function KnowledgeBaseStudioPage() {
     let streamedText = "";
     let streamSources: any[] = [];
     let streamVisual: any = null;
+    let streamVisualDiagrams: any[] = [];
     let streamModel = modelToUse;
 
     // Add empty assistant message placeholder
@@ -563,6 +566,7 @@ function KnowledgeBaseStudioPage() {
         onMetadata: (data: any) => {
           streamSources = data.results || [];
           streamVisual = data.visual_snippet || null;
+          streamVisualDiagrams = data.visual_diagrams || [];
           // Update sources immediately so visual preview appears early
           setChatMessages((prev) => {
             const updated = [...prev];
@@ -571,6 +575,7 @@ function KnowledgeBaseStudioPage() {
                 ...updated[streamMsgIndex.current],
                 sources: streamSources,
                 visual_snippet: streamVisual,
+                visual_diagrams: streamVisualDiagrams,
               };
             }
             return updated;
@@ -587,6 +592,7 @@ function KnowledgeBaseStudioPage() {
                 text: streamedText || "No answer generated.",
                 sources: streamSources,
                 visual_snippet: streamVisual,
+                visual_diagrams: streamVisualDiagrams,
                 model: streamModel,
               };
             }
@@ -1068,6 +1074,69 @@ function KnowledgeBaseStudioPage() {
                               <span>Open High-Res</span>
                               <ExternalLink className="w-2.5 h-2.5" />
                             </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Attached Visual Diagrams & Schematics (Mi:RAG Studio Visual Artifacts) */}
+                      {msg.visual_diagrams && msg.visual_diagrams.length > 0 && (
+                        <div className="mt-3 p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-3">
+                          <div className="flex items-center justify-between font-mono text-[10px] font-black text-black border-b-2 border-black pb-1.5">
+                            <span className="flex items-center gap-1.5 text-black">
+                              <Sparkles className="w-3.5 h-3.5 text-[#a855f7]" />
+                              <span>
+                                🖼️ ATTACHED VISUAL DIAGRAMS ({msg.visual_diagrams.length})
+                              </span>
+                            </span>
+                            <span className="bg-[#a855f7] text-white px-2 py-0.5 rounded border border-black text-[9px] font-mono font-black">
+                              Multimodal Evidence
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {msg.visual_diagrams.map((vd: any, vIdx: number) => {
+                              const imgUrl = vd.image_url?.startsWith("http")
+                                ? vd.image_url
+                                : `http://localhost:8000${vd.image_url || ""}`;
+                              return (
+                                <div
+                                  key={vIdx}
+                                  className="group border-2 border-black rounded-lg overflow-hidden bg-gray-50 flex flex-col justify-between shadow-[2px_2px_0px_#000] hover:shadow-[3px_3px_0px_#a855f7] transition-all"
+                                >
+                                  <div
+                                    className="relative bg-white flex items-center justify-center p-2 border-b border-black cursor-pointer overflow-hidden max-h-48"
+                                    onClick={() => window.open(imgUrl, "_blank")}
+                                  >
+                                    <img
+                                      src={imgUrl}
+                                      alt={vd.caption || `Diagram ${vIdx + 1}`}
+                                      className="max-h-40 w-full object-contain group-hover:scale-105 transition-transform duration-200"
+                                      loading="lazy"
+                                    />
+                                    <div className="absolute top-1.5 right-1.5 bg-black/80 text-white text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/20">
+                                      Page {vd.page || 1}
+                                    </div>
+                                  </div>
+                                  <div className="p-2 flex flex-col justify-between gap-1.5 bg-white">
+                                    <div className="text-[11px] font-bold text-gray-900 line-clamp-2 leading-tight">
+                                      {vd.caption || `Diagram on Page ${vd.page || 1}`}
+                                    </div>
+                                    <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                                      <span className="text-[9px] font-mono text-gray-500 truncate max-w-[120px]">
+                                        {vd.doc_name || "Document"}
+                                      </span>
+                                      <button
+                                        onClick={() => window.open(imgUrl, "_blank")}
+                                        className="text-[9px] font-mono font-black flex items-center gap-1 bg-[#ffe600] hover:bg-[#ffd000] text-black px-2 py-0.5 rounded border border-black shadow-[1px_1px_0px_#000] cursor-pointer"
+                                      >
+                                        <span>High-Res</span>
+                                        <ExternalLink className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

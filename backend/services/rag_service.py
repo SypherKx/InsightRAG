@@ -30,12 +30,94 @@ import os
 import httpx
 
 
+def extract_attached_visual_diagrams(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Extract attached visual diagrams and schematics from retrieved results and chunk text.
+    Returns deduplicated list with captions, pages, and image URLs.
+    """
+    import re
+    diagrams = []
+    seen_urls = set()
+
+    for r in results:
+        r_meta = r.get("metadata", {})
+        p_num = r_meta.get("page_number") or r_meta.get("page", 1)
+        doc = r_meta.get("file_name") or r_meta.get("title") or r_meta.get("source", "")
+        
+        # 1. From chunk metadata visual_elements
+        for vis in r_meta.get("visual_elements", []):
+            url = vis.get("image_url")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                diagrams.append({
+                    "doc_name": doc,
+                    "page": vis.get("page", p_num),
+                    "caption": vis.get("caption", f"Figure on Page {p_num}"),
+                    "image_url": url,
+                    "file_path": vis.get("file_path"),
+                    "visual_type": vis.get("visual_type", "Diagram"),
+                    "description": vis.get("description", ""),
+                    "bbox": vis.get("bbox"),
+                })
+
+        # 2. From inline markdown tags in chunk text [IMAGE / FIGURE: ...] [Image URL: ...]
+        txt = r.get("text", "")
+        matches = re.findall(r'\[IMAGE / FIGURE:\s*([^\]]+)\]\s*\[Image URL:\s*([^\]]+)\]', txt)
+        for cap, url in matches:
+            clean_url = url.strip()
+            if clean_url and clean_url not in seen_urls:
+                seen_urls.add(clean_url)
+                diagrams.append({
+                    "doc_name": doc,
+                    "page": p_num,
+                    "caption": cap.strip(),
+                    "image_url": clean_url,
+                    "visual_type": "Figure / Architecture Diagram",
+                    "description": "",
+                })
+
+    return diagrams
+
+
+def get_b64_images(images: Optional[List[str]], visual_diagrams: List[Dict[str, Any]], max_images: int = 2) -> List[str]:
+    """Get base64-encoded strings for multimodal vision processing."""
+    import base64
+    from pathlib import Path
+    b64_list = []
+
+    # 1. Directly provided images (base64 or URLs/paths)
+    if images:
+        for img in images[:max_images]:
+            if img.startswith("data:image"):
+                b64_list.append(img.split(",", 1)[-1])
+            elif Path(img).exists():
+                b64_list.append(base64.b64encode(Path(img).read_bytes()).decode("utf-8"))
+            elif len(img) > 100 and not img.startswith("http"):
+                b64_list.append(img)
+
+    # 2. If no user images, use retrieved visual diagrams
+    if not b64_list and visual_diagrams:
+        for vd in visual_diagrams[:max_images]:
+            fpath = vd.get("file_path")
+            if fpath and Path(fpath).exists():
+                b64_list.append(base64.b64encode(Path(fpath).read_bytes()).decode("utf-8"))
+            elif vd.get("image_url"):
+                url_parts = vd["image_url"].split("/images/", 1)
+                if len(url_parts) == 2:
+                    local_p = Path("./uploads/extracted_images") / url_parts[1]
+                    if local_p.exists():
+                        b64_list.append(base64.b64encode(local_p.read_bytes()).decode("utf-8"))
+
+    return b64_list
+
+
 def build_chatgpt_rag_prompt(
     query: str,
     results: List[Dict[str, Any]],
     history_str: str = "",
     target_page: Optional[int] = None,
-    is_visual_query: bool = False
+    is_visual_query: bool = False,
+    visual_diagrams: Optional[List[Dict[str, Any]]] = None
 ) -> str:
     """
     Constructs an articulate, structured, ChatGPT-grade prompt.
@@ -61,9 +143,24 @@ def build_chatgpt_rag_prompt(
             f"CRITICAL PAGE FOCUS: The user specifically asked about Page {target_page}. You MUST detail the content on Page {target_page} using the context provided below.\n"
             if target_page else ""
         )
+        
+        visual_diagram_lines = []
+        if visual_diagrams:
+            for vd in visual_diagrams[:5]:
+                desc = f": {vd['description']}" if vd.get('description') else ""
+                visual_diagram_lines.append(
+                    f"- {vd.get('caption', 'Diagram')} [Page {vd.get('page', 1)}]{desc} (URL: {vd.get('image_url', '')})"
+                )
+
         visual_instruction = (
-            "VISUAL DIAGRAMS/SNAPSHOTS: When the user asks for an image, diagram, architecture schematic, or snapshot (e.g. 'photo of the project part'), explain the visual structure and components from the context and note that the focused visual crop snapshot is rendered in the viewer.\n"
-            if is_visual_query else ""
+            "ATTACHED VISUAL DIAGRAMS & FIGURES:\n"
+            "The following diagrams/figures from the document are attached to this answer:\n"
+            + "\n".join(visual_diagram_lines) + "\n"
+            "Explain the visual structure, flow, and components referenced in these diagrams, and mention that the user can inspect the high-resolution attached diagrams in the viewer cards below.\n"
+            if visual_diagram_lines else (
+                "VISUAL DIAGRAMS/SNAPSHOTS: When the user asks for an image, diagram, architecture schematic, or snapshot (e.g. 'photo of the project part'), explain the visual structure and components from the context and note that the focused visual crop snapshot is rendered in the viewer.\n"
+                if is_visual_query else ""
+            )
         )
 
         return (
@@ -314,7 +411,8 @@ class RAGService:
         filters: Optional[Dict] = None, model: str = "llama3.2:3b",
         generate_answer: bool = True, ollama_url: Optional[str] = None,
         processing_mode: str = "local", api_key: Optional[str] = None,
-        history: Optional[List[Dict[str, Any]]] = None
+        history: Optional[List[Dict[str, Any]]] = None,
+        images: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Query RAG for relevant context and synthesize answer using Local Ollama or Turbo Cloud Server with multi-turn history."""
         if not self.is_available:
@@ -360,6 +458,18 @@ class RAGService:
             )
             profiler.end_stage("retrieval_ms")
 
+            # Extract attached visual diagrams and schematics from retrieved results
+            visual_diagrams = extract_attached_visual_diagrams(results)
+            if visual_diagrams:
+                try:
+                    print(f"\nATTACHED VISUAL DIAGRAMS ({len(visual_diagrams)})", flush=True)
+                    for vd in visual_diagrams:
+                        print(f"  - {vd.get('caption', 'Figure')} [Page {vd.get('page', 1)}] ({vd.get('image_url', '')})", flush=True)
+                except Exception:
+                    pass
+
+            b64_images = get_b64_images(images, visual_diagrams)
+
             answer = None
             used_llm = False
             llm_model = None
@@ -374,7 +484,8 @@ class RAGService:
                     results=results,
                     history_str=history_str,
                     target_page=intent_info.get("target_page"),
-                    is_visual_query=intent_info.get("is_visual", False)
+                    is_visual_query=intent_info.get("is_visual", False) or bool(b64_images),
+                    visual_diagrams=visual_diagrams
                 )
                 profiler.end_stage("prompt_prep_ms")
 
@@ -488,7 +599,10 @@ class RAGService:
                             installed_models = []
 
                         local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
-                        candidate_models = [local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"]
+                        candidate_models = []
+                        if b64_images:
+                            candidate_models.extend(["qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"])
+                        candidate_models.extend([local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"])
                         for inst in installed_models:
                             if inst not in candidate_models:
                                 candidate_models.append(inst)
@@ -499,22 +613,26 @@ class RAGService:
                             successful_model = candidate_models[0]
                             for cand in candidate_models:
                                 try:
+                                    payload = {
+                                        "model": cand,
+                                        "prompt": prompt,
+                                        "stream": False,
+                                        "keep_alive": "30m",
+                                        "options": {
+                                            "num_ctx": 8192,
+                                            "temperature": 0.35,
+                                            "num_predict": 2048,
+                                            "num_thread": _cpu_threads,
+                                            "top_k": 40,
+                                            "top_p": 0.9,
+                                        }
+                                    }
+                                    if b64_images and ("vl" in cand or "vision" in cand):
+                                        payload["images"] = b64_images[:2]
+
                                     res = client.post(
                                         f"{working_endpoint}/api/generate",
-                                        json={
-                                            "model": cand,
-                                            "prompt": prompt,
-                                            "stream": False,
-                                            "keep_alive": "30m",
-                                            "options": {
-                                                "num_ctx": 8192,
-                                                "temperature": 0.35,
-                                                "num_predict": 2048,
-                                                "num_thread": _cpu_threads,
-                                                "top_k": 40,
-                                                "top_p": 0.9,
-                                            }
-                                        }
+                                        json=payload
                                     )
                                     if res.status_code == 200:
                                         resp = res
@@ -527,7 +645,9 @@ class RAGService:
                                 data = resp.json()
                                 answer = data.get("response", "").strip()
                                 used_llm = True
-                                llm_model = f"💻 Local Ollama ({successful_model})"
+                                is_vision_used = "vl" in successful_model or "vision" in successful_model
+                                tag = "Local Vision" if is_vision_used else "Local Ollama"
+                                llm_model = f"💻 {tag} ({successful_model})"
                                 tokens_generated = data.get("eval_count", 0)
                                 eval_duration = data.get("eval_duration", 0)
                                 if eval_duration > 0:
@@ -635,6 +755,7 @@ class RAGService:
                 "used_llm": used_llm,
                 "llm_model": llm_model,
                 "visual_snippet": visual_snippet,
+                "visual_diagrams": visual_diagrams,
                 "metrics": metrics
             }
         except Exception as e:
@@ -645,7 +766,8 @@ class RAGService:
         self, query: str, top_k: int = 4, min_score: float = 0.0,
         filters: Optional[Dict] = None, model: str = "llama3.2:3b",
         ollama_url: Optional[str] = None, processing_mode: str = "local",
-        api_key: Optional[str] = None, history: Optional[List[Dict[str, Any]]] = None
+        api_key: Optional[str] = None, history: Optional[List[Dict[str, Any]]] = None,
+        images: Optional[List[str]] = None
     ):
         """
         Asynchronous Generator for Server-Sent Events (SSE) token streaming.
@@ -692,7 +814,19 @@ class RAGService:
         )
         profiler.end_stage("retrieval_ms")
 
-        # Yield metadata event (sources, visual crop)
+        # Extract attached visual diagrams and schematics from retrieved results
+        visual_diagrams = extract_attached_visual_diagrams(results)
+        if visual_diagrams:
+            try:
+                print(f"\nATTACHED VISUAL DIAGRAMS ({len(visual_diagrams)})", flush=True)
+                for vd in visual_diagrams:
+                    print(f"  - {vd.get('caption', 'Figure')} [Page {vd.get('page', 1)}] ({vd.get('image_url', '')})", flush=True)
+            except Exception:
+                pass
+
+        b64_images = get_b64_images(images, visual_diagrams)
+
+        # Yield metadata event (sources, visual crop, attached visual diagrams)
         visual_snippet = None
         target_page = intent_info.get("target_page")
         is_visual_query = intent_info.get("is_visual", False)
@@ -738,6 +872,7 @@ class RAGService:
             "data": {
                 "results": results,
                 "visual_snippet": visual_snippet,
+                "visual_diagrams": visual_diagrams,
                 "intent": intent_info.get("intent"),
                 "target_page": target_page,
                 "was_rewritten": was_rewritten,
@@ -751,13 +886,25 @@ class RAGService:
             results=results,
             history_str=history_str,
             target_page=target_page,
-            is_visual_query=is_visual_query
+            is_visual_query=is_visual_query or bool(b64_images),
+            visual_diagrams=visual_diagrams
         )
 
         # Local Ollama Streaming
-        from .ollama_manager import get_working_ollama_host
+        from .ollama_manager import get_working_ollama_host, get_installed_models
         working_endpoint = ollama_url or await get_working_ollama_host(auto_start=True) or "http://127.0.0.1:11434"
         local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
+
+        stream_model = local_model
+        if b64_images:
+            try:
+                installed = await get_installed_models()
+                for v_cand in ["qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"]:
+                    if v_cand in installed:
+                        stream_model = v_cand
+                        break
+            except Exception:
+                pass
 
         first_token = True
         ttft_ms = 0.0
@@ -765,24 +912,28 @@ class RAGService:
         gen_start = time.perf_counter()
 
         try:
+            stream_payload = {
+                "model": stream_model,
+                "prompt": prompt,
+                "stream": True,
+                "keep_alive": "30m",
+                "options": {
+                    "num_ctx": 8192,
+                    "temperature": 0.35,
+                    "num_predict": 2048,
+                    "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
+                    "top_k": 40,
+                    "top_p": 0.9,
+                }
+            }
+            if b64_images and ("vl" in stream_model or "vision" in stream_model):
+                stream_payload["images"] = b64_images[:2]
+
             async with httpx.AsyncClient(timeout=120.0) as aclient:
                 async with aclient.stream(
                     "POST",
                     f"{working_endpoint}/api/generate",
-                    json={
-                        "model": local_model,
-                        "prompt": prompt,
-                        "stream": True,
-                        "keep_alive": "30m",
-                        "options": {
-                            "num_ctx": 8192,
-                            "temperature": 0.35,
-                            "num_predict": 2048,
-                            "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
-                            "top_k": 40,
-                            "top_p": 0.9,
-                        }
-                    }
+                    json=stream_payload
                 ) as resp:
                     if resp.status_code == 200:
                         async for line in resp.aiter_lines():
@@ -813,11 +964,14 @@ class RAGService:
         metrics["query_intent"] = intent_info.get("intent")
         metrics["was_rewritten"] = was_rewritten
 
+        is_vision = "vl" in stream_model or "vision" in stream_model
+        tag = "Local Vision" if is_vision else "Local Ollama"
+
         yield {
             "event": "done",
             "data": {
                 "metrics": metrics,
-                "llm_model": f"💻 Local Ollama ({local_model})"
+                "llm_model": f"💻 {tag} ({stream_model})"
             }
         }
 
