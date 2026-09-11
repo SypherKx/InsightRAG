@@ -1432,22 +1432,29 @@ function KnowledgeBaseStudioPage() {
         ) : (
           /* 2. MAIN STUDIO CONTAINER CARD (UPLOAD VIEW) */
           <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-3 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-5 sm:space-y-6 text-black">
-            {/* Header Title + Download Button */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-dashed border-gray-300 pb-4 sm:pb-5 gap-3 sm:gap-4">
+            {/* Header Title + Actions */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-black pb-4 sm:pb-5 gap-3 sm:gap-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    to="/"
-                    className="sm:hidden bg-black text-white font-black font-mono text-[10px] px-2 py-0.5 rounded border border-black"
-                  >
-                    ← Home
-                  </Link>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="h-9 w-9 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
+                    <Bot className="w-5 h-5 text-[#ffe600]" />
+                  </div>
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-black font-mono">
-                    KNOWLEDGE BASE STUDIO
+                    Knowledge Base Studio
                   </h1>
+                  <span className="bg-[#ffe600] text-black text-[10px] font-black font-mono px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]">
+                    Local Multimodal
+                  </span>
                 </div>
-                <p className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1">
-                  Zero-Budget Local Multimodal RAG Engine • 100% On-Device Privacy
+                <p className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="text-emerald-700 font-bold flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    100% Private On-Device Engine
+                  </span>
+                  <span>•</span>
+                  <span>Hardware Accelerated Vectors</span>
+                  <span>•</span>
+                  <span>Visual Diagram OCR</span>
                 </p>
               </div>
 
@@ -1455,31 +1462,32 @@ function KnowledgeBaseStudioPage() {
                 {ragStats.total_vectors > 0 && (
                   <button
                     onClick={() => setActiveView("chat")}
-                    className="flex-1 sm:flex-none bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                    className="flex-1 sm:flex-none bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
                   >
-                    <Bot className="w-3.5 h-3.5 text-black" />
-                    <span>Open Chat Studio →</span>
+                    <Bot className="w-4 h-4 text-black" />
+                    <span>Open Chat Studio ({ragStats.total_vectors}) →</span>
                   </button>
                 )}
                 <Link
                   to="/"
-                  className="hidden sm:flex bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] items-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
+                  className="hidden sm:flex bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] items-center gap-1 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
                 >
                   Home
                 </Link>
                 <Link
                   to="/docs"
-                  className="flex-1 sm:flex-none bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 transition active:translate-x-[1px] active:translate-y-[1px]"
+                  className="flex-1 sm:flex-none bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-black" />
                   <span>Docs</span>
                 </Link>
                 <button
-                  onClick={() => setShowModal(true)}
-                  className="flex-1 sm:flex-none bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                  onClick={() => setShowModelHubModal(true)}
+                  className="flex-1 sm:flex-none bg-black text-[#ffe600] hover:bg-neutral-800 font-black font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
+                  title="Browse, install, and switch open-source LLMs"
                 >
-                  <Download className="w-3.5 h-3.5 text-[#ffe600]" />
-                  <span>+ Models</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[#ffe600]" />
+                  <span>Model Hub</span>
                 </button>
               </div>
             </div>
@@ -1839,11 +1847,17 @@ function KnowledgeBaseStudioPage() {
 
               {/* VISION OCR MODELS */}
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                  VISION OCR MODELS
-                </label>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 bg-white border-2 border-black px-4 py-2 rounded-xl shadow-[3px_3px_0px_#000] cursor-pointer font-mono text-xs font-bold">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-black" />
+                    <span>VISION OCR & DIAGRAM REASONING PIPELINE</span>
+                  </label>
+                  <span className="text-[10px] font-mono font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                    🖼️ Active Ingestion
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 bg-white hover:bg-yellow-50/60 border-2 border-black px-4 py-2 rounded-xl shadow-[3px_3px_0px_#000] cursor-pointer font-mono text-xs font-bold transition-all">
                     <input
                       type="checkbox"
                       checked={visionOCR}
@@ -1852,9 +1866,20 @@ function KnowledgeBaseStudioPage() {
                     />
                     <span>moondream:latest</span>
                     <span className="bg-emerald-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded border border-black">
-                      ACCELERATED
+                      FAST OCR
                     </span>
                   </label>
+
+                  <div className="flex items-center gap-2 bg-purple-50 border-2 border-black px-3.5 py-2 rounded-xl shadow-[2px_2px_0px_#000] font-mono text-xs font-bold text-purple-950">
+                    <span>qwen2.5vl:3b</span>
+                    <span className="bg-purple-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded border border-black">
+                      SOTA MULTIMODAL
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] font-mono text-gray-500 font-semibold">
+                    Automatically rasterizes scanned pages and extracts figures & charts
+                  </span>
                 </div>
               </div>
             </div>
@@ -1931,8 +1956,10 @@ function KnowledgeBaseStudioPage() {
                   onSelectFiles(e.dataTransfer.files);
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative cursor-pointer rounded-2xl border-3 border-dashed p-8 text-center transition-all ${
-                  drag ? "border-black bg-yellow-100" : "border-black bg-gray-50 hover:bg-yellow-50"
+                className={`group relative cursor-pointer rounded-2xl sm:rounded-3xl border-3 border-dashed p-8 sm:p-10 text-center transition-all duration-200 ${
+                  drag
+                    ? "border-black bg-[#fff9db] shadow-[6px_6px_0px_#000] scale-[1.01]"
+                    : "border-black bg-gradient-to-b from-white to-gray-50 hover:to-[#fffde6] shadow-[4px_4px_0px_#000] hover:shadow-[7px_7px_0px_#000] hover:-translate-y-0.5"
                 }`}
               >
                 <input
@@ -1943,16 +1970,38 @@ function KnowledgeBaseStudioPage() {
                   className="hidden"
                   onChange={(e) => onSelectFiles(e.target.files)}
                 />
-                <div className="mx-auto w-12 h-12 rounded-xl bg-[#ffe600] border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center mb-3">
-                  <Upload className="w-6 h-6 text-black" />
+                <div className="mx-auto w-14 h-14 rounded-2xl bg-[#ffe600] border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center mb-3.5 group-hover:scale-110 transition-transform">
+                  <Upload className="w-7 h-7 text-black stroke-[2.5]" />
                 </div>
 
-                <h2 className="text-xl font-black font-mono text-black">
-                  Drop your documents, PDFs, or photos here
+                <h2 className="text-lg sm:text-xl font-black font-mono text-black uppercase tracking-tight">
+                  Drop Research Documents, PDFs, or Scans Here
                 </h2>
-                <p className="text-xs font-mono font-bold text-gray-600 mt-1">
-                  Supports PDF, DOCX, TXT, MD, CSV, PNG, JPG, WEBP • Click to Browse Files
+                <p className="text-xs font-mono text-gray-600 mt-1 font-semibold max-w-lg mx-auto">
+                  Click to browse files • Instant high-res OCR, vector chunking & diagram parsing
                 </p>
+
+                {/* Aesthetic format pills */}
+                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-4 font-mono text-[10px] font-black">
+                  <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-md border border-red-300">
+                    PDF
+                  </span>
+                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md border border-blue-300">
+                    DOCX
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-300">
+                    CSV / JSON
+                  </span>
+                  <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-md border border-gray-300">
+                    TXT / MD
+                  </span>
+                  <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md border border-purple-300">
+                    PNG / JPG / WEBP
+                  </span>
+                  <span className="bg-[#ffe600] text-black px-2 py-0.5 rounded-md border border-black shadow-[1px_1px_0px_#000]">
+                    ✂️ Custom Page-Range Slicing
+                  </span>
+                </div>
               </div>
 
               {/* Upload Status Banner */}
@@ -2012,30 +2061,59 @@ function KnowledgeBaseStudioPage() {
               </div>
             )}
 
-            {/* Ingested Vector Index Stats Bar */}
-            <div className="flex flex-wrap items-center justify-between bg-gray-100 p-4 rounded-2xl border-2 border-black gap-3">
-              <div className="flex items-center gap-4 font-mono text-xs font-bold">
-                <span className="flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-gray-700" />
-                  Indexed Vectors:{" "}
-                  <span className="text-black font-extrabold">{ragStats.total_vectors || 0}</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <HardDrive className="w-4 h-4 text-gray-700" />
-                  Active Store:{" "}
-                  <span className="text-emerald-600 font-extrabold">FAISS Vector Index</span>
-                </span>
+            {/* Ingested Vector Index 3-Stat Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Stat 1: Documents */}
+              <div className="bg-white p-3.5 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-between font-mono">
+                <div>
+                  <div className="text-[10px] font-black uppercase text-gray-500">
+                    Indexed Documents
+                  </div>
+                  <div className="text-base sm:text-lg font-black text-black">
+                    {ragStats.files?.length || 0} File(s)
+                  </div>
+                </div>
+                <div className="h-9 w-9 rounded-xl bg-gray-100 border border-gray-300 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-black" />
+                </div>
               </div>
 
-              {ragStats.total_vectors > 0 && (
-                <button
-                  onClick={handleClearKnowledgeBase}
-                  className="text-xs font-mono font-bold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-red-300 hover:border-red-600 shadow-[1px_1px_0px_#000]"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Clear Entire Index
-                </button>
-              )}
+              {/* Stat 2: Grounded Vectors */}
+              <div className="bg-white p-3.5 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-between font-mono">
+                <div>
+                  <div className="text-[10px] font-black uppercase text-gray-500">
+                    Grounded Vectors
+                  </div>
+                  <div className="text-base sm:text-lg font-black text-emerald-700">
+                    {ragStats.total_vectors || 0} Vectors
+                  </div>
+                </div>
+                <div className="h-9 w-9 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-center">
+                  <Layers className="w-4 h-4 text-emerald-600" />
+                </div>
+              </div>
+
+              {/* Stat 3: Vector Store & Action */}
+              <div className="bg-white p-3.5 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-between font-mono">
+                <div>
+                  <div className="text-[10px] font-black uppercase text-gray-500">
+                    Vector Database
+                  </div>
+                  <div className="text-xs sm:text-sm font-black text-black">
+                    FAISS Local Store
+                  </div>
+                </div>
+                {ragStats.total_vectors > 0 && (
+                  <button
+                    onClick={handleClearKnowledgeBase}
+                    className="text-[10px] font-mono font-black text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-300 transition shadow-[1px_1px_0px_#000]"
+                    title="Wipe entire vector index"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-600" />
+                    <span>Clear All</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Indexed Knowledge Base Documents List with Individual Deletion */}
