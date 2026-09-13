@@ -10,6 +10,7 @@ Handles loading and extracting text from various file formats:
 
 import os
 import uuid
+import hashlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union, Callable
 from dataclasses import dataclass
@@ -143,6 +144,7 @@ class DocumentIngester:
                     "file_size_bytes": file_path.stat().st_size,
                     "file_extension": ext,
                     "file_name": file_path.name,
+                    "sha256": hashlib.sha256(file_path.read_bytes()).hexdigest(),
                     "start_page": start_page,
                     "end_page": end_page,
                 }
@@ -414,27 +416,45 @@ class DocumentIngester:
                     logger.debug(f"Image extraction error on page {page_number}: {img_err}")
 
                 # C. Fallback for scanned pages (low selectable text + visuals present)
-                if len(text_clean) < 80 and (has_images or has_drawings):
+                scanned_ocr_lines = []
+                if len(text_clean) < 80 or (len(text_clean) < 150 and (has_images or has_drawings)):
                     try:
-                        pix = page.get_pixmap(dpi=200)
-                        vis_info = _analyze_visual(
-                            img_bytes=pix.tobytes("png"),
-                            w=pix.width,
-                            h=pix.height,
-                            bbox=[0, 0, pix.width, pix.height],
-                            caption=f"Scanned Document / Graphic Layout on Page {page_number}",
-                            page_num=page_number,
-                            idx=len(visual_elements) + 1,
-                            doc_name=file_path.name
-                        )
-                        visual_elements.append(vis_info)
-                    except Exception:
-                        pass
+                        from rapidocr_onnxruntime import RapidOCR
+                        pix = page.get_pixmap(dpi=150)
+                        ocr_engine = RapidOCR()
+                        ocr_res, _ = ocr_engine(pix.tobytes("png"))
+                        if ocr_res:
+                            for item in ocr_res:
+                                if len(item) >= 2 and item[1]:
+                                    line_txt = str(item[1]).strip()
+                                    if len(line_txt) > 1:
+                                        scanned_ocr_lines.append(line_txt)
+                    except Exception as ocr_err:
+                        logger.debug(f"RapidOCR extraction on page {page_number}: {ocr_err}")
+
+                    if not scanned_ocr_lines and len(text_clean) < 80 and (has_images or has_drawings):
+                        try:
+                            pix = page.get_pixmap(dpi=200)
+                            vis_info = _analyze_visual(
+                                img_bytes=pix.tobytes("png"),
+                                w=pix.width,
+                                h=pix.height,
+                                bbox=[0, 0, pix.width, pix.height],
+                                caption=f"Scanned Document / Graphic Layout on Page {page_number}",
+                                page_num=page_number,
+                                idx=len(visual_elements) + 1,
+                                doc_name=file_path.name
+                            )
+                            visual_elements.append(vis_info)
+                        except Exception:
+                            pass
 
                 # Assemble page with distinct sections
                 page_sections = []
                 if text_clean:
                     page_sections.append(f"=== PAGE {page_number} - TEXT CONTENT ===\n{text_clean}")
+                if scanned_ocr_lines:
+                    page_sections.append(f"=== PAGE {page_number} - SCANNED PAGE OCR TRANSCRIPTION ===\n[Scanned Slide OCR Text]:\n" + "\n".join(scanned_ocr_lines))
                 if tables_md:
                     page_sections.append(f"=== PAGE {page_number} - STRUCTURED TABLES ===\n" + "\n\n".join(tables_md))
                 if visual_elements:
@@ -832,6 +852,19 @@ def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1,
     except Exception:
         pass
 
+    # Compute perceptual visual fingerprint for fast reverse image matching
+    fingerprint = None
+    try:
+        from .image_regions import VisualFingerprintMatcher
+        if pil_img:
+            fingerprint = VisualFingerprintMatcher.compute_fingerprint(pil_img)
+        elif img_bytes:
+            fingerprint = VisualFingerprintMatcher.compute_fingerprint(img_bytes)
+        elif file_path:
+            fingerprint = VisualFingerprintMatcher.compute_fingerprint(file_path)
+    except Exception as fp_err:
+        logger.debug(f"Fingerprint calculation error: {fp_err}")
+
     desc = ai_description or (f"{visual_type} ({aspect_ratio}). " + ", ".join(details))
     return {
         "idx": idx,
@@ -844,6 +877,7 @@ def _analyze_visual(img_bytes=None, w=0, h=0, bbox=None, caption="", page_num=1,
         "description": desc,
         "image_url": image_url,
         "file_path": saved_file_path,
+        "fingerprint": fingerprint,
         "page": page_num,
         "doc_name": doc_name,
     }

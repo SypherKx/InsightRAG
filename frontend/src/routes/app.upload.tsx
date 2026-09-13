@@ -1323,7 +1323,7 @@ function KnowledgeBaseStudioPage() {
                         </div>
                       )}
 
-                      {/* Attached Visual Diagrams & Schematics (Mi:RAG Studio Visual Artifacts) */}
+                      {/* Attached Visual Diagrams & Schematics */}
                       {msg.visual_diagrams && msg.visual_diagrams.length > 0 && (
                         <div className="mt-3 p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-3">
                           <div className="flex items-center justify-between font-mono text-[10px] font-black text-black border-b-2 border-black pb-1.5">

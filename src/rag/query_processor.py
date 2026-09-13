@@ -26,10 +26,31 @@ class QueryProcessor:
 
     PRONOUNS = {"it", "its", "this", "that", "these", "those", "they", "them", "such", "the same"}
 
+    GREETINGS = {
+        "hi", "hello", "hey", "namaste", "kem cho", "kaise ho", "kya haal hai",
+        "good morning", "good evening", "good afternoon", "hola", "greetings",
+        "sup", "yo", "pranam"
+    }
+
     PAGE_PATTERNS = [
         re.compile(r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', re.IGNORECASE),
         re.compile(r'\b(\d+)\s*(?:th|st|nd|rd)?\s*(?:page|number\s*page)\b', re.IGNORECASE),
     ]
+
+    @classmethod
+    def intercept_greeting(cls, query: str) -> Optional[str]:
+        """Intercept conversational greetings to return instant zero-retrieval polite responses."""
+        if not query:
+            return None
+        q_clean = query.strip().lower().rstrip("!.,? ")
+        words = re.findall(r'\b\w+\b', q_clean)
+        if len(words) <= 3 and (q_clean in cls.GREETINGS or any(w in cls.GREETINGS for w in words)):
+            return (
+                "Hello! I am your InsightRAG AI document intelligence assistant. "
+                "How can I help you today? You can ask me questions about your uploaded documents, "
+                "request summaries, search for specific data, or inspect diagrams and figures."
+            )
+        return None
 
     @classmethod
     def extract_target_page(cls, query: str) -> Optional[int]:
@@ -51,9 +72,19 @@ class QueryProcessor:
         Classifies query intent deterministically in <1ms without LLM latency.
         
         Returns:
-            Dict with intent: 'visual', 'page_lookup', 'factual', 'analytical', 'lookup',
+            Dict with intent: 'greeting', 'visual', 'page_lookup', 'factual', 'analytical', 'lookup',
             recommended top_k candidate count, and extracted target_page if present.
         """
+        if cls.intercept_greeting(query):
+            return {
+                "intent": "greeting",
+                "top_k": 1,
+                "is_visual": False,
+                "target_page": None,
+                "is_page_lookup": False,
+                "is_multi_part": False
+            }
+
         q_lower = query.lower()
         words = set(re.findall(r'\b\w+\b', q_lower))
 
@@ -218,6 +249,64 @@ class QueryProcessor:
                 clean_sub_queries.append(sq_stripped)
 
         return clean_sub_queries[:4]
+
+    @classmethod
+    def expand_query_intent(cls, query: str) -> str:
+        """
+        Expands query keywords based on detected intent:
+        - Summary: appends 'abstract executive summary main findings key takeaways'
+        - Visual: appends 'architecture workflow visual schematic layout component diagram'
+        """
+        q_lower = query.lower()
+        expanded = query.strip()
+        if any(w in q_lower for w in ["summarize", "summary", "overview", "main points", "saaransh"]):
+            expanded += " abstract executive summary main findings key takeaways"
+        elif any(w in q_lower for w in ["diagram", "figure", "circuit", "flowchart", "schematic", "architecture"]):
+            expanded += " architecture workflow visual schematic layout component diagram"
+        return expanded
+
+    @classmethod
+    def generate_hyde_expansion(
+        cls,
+        query: str,
+        ollama_url: str = "http://127.0.0.1:11434",
+        model: str = "llama3.2:3b",
+        timeout_seconds: float = 3.5
+    ) -> Optional[str]:
+        """
+        Dynamic HyDE (Hypothetical Document Embeddings):
+        Generates 1 short hypothetical factual sentence to bridge the vocabulary gap.
+        """
+        prompt = (
+            "Write a single concise, factual sentence from a technical document that directly answers this question. "
+            "Return ONLY that one sentence without commentary:\n\n"
+            f"Question: {query}\n"
+            "Document Excerpt:"
+        )
+        try:
+            import httpx
+            with httpx.Client(timeout=timeout_seconds) as client:
+                res = client.post(
+                    f"{ollama_url.rstrip('/')}/api/generate",
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.1,
+                            "num_predict": 60,
+                            "num_ctx": 1024
+                        }
+                    }
+                )
+                if res.status_code == 200:
+                    hypo = res.json().get("response", "").strip()
+                    hypo_clean = hypo.split("\n")[0].strip('"').strip()
+                    if len(hypo_clean) > 10:
+                        return hypo_clean
+        except Exception:
+            pass
+        return None
 
     @classmethod
     def rewrite_query_with_llm(

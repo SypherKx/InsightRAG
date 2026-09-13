@@ -10,7 +10,7 @@ import uuid
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Response, Query, BackgroundTasks, status
 
 from ..dependencies import get_rag_service
-from ..models.requests import RAGQueryRequest
+from ..models.requests import RAGQueryRequest, RAGFeedbackRequest
 from ..models.responses import RAGQueryResponse, RAGUploadResponse, RAGTaskStatusResponse
 
 logger = logging.getLogger(__name__)
@@ -461,9 +461,31 @@ async def query_rag(request: RAGQueryRequest):
         answer=answer,
         llm_model=result.get("llm_model"),
         used_llm=result.get("used_llm", False),
+        is_grounded=result.get("is_grounded", True),
+        confidence_score=result.get("confidence_score", 0.0),
+        grounding_status=result.get("grounding_status", "grounded"),
         visual_snippet=result.get("visual_snippet"),
         visual_diagrams=result.get("visual_diagrams", []),
         metrics=result.get("metrics")
+    )
+
+
+@router.post("/feedback")
+async def submit_rag_feedback(request: RAGFeedbackRequest):
+    """
+    Submit active user feedback (RLHF) for citation weighting and negative constraints.
+    Thumbs up gives +0.12 boost; Thumbs down gives -0.15 penalty.
+    """
+    rag_svc = get_rag_service()
+    if not rag_svc.is_available:
+        raise HTTPException(status_code=503, detail="RAG service not available.")
+    return rag_svc.record_feedback(
+        query=request.query,
+        rating=request.rating,
+        doc_name=request.doc_name,
+        chunk_id=request.chunk_id,
+        citations=request.citations,
+        comment=request.comment
     )
 
 

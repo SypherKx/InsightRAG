@@ -13,6 +13,7 @@ tags:
 ## 🔗 Connected Dependencies & Imported Modules
 - Main Subsystem Hub: [[02_RAG_Pipeline_Hub]]
 - Imported Module: [[files/src_rag_embeddings_py]]
+- Imported Module: [[files/src_rag_feedback_store_py]]
 - Imported Module: [[files/src_rag_models_py]]
 - Imported Module: [[files/src_rag_query_processor_py]]
 - Imported Module: [[files/src_rag_vectorstore_py]]
@@ -36,7 +37,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\retriever.py (521 lines)
+Module: src\rag\retriever.py (565 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class RAGRetriever:, def __init__, def retrieve, def _lexical_search, def _reciprocal_rank_fusion

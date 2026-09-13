@@ -191,6 +191,18 @@ def build_chatgpt_rag_prompt(
             )
         )
 
+        neg_constraint_block = ""
+        try:
+            from rag.feedback_store import FeedbackStore
+            neg_directives = FeedbackStore().get_negative_constraints(max_constraints=3)
+            if neg_directives:
+                neg_constraint_block = (
+                    "NEGATIVE CONSTRAINTS (AVOID PAST DIRECT USER CORRECTIONS):\n"
+                    + "\n".join(f"- {d}" for d in neg_directives) + "\n\n"
+                )
+        except Exception:
+            pass
+
         return (
             "You are InsightRAG AI, an elite, articulate, and comprehensive AI document intelligence consultant inspired by the depth, clarity, and helpfulness of ChatGPT.\n"
             "Your objective is to thoroughly answer the user's question, address every facet or sub-part asked, and provide a rich, well-structured response grounded in the provided document context.\n\n"
@@ -208,6 +220,7 @@ def build_chatgpt_rag_prompt(
             "   - **Data & Comparisons**: Use markdown tables or bulleted specs when presenting comparative numbers, metrics, or architecture components.\n"
             "   - **Synthesis & Explanation**: Don't just list raw chunks. Explain *how* and *why* things work, synthesizing details across multiple chunks into a cohesive narrative.\n"
             "   - **Key Takeaways / Practical Summary**: Conclude with a helpful summary or key takeaway when relevant.\n\n"
+            f"{neg_constraint_block}"
             f"{visual_instruction}"
             f"{page_instruction}"
             f"{history_str}"
@@ -452,6 +465,26 @@ class RAGService:
         profiler = LatencyProfiler()
         profiler.start_stage("query_processing_ms")
 
+        # Greeting Interceptor: Instant response if query is pure greeting without docs need
+        greeting_msg = QueryProcessor.intercept_greeting(query)
+        if greeting_msg and not history:
+            profiler.end_stage("query_processing_ms")
+            return {
+                "results": [],
+                "query": query,
+                "rewritten_query": None,
+                "total_results": 0,
+                "answer": greeting_msg,
+                "used_llm": False,
+                "llm_model": "InsightRAG Greeting Engine",
+                "is_grounded": True,
+                "confidence_score": 1.0,
+                "grounding_status": "greeting_intercept",
+                "visual_snippet": None,
+                "visual_diagrams": [],
+                "metrics": {"total_time_ms": 1.0, "query_intent": "greeting"}
+            }
+
         # 1. Query Intent Classification & Conversational Rewriting
         intent_info = QueryProcessor.classify_intent(query)
         effective_top_k = max(top_k, intent_info.get("top_k", 5))
@@ -629,7 +662,7 @@ class RAGService:
                         local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
                         candidate_models = []
                         if b64_images:
-                            candidate_models.extend(["qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"])
+                            candidate_models.extend(["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"])
                         candidate_models.extend([local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"])
                         for inst in installed_models:
                             if inst not in candidate_models:
@@ -774,14 +807,24 @@ class RAGService:
             metrics["query_intent"] = intent_info.get("intent")
             metrics["was_rewritten"] = was_rewritten
 
+            from rag.anti_hallucination import AntiHallucinationEngine
+            grounding_eval = AntiHallucinationEngine.evaluate_grounding(answer or "", results, query=query)
+            final_answer = grounding_eval["sanitized_answer"] if answer else answer
+            is_grounded = grounding_eval["is_grounded"]
+            confidence_score = grounding_eval["confidence_score"]
+            grounding_status = grounding_eval["status"]
+
             return {
                 "results": results,
                 "query": query,
                 "rewritten_query": retrieval_query if was_rewritten else None,
                 "total_results": len(results),
-                "answer": answer,
+                "answer": final_answer,
                 "used_llm": used_llm,
                 "llm_model": llm_model,
+                "is_grounded": is_grounded,
+                "confidence_score": confidence_score,
+                "grounding_status": grounding_status,
                 "visual_snippet": visual_snippet,
                 "visual_diagrams": visual_diagrams,
                 "metrics": metrics
@@ -816,6 +859,42 @@ class RAGService:
         intent_info = QueryProcessor.classify_intent(query)
         effective_top_k = max(top_k, intent_info.get("top_k", 5))
         history_str, _ = QueryProcessor.compress_conversation_history(history, max_turns=4)
+
+        # Greeting Interceptor: Instant response if query is pure greeting without docs need
+        greeting_msg = QueryProcessor.intercept_greeting(query)
+        if greeting_msg and not history:
+            yield {
+                "event": "metadata",
+                "data": {
+                    "results": [],
+                    "visual_snippet": None,
+                    "visual_diagrams": [],
+                    "intent": "greeting",
+                    "target_page": None,
+                    "was_rewritten": False,
+                    "rewritten_query": None,
+                }
+            }
+            for word in greeting_msg.split():
+                yield {"event": "token", "data": {"token": word + " "}}
+                await asyncio.sleep(0.01)
+            yield {
+                "event": "done",
+                "data": {
+                    "metrics": {
+                        "ttft_ms": 1.0,
+                        "tokens_generated": len(greeting_msg.split()),
+                        "tokens_per_sec": 300.0,
+                        "query_intent": "greeting"
+                    },
+                    "llm_model": "InsightRAG Greeting Engine",
+                    "is_grounded": True,
+                    "confidence_score": 1.0,
+                    "grounding_status": "greeting_intercept",
+                    "citations": []
+                }
+            }
+            return
 
         # 1b. Service-level query rewriting & Hinglish normalization
         was_rewritten = False
@@ -931,7 +1010,7 @@ class RAGService:
         if b64_images:
             try:
                 installed = await get_installed_models()
-                for v_cand in ["qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"]:
+                for v_cand in ["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"]:
                     if v_cand in installed:
                         stream_model = v_cand
                         break
@@ -943,7 +1022,7 @@ class RAGService:
         token_count = 0
         gen_start = time.perf_counter()
 
-        is_vision = "vl" in stream_model or "vision" in stream_model
+        is_vision = "vl" in stream_model or "vision" in stream_model or "moondream" in stream_model
         # Vision models on CPU need conservative context to avoid thrashing CPU cache and RAM
         num_ctx = 3072 if is_vision else 4096
         num_predict = 512 if is_vision else 1024
@@ -969,6 +1048,7 @@ class RAGService:
 
             # 240s client timeout with distinct read timeout for CPU model generation
             client_timeout = httpx.Timeout(240.0, connect=15.0, read=240.0, write=30.0)
+            accumulated_tokens = []
             async with httpx.AsyncClient(timeout=client_timeout) as aclient:
                 async with aclient.stream(
                     "POST",
@@ -987,6 +1067,7 @@ class RAGService:
                                         ttft_ms = round((time.perf_counter() - gen_start) * 1000.0, 2)
                                         first_token = False
                                     token_count += 1
+                                    accumulated_tokens.append(token)
                                     yield {"event": "token", "data": {"token": token}}
                             except Exception:
                                 pass
@@ -1005,14 +1086,18 @@ class RAGService:
                     if results:
                         intro += "**Summary from Document Context:**\n" + results[0].get("text", "")[:450].strip() + "...\n\n"
                     intro += "*(Note: Full resolution image is attached below and ready to view/zoom)*"
+                    accumulated_tokens.append(intro)
                     yield {"event": "token", "data": {"token": intro}}
                     token_count = len(intro.split())
                 elif results:
                     intro = "Here is the relevant excerpt retrieved from your documents:\n\n" + results[0].get("text", "")[:600].strip() + "..."
+                    accumulated_tokens.append(intro)
                     yield {"event": "token", "data": {"token": intro}}
                     token_count = len(intro.split())
                 else:
-                    yield {"event": "token", "data": {"token": "The local AI model timed out on CPU inference. Please check that Ollama has sufficient CPU/memory or try a shorter question."}}
+                    fallback_msg = "The local AI model timed out on CPU inference. Please check that Ollama has sufficient CPU/memory or try a shorter question."
+                    accumulated_tokens.append(fallback_msg)
+                    yield {"event": "token", "data": {"token": fallback_msg}}
             else:
                 yield {"event": "token", "data": {"token": "\n\n*(Generation completed with available context)*"}}
 
@@ -1029,13 +1114,45 @@ class RAGService:
         is_vision = "vl" in stream_model or "vision" in stream_model
         tag = "Local Vision" if is_vision else "Local Ollama"
 
+        full_streamed_answer = "".join(accumulated_tokens).strip()
+        from rag.anti_hallucination import AntiHallucinationEngine
+        grounding_eval = AntiHallucinationEngine.evaluate_grounding(full_streamed_answer, results, query=query)
+
         yield {
             "event": "done",
             "data": {
                 "metrics": metrics,
-                "llm_model": f"[Local] {tag} ({stream_model})"
+                "llm_model": f"[Local] {tag} ({stream_model})",
+                "is_grounded": grounding_eval["is_grounded"],
+                "confidence_score": grounding_eval["confidence_score"],
+                "grounding_status": grounding_eval["status"],
+                "citations": grounding_eval.get("citations", []),
             }
         }
+
+    def record_feedback(
+        self,
+        query: str,
+        rating: str,
+        doc_name: Optional[str] = None,
+        chunk_id: Optional[str] = None,
+        citations: Optional[List[str]] = None,
+        comment: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Record active user feedback for RLHF weighting."""
+        try:
+            from rag.feedback_store import FeedbackStore
+            return FeedbackStore().record_feedback(
+                query=query,
+                rating=rating,
+                doc_name=doc_name,
+                chunk_id=chunk_id,
+                citations=citations,
+                comment=comment
+            )
+        except Exception as e:
+            logger.error(f"Failed to record feedback: {e}")
+            return {"status": "error", "error": str(e)}
 
     def get_stats(self) -> Dict[str, Any]:
         """Get RAG index statistics and list of uploaded files."""

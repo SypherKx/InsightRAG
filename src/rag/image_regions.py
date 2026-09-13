@@ -288,3 +288,204 @@ def find_image_sub_region(
         logger.debug(f"Image sub-region CV analysis error: {e}")
 
     return full_box, False
+
+
+class VisualFingerprintMatcher:
+    """
+    Perceptual Visual Fingerprinting for sub-5ms CPU reverse image and diagram matching.
+    
+    Combines:
+    1. 64-bit dHash (Difference Gradient Hash - 9x8 grayscale)
+    2. 64-bit aHash (Average Luminance Mean Hash - 8x8 grayscale)
+    3. 32x32 NCC (Normalized Cross Correlation spatial vector)
+    4. 16-bin Color Histogram (RGB color distribution)
+    
+    Composite Formula:
+    Score = (0.40 * sim_d) + (0.25 * sim_a) + (0.20 * sim_ncc) + (0.15 * sim_col)
+    """
+
+    @staticmethod
+    def _to_pil_image(image_input) -> Optional[Any]:
+        """Convert bytes, base64 string, or filepath to PIL Image in RGB mode."""
+        from PIL import Image
+        import io
+        import base64
+        from pathlib import Path
+
+        if isinstance(image_input, Image.Image):
+            return image_input.convert("RGB")
+        if isinstance(image_input, bytes):
+            return Image.open(io.BytesIO(image_input)).convert("RGB")
+        if isinstance(image_input, str):
+            if image_input.startswith("data:image"):
+                image_input = image_input.split(",", 1)[-1]
+            if len(image_input) > 200 and not image_input.startswith("http"):
+                try:
+                    raw = base64.b64decode(image_input)
+                    return Image.open(io.BytesIO(raw)).convert("RGB")
+                except Exception:
+                    pass
+            p = Path(image_input)
+            if p.exists() and p.is_file():
+                return Image.open(p).convert("RGB")
+        return None
+
+    @classmethod
+    def compute_dhash(cls, img) -> int:
+        """Compute 64-bit difference hash (9x8 grayscale gradient)."""
+        gray = img.convert("L").resize((9, 8), cls._resample_filter())
+        pixels = list(gray.getdata())
+        diff = []
+        for row in range(8):
+            for col in range(8):
+                idx = row * 9 + col
+                diff.append(1 if pixels[idx] > pixels[idx + 1] else 0)
+        
+        val = 0
+        for bit in diff:
+            val = (val << 1) | bit
+        return val
+
+    @classmethod
+    def compute_ahash(cls, img) -> int:
+        """Compute 64-bit average hash (8x8 grayscale mean threshold)."""
+        gray = img.convert("L").resize((8, 8), cls._resample_filter())
+        pixels = list(gray.getdata())
+        avg = sum(pixels) / 64.0
+        val = 0
+        for p in pixels:
+            val = (val << 1) | (1 if p > avg else 0)
+        return val
+
+    @classmethod
+    def compute_ncc_vector(cls, img) -> List[float]:
+        """Compute 32x32 RGB normalized thumbnail vector."""
+        thumb = img.resize((32, 32), cls._resample_filter())
+        pixels = list(thumb.getdata())
+        flat = [c for px in pixels for c in px[:3]]
+        mean_val = sum(flat) / len(flat)
+        centered = [x - mean_val for x in flat]
+        norm = (sum(x * x for x in centered) ** 0.5) or 1.0
+        return [round(x / norm, 5) for x in centered]
+
+    @classmethod
+    def compute_color_histogram(cls, img) -> List[float]:
+        """Compute 16-bin per RGB channel normalized histogram (48 bins total)."""
+        thumb = img.resize((64, 64), cls._resample_filter())
+        pixels = list(thumb.getdata())
+        r_hist = [0] * 16
+        g_hist = [0] * 16
+        b_hist = [0] * 16
+        total = max(1, len(pixels))
+
+        for r, g, b in (p[:3] for p in pixels):
+            r_hist[min(15, r // 16)] += 1
+            g_hist[min(15, g // 16)] += 1
+            b_hist[min(15, b // 16)] += 1
+
+        full = [round(c / total, 5) for c in (r_hist + g_hist + b_hist)]
+        return full
+
+    @classmethod
+    def _resample_filter(cls):
+        from PIL import Image
+        return getattr(Image, "Resampling", Image).LANCZOS
+
+    @classmethod
+    def compute_fingerprint(cls, image_input) -> Optional[Dict[str, Any]]:
+        """Compute all 4 perceptual fingerprint features for an image."""
+        try:
+            img = cls._to_pil_image(image_input)
+            if img is None:
+                return None
+            return {
+                "dhash": hex(cls.compute_dhash(img)),
+                "ahash": hex(cls.compute_ahash(img)),
+                "ncc": cls.compute_ncc_vector(img),
+                "hist": cls.compute_color_histogram(img),
+                "width": img.width,
+                "height": img.height
+            }
+        except Exception as e:
+            logger.debug(f"Fingerprint computation error: {e}")
+            return None
+
+    @classmethod
+    def hamming_similarity(cls, hex1: str, hex2: str, bits: int = 64) -> float:
+        """Compute normalized similarity from hamming distance between two hex integers."""
+        try:
+            v1 = int(hex1, 16)
+            v2 = int(hex2, 16)
+            xor_val = v1 ^ v2
+            dist = bin(xor_val).count('1')
+            return max(0.0, 1.0 - (dist / float(bits)))
+        except Exception:
+            return 0.0
+
+    @classmethod
+    def vector_cosine_similarity(cls, v1: List[float], v2: List[float]) -> float:
+        """Compute cosine similarity between two float vectors."""
+        if not v1 or not v2 or len(v1) != len(v2):
+            return 0.0
+        dot = sum(a * b for a, b in zip(v1, v2))
+        return min(max(dot, 0.0), 1.0)
+
+    @classmethod
+    def histogram_intersection(cls, h1: List[float], h2: List[float]) -> float:
+        """Compute histogram intersection similarity normalized to [0.0, 1.0]."""
+        if not h1 or not h2 or len(h1) != len(h2):
+            return 0.0
+        # Sum of intersection across 3 channels (each channel sums to 1.0, so total max is 3.0)
+        total_inter = sum(min(a, b) for a, b in zip(h1, h2))
+        return min(max(total_inter / 3.0, 0.0), 1.0)
+
+    @classmethod
+    def compute_similarity(cls, fp1: Dict[str, Any], fp2: Dict[str, Any]) -> float:
+        """
+        Compute composite visual similarity score:
+        Score = (0.40 * sim_d) + (0.25 * sim_a) + (0.20 * sim_ncc) + (0.15 * sim_col)
+        """
+        if not fp1 or not fp2:
+            return 0.0
+
+        sim_d = cls.hamming_similarity(fp1.get("dhash", "0x0"), fp2.get("dhash", "0x0"), 64)
+        sim_a = cls.hamming_similarity(fp1.get("ahash", "0x0"), fp2.get("ahash", "0x0"), 64)
+        sim_ncc = cls.vector_cosine_similarity(fp1.get("ncc", []), fp2.get("ncc", []))
+        sim_col = cls.histogram_intersection(fp1.get("hist", []), fp2.get("hist", []))
+
+        composite = (0.40 * sim_d) + (0.25 * sim_a) + (0.20 * sim_ncc) + (0.15 * sim_col)
+        return round(composite, 4)
+
+    @classmethod
+    def find_best_match(
+        cls,
+        query_image,
+        stored_diagrams: List[Dict[str, Any]],
+        threshold: float = 0.78
+    ) -> Optional[Tuple[Dict[str, Any], float]]:
+        """
+        Sub-5ms CPU reverse visual search across stored diagram fingerprints.
+        Returns: (matching_diagram_dict, similarity_score) or None if no match meets threshold.
+        """
+        q_fp = cls.compute_fingerprint(query_image)
+        if not q_fp or not stored_diagrams:
+            return None
+
+        best_diag = None
+        best_score = 0.0
+
+        for diag in stored_diagrams:
+            target_fp = diag.get("fingerprint")
+            if not target_fp and diag.get("file_path"):
+                target_fp = cls.compute_fingerprint(diag["file_path"])
+                diag["fingerprint"] = target_fp
+
+            if target_fp:
+                score = cls.compute_similarity(q_fp, target_fp)
+                if score > best_score:
+                    best_score = score
+                    best_diag = diag
+
+        if best_diag and best_score >= threshold:
+            return best_diag, best_score
+        return None

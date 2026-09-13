@@ -14,6 +14,7 @@ from .models import Document, DocumentChunk, RAGQuery, RAGResponse, RetrievalRes
 from .embeddings import EmbeddingGenerator
 from .vectorstore import FAISSVectorStore
 from .query_processor import QueryProcessor
+from .feedback_store import FeedbackStore
 
 logger = logging.getLogger(__name__)
 
@@ -276,43 +277,86 @@ class RAGRetriever:
         return fused
 
     def _rerank_candidates(self, query_text: str, candidate_pool: List[Dict],
-                           top_k: int = 4, min_score: float = 0.0) -> List[Dict[str, Any]]:
+                           top_k: int = 4, min_score: float = 0.0,
+                           history_text: str = "") -> List[Dict[str, Any]]:
         """
-        Lightweight Semantic Cross-Reranker.
-        Computes direct relevance between query and chunk contents to eliminate irrelevant context.
+        Attention-Guided Composite Cross-Reranker with Lexical Preservation and RLHF weighting.
+        
+        Formula:
+        CompositeScore = (0.65 * CosineSimilarity)
+                       + min(QueryWordOverlap * 0.08, 0.25)
+                       + min(HistoryOverlap * 0.04, 0.10)
+                       + (0.05 if HasAttachedFigure else 0.0)
+                       + FeedbackBoost (+0.12 / -0.15)
+        
+        Lexical Keyword Preservation:
+        If CompositeScore < 0.35 (min similarity threshold) but chunk contains exact
+        technical terms, acronyms, or numbers from the query, promote to max(score, 0.70).
         """
         if not candidate_pool:
             return []
 
-        # If candidates <= top_k, return directly
-        if len(candidate_pool) <= top_k:
-            return candidate_pool
-
         try:
-            # Batch encode candidate texts (using contextual text for rich relevance scoring)
+            import re
+            # Extract salient alphanumeric query tokens
+            q_tokens = set(re.findall(r'[a-zA-Z0-9_\-\.]{3,}', query_text.lower()))
+            h_tokens = set(re.findall(r'[a-zA-Z0-9_\-\.]{3,}', history_text.lower())) if history_text else set()
+
+            # Batch encode candidate texts
             cand_texts = [c.get("embedded_text") or c.get("text", "") for c in candidate_pool]
             cand_embs = self.embedding_gen.generate(cand_texts)
             q_emb = self.embedding_gen.generate_single(query_text)
             sims = self.embedding_gen.compute_similarities(q_emb, cand_embs)
 
-            import re
+            # Target page extraction
             pm = re.search(r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', query_text, re.IGNORECASE)
             t_page = int(pm.group(1)) if pm else None
 
+            feedback_store = FeedbackStore()
+
             for i, c in enumerate(candidate_pool):
-                base_score = float(sims[i])
+                raw_sim = float(sims[i])
+                c_text = (c.get("embedded_text") or c.get("text", "")).lower()
                 c_meta = c.get("metadata", {})
                 c_page = c_meta.get("page_number") or c_meta.get("page")
+                cid = str(c.get("chunk_id", ""))
+                doc_name = str(c_meta.get("file_name") or c_meta.get("source") or "")
+
+                # 1. Query Word Overlap
+                word_matches = sum(1 for t in q_tokens if t in c_text) if q_tokens else 0
+                q_overlap_bonus = min(word_matches * 0.08, 0.25)
+
+                # 2. History Overlap
+                hist_matches = sum(1 for t in h_tokens if t in c_text) if h_tokens else 0
+                h_overlap_bonus = min(hist_matches * 0.04, 0.10)
+
+                # 3. Figure Presence Bonus
+                has_figure = bool(c_meta.get("visual_elements") or "IMAGE / FIGURE" in c.get("text", ""))
+                fig_bonus = 0.05 if has_figure else 0.0
+
+                # 4. Active User Feedback (RLHF) Boost / Penalty
+                fb_boost = feedback_store.get_citation_boost(cid) or feedback_store.get_citation_boost(doc_name)
+
+                # 5. Composite Attention Score Calculation
+                composite = (0.65 * raw_sim) + q_overlap_bonus + h_overlap_bonus + fig_bonus + fb_boost
+
+                # 6. Lexical Keyword Preservation:
+                # If score is below 0.35 threshold but exact technical jargon/digits match, preserve
+                if composite < 0.35 and word_matches > 0:
+                    composite = max(composite, 0.70)
+
+                # 7. Exact Target Page Dominant Boost
                 if t_page is not None and c_page is not None and int(c_page) == t_page:
-                    base_score += 2.0  # Dominant boost for exact page requested
-                # Clamp to [0, 1] — Pydantic RetrievalResult enforces le=1.0
-                c["similarity_score"] = min(max(base_score, 0.0), 1.0)
+                    composite += 2.0
+
+                # Clamp score strictly to [0.0, 1.0] for Pydantic compatibility
+                c["similarity_score"] = min(max(composite, 0.0), 1.0)
 
             candidate_pool.sort(key=lambda x: x["similarity_score"], reverse=True)
             filtered = [c for c in candidate_pool if c["similarity_score"] >= min_score]
             return filtered[:top_k]
         except Exception as e:
-            logger.warning(f"Reranking fallback to RRF order: {e}")
+            logger.warning(f"Reranking error, falling back to RRF order: {e}")
             return candidate_pool[:top_k]
 
     def _build_filter(self, filters: Dict[str, Any]) -> Callable[[Dict], bool]:

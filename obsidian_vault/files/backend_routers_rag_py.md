@@ -24,15 +24,15 @@ tags:
 - `async def get_rag_ingestion_status`
 - `async def get_diagram_crop`
 - `async def query_rag`
+- `async def submit_rag_feedback`
 - `async def query_rag_stream`
 - `async def sse_event_generator`
-- `async def get_extracted_image`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\routers\rag.py (557 lines)
+Module: backend\routers\rag.py (579 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
 Exports: async def get_rag_stats, async def clear_rag_knowledge_base, async def delete_single_rag_document, async def upload_rag_documents, async def get_rag_ingestion_status

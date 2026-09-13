@@ -17,16 +17,24 @@ tags:
 ---
 
 ## ⚙️ Key Symbols & Interfaces
+- `class VisualFingerprintMatcher:`
 - `def extract_query_keywords`
 - `def find_pdf_diagram_and_sub_regions`
 - `def find_image_sub_region`
+- `def _to_pil_image`
+- `def compute_dhash`
+- `def compute_ahash`
+- `def compute_ncc_vector`
+- `def compute_color_histogram`
+- `def _resample_filter`
+- `def compute_fingerprint`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\image_regions.py (290 lines)
+Module: src\rag\image_regions.py (491 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
-Exports: def extract_query_keywords, def find_pdf_diagram_and_sub_regions, def find_image_sub_region
+Exports: class VisualFingerprintMatcher:, def extract_query_keywords, def find_pdf_diagram_and_sub_regions, def find_image_sub_region, def _to_pil_image
 ```

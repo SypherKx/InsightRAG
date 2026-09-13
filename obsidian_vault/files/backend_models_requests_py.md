@@ -20,13 +20,14 @@ tags:
 - `class DatasetUploadParams`
 - `class AnomalyFilterParams`
 - `class RAGQueryRequest`
+- `class RAGFeedbackRequest`
 
 ---
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: backend\models\requests.py (38 lines)
+Module: backend\models\requests.py (48 lines)
 Tags: #code, #backend
 Hub: 05_FastAPI_Backend_Hub
-Exports: class DatasetUploadParams, class AnomalyFilterParams, class RAGQueryRequest
+Exports: class DatasetUploadParams, class AnomalyFilterParams, class RAGQueryRequest, class RAGFeedbackRequest
 ```

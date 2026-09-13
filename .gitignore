@@ -53,3 +53,8 @@ skills-lock.json
 
 .vercel
 .env*.local
+
+# Internal Analysis & Local Reports
+docs/*.pdf
+scripts/generate_architecture_comparison_pdf.py
+data/rag_feedback.json

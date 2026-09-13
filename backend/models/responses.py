@@ -156,6 +156,9 @@ class RAGQueryResponse(BaseModel):
     answer: Optional[str] = None
     llm_model: Optional[str] = None
     used_llm: bool = False
+    is_grounded: bool = True
+    confidence_score: float = 0.0
+    grounding_status: str = "grounded"
     visual_snippet: Optional[Dict[str, Any]] = None
     visual_diagrams: List[Dict[str, Any]] = Field(default_factory=list)
     metrics: Optional[Dict[str, Any]] = None

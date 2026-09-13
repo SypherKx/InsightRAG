@@ -36,3 +36,13 @@ class RAGQueryRequest(BaseModel):
     images: Optional[List[str]] = Field(default_factory=list)
 
 
+class RAGFeedbackRequest(BaseModel):
+    """User feedback for active learning (RLHF) and citation weighting."""
+    query: str
+    rating: str = "up"  # 'up' or 'down'
+    doc_name: Optional[str] = None
+    chunk_id: Optional[str] = None
+    citations: List[str] = Field(default_factory=list)
+    comment: Optional[str] = None
+
+
