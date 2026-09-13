@@ -19,7 +19,7 @@ function NotFoundComponent() {
           The requested page does not exist in our RAG workspace.
         </p>
         <div className="mt-6">
-          <Link to="/app/upload">
+          <Link to="/">
             <button className="button-primary">Return to home</button>
           </Link>
         </div>
@@ -49,7 +49,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           >
             Try again
           </button>
-          <a href="/app/upload" className="button-secondary">
+          <a href="/" className="button-secondary">
             Go home
           </a>
         </div>
