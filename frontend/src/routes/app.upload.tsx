@@ -56,6 +56,7 @@ import {
   listInstalledModels,
   checkBackendHealth,
 } from "../services/api";
+import { FormattedMarkdown } from "../components/FormattedMarkdown";
 
 export const Route = createFileRoute("/app/upload")({
   head: () => ({
@@ -1272,9 +1273,63 @@ function KnowledgeBaseStudioPage() {
                       </div>
 
                       {/* Message Body Content */}
-                      <div className="whitespace-pre-wrap leading-relaxed font-sans text-xs sm:text-sm text-gray-900">
-                        {msg.text}
-                      </div>
+                      {msg.role === "assistant" ? (
+                        <div className="relative">
+                          <FormattedMarkdown content={msg.text.replace(/▍$/, "")} />
+                          {msg.text.endsWith("▍") && (
+                            <span className="inline-block w-2 h-3.5 bg-purple-600 animate-pulse ml-1 align-middle rounded-xs" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="whitespace-pre-wrap leading-relaxed font-sans text-xs sm:text-sm text-gray-900 font-medium">
+                          {msg.text}
+                        </div>
+                      )}
+
+                      {/* Grounded Source Citations & References Accordion */}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <details className="mt-3 group rounded-xl border-2 border-black/80 bg-gray-50 overflow-hidden shadow-[2px_2px_0px_#000] text-xs">
+                          <summary className="px-3 py-2 bg-white cursor-pointer font-mono text-[10px] font-black text-black flex items-center justify-between hover:bg-yellow-50 transition-colors select-none">
+                            <span className="flex items-center gap-1.5">
+                              <BookOpen className="w-3.5 h-3.5 text-purple-600" />
+                              <span>VERIFIED SOURCE CITATIONS ({msg.sources.length})</span>
+                            </span>
+                            <span className="text-[9px] font-mono text-gray-500 group-open:rotate-180 transition-transform">
+                              ▼
+                            </span>
+                          </summary>
+                          <div className="p-2.5 space-y-2 border-t border-black/10 max-h-56 overflow-y-auto bg-gray-50/50">
+                            {msg.sources.map((src: any, sIdx: number) => {
+                              const sMeta = src.metadata || {};
+                              const sPage = sMeta.page_number || sMeta.page || "1";
+                              const sDoc = sMeta.file_name || sMeta.title || "Document";
+                              const sScore = typeof src.similarity_score === "number"
+                                ? Math.round(src.similarity_score * 100)
+                                : null;
+                              return (
+                                <div
+                                  key={sIdx}
+                                  className="p-2 rounded-lg bg-white border border-gray-300 text-[11px] space-y-1 shadow-[1px_1px_0px_#000]"
+                                >
+                                  <div className="flex items-center justify-between font-mono text-[10px] text-gray-700 font-bold border-b border-gray-100 pb-1">
+                                    <span className="text-purple-700 font-black">
+                                      [{sIdx + 1}] {sDoc} (Page {sPage})
+                                    </span>
+                                    {sScore !== null && (
+                                      <span className="bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-300 text-[9px] font-mono font-bold">
+                                        {sScore}% Match
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-gray-600 line-clamp-3 font-sans italic">
+                                    "{src.text || src.embedded_text || ""}"
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      )}
 
                       {/* Focused Diagram / Sub-region Visual Evidence Card */}
                       {msg.visual_snippet && msg.visual_snippet.has_image && (
