@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -17,6 +17,12 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: ({ search }: any) => {
+    // Automatically open upload studio by default (unless specifically passing ?landing=true)
+    if (!search?.landing) {
+      throw redirect({ to: "/app/upload" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "InsightRAG" },
