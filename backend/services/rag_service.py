@@ -677,6 +677,7 @@ class RAGService:
                                         visual_diagrams=visual_diagrams,
                                         model=cand
                                     )
+                                    num_gpu_layers = 99 if getattr(self, "hardware_mode", "gpu") == "gpu" else 0
                                     payload = {
                                         "model": cand,
                                         "prompt": cand_prompt,
@@ -687,6 +688,7 @@ class RAGService:
                                             "temperature": 0.35,
                                             "num_predict": cand_predict,
                                             "num_thread": _cpu_threads,
+                                            "num_gpu": num_gpu_layers,
                                             "top_k": 40,
                                             "top_p": 0.9,
                                         }
@@ -1071,6 +1073,7 @@ class RAGService:
             num_predict = 350 if is_moondream else (512 if is_vision else 1024)
 
             try:
+                num_gpu_layers = 99 if getattr(self, "hardware_mode", "gpu") == "gpu" else 0
                 stream_payload = {
                     "model": stream_model,
                     "prompt": prompt,
@@ -1081,6 +1084,7 @@ class RAGService:
                         "temperature": 0.35,
                         "num_predict": num_predict,
                         "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
+                        "num_gpu": num_gpu_layers,
                         "top_k": 40,
                         "top_p": 0.9,
                     }

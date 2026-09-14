@@ -42,6 +42,10 @@ import {
   Terminal,
   Square,
   Pencil,
+  ChevronDown,
+  ChevronUp,
+  Settings2,
+  Sliders,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -263,8 +267,16 @@ function KnowledgeBaseStudioPage() {
   const [sessionLifetime, setSessionLifetime] = useState("3 Hours");
   const [embeddingModel, setEmbeddingModel] = useState("all-MiniLM-L6-v2");
   const [visionOCR, setVisionOCR] = useState(true);
+  const [selectedVisionModel, setSelectedVisionModel] = useState<string>(() => {
+    try {
+      return localStorage.getItem("insightrag_vision_model") || "moondream:latest";
+    } catch {
+      return "moondream:latest";
+    }
+  });
   const [processingMode, setProcessingMode] = useState("local");
   const [cloudApiKey, setCloudApiKey] = useState("");
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   // Model hub & downloads
   const [pullingModelId, setPullingModelId] = useState<string | null>(null);
@@ -1828,432 +1840,446 @@ function KnowledgeBaseStudioPage() {
           /* 2. MAIN STUDIO CONTAINER CARD (UPLOAD VIEW) */
           <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-3 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-5 sm:space-y-6 text-black">
             {/* Header Title + Actions */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-black pb-4 sm:pb-5 gap-3 sm:gap-4">
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <div className="h-9 w-9 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
-                    <Bot className="w-5 h-5 text-[#ffe600]" />
-                  </div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-black font-mono">
-                    Knowledge Base Studio
-                  </h1>
-                  <span className="bg-[#ffe600] text-black text-[10px] font-black font-mono px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]">
-                    Local Multimodal
-                  </span>
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between border-b-2 border-black pb-4 sm:pb-5 gap-3.5">
+              {/* Left Side: Brand Icon, Title & Badges */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-black flex items-center justify-center text-[#ffe600] shadow-[3px_3px_0px_#000] shrink-0">
+                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffe600]" />
                 </div>
-                <p className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
-                  <span className="text-emerald-700 font-bold flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    100% Private On-Device Engine
-                  </span>
-                  <span>•</span>
-                  <span>Hardware Accelerated Vectors</span>
-                  <span>•</span>
-                  <span>Visual Diagram OCR</span>
-                </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-black font-mono">
+                      Knowledge Base Studio
+                    </h1>
+                    <span className="bg-[#ffe600] text-black text-[10px] font-black font-mono px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000] uppercase shrink-0">
+                      Local Multimodal
+                    </span>
+                  </div>
+                  <div className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="text-emerald-700 font-bold flex items-center gap-1.5 shrink-0">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      100% Private On-Device Engine
+                    </span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-600 font-medium shrink-0">Hardware Vectors</span>
+                    <span className="text-gray-400 hidden sm:inline">•</span>
+                    <span className="text-gray-600 font-medium hidden sm:inline shrink-0">Visual OCR</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {/* Right Side: Clean Unified Button Row */}
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full xl:w-auto justify-start xl:justify-end shrink-0">
                 {ragStats.total_vectors > 0 && (
                   <button
                     onClick={() => setActiveView("chat")}
-                    className="flex-1 sm:flex-none bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
+                    className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                   >
                     <Bot className="w-4 h-4 text-black" />
                     <span>Open Chat Studio ({ragStats.total_vectors}) →</span>
                   </button>
                 )}
-                <Link
-                  to="/"
-                  className="hidden sm:flex bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] items-center gap-1 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
-                >
-                  Home
-                </Link>
-                <Link
-                  to="/docs"
-                  className="flex-1 sm:flex-none bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
-                >
-                  <BookOpen className="w-3.5 h-3.5 text-black" />
-                  <span>Docs</span>
-                </Link>
                 <button
                   onClick={() => setShowModelHubModal(true)}
-                  className="flex-1 sm:flex-none bg-black text-[#ffe600] hover:bg-neutral-800 font-black font-mono text-xs px-3.5 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px]"
+                  className="bg-black text-[#ffe600] hover:bg-neutral-800 font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                   title="Browse, install, and switch open-source LLMs"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#ffe600]" />
                   <span>Model Hub</span>
                 </button>
+                <Link
+                  to="/docs"
+                  className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-black" />
+                  <span>Docs</span>
+                </Link>
+                <Link
+                  to="/"
+                  className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                >
+                  Home
+                </Link>
               </div>
             </div>
 
-            {/* 3. CONFIGURATION SELECTORS GRID (Image 2 exact style) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* COMPUTE ARCHITECTURE (100% LOCAL VS ADVANCE TURBO CLOUD) */}
-              <div className="space-y-1.5 md:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                    COMPUTE ARCHITECTURE (LOCAL ON-DEVICE VS. ADVANCE TURBO CLOUD SERVER)
-                  </label>
+            {/* 3. COMPACT QUICK CONTROL BAR & ADVANCED SETTINGS */}
+            <div className="space-y-3">
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 sm:p-3.5 bg-gray-50/90 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000]">
+                {/* Left: Model Selector & Hub */}
+                <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                    <span className="text-xs font-black font-mono uppercase tracking-wider text-black">
+                      AI Model:
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-md">
+                    <select
+                      value={selectedLLM}
+                      onChange={(e) => handleSwitchModel(e.target.value)}
+                      disabled={processingMode !== "local"}
+                      className="w-full bg-white disabled:bg-gray-100 font-mono text-xs font-bold border-2 border-black rounded-xl px-3 py-1.5 shadow-[2px_2px_0px_#000] focus:outline-none cursor-pointer truncate"
+                    >
+                      {specs.installed_models && specs.installed_models.length > 0 ? (
+                        specs.installed_models.map((m: string) => (
+                          <option key={m} value={m}>
+                            {m} {m === "qwen2.5vl:3b" ? "[Vision & OCR]" : m === "llama3.2:3b" ? "[Fast & Lightweight]" : ""}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="llama3.2:3b">llama3.2:3b [Fast & Lightweight]</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right: Quick Mode/Hardware Badge & Advanced Settings Toggle */}
+                <div className="flex items-center justify-between md:justify-end gap-2 shrink-0">
+                  {/* Mode Badge */}
                   <span
-                    className={`text-[10px] font-black font-mono px-2.5 py-0.5 rounded border border-black uppercase flex items-center gap-1 ${
+                    className={`text-[10px] font-black font-mono px-2.5 py-1.5 rounded-xl border-2 border-black uppercase flex items-center gap-1.5 shadow-[2px_2px_0px_#000] ${
                       processingMode === "local"
-                        ? "bg-emerald-400 text-black"
-                        : "bg-purple-400 text-black animate-pulse"
+                        ? "bg-emerald-100 text-emerald-950 border-black"
+                        : "bg-purple-100 text-purple-950 border-black"
                     }`}
                   >
                     {processingMode === "local" ? (
                       <>
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>100% LOCAL (AIR-GAPPED OFFLINE)</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>100% Local</span>
                       </>
                     ) : (
                       <>
-                        <Zap className="w-3.5 h-3.5" />
-                        <span>CLOUD TURBO ACCELERATED</span>
+                        <Zap className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Cloud Turbo</span>
                       </>
                     )}
                   </span>
-                </div>
-                <select
-                  value={processingMode}
-                  onChange={(e) => setProcessingMode(e.target.value)}
-                  className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-                >
-                  <option value="local">
-                    [Local] 100% On-Device (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
-                  </option>
-                  <option value="groq:llama-3.3-70b-versatile">
-                    [Cloud Turbo] Groq Llama-3.3 70B (500+ Page Fast Cloud Processing)
-                  </option>
-                  <option value="gemini:gemini-1.5-flash">
-                    [Cloud Reasoning] Google Gemini 1.5 Flash (1M Long Context)
-                  </option>
-                  <option value="openai:gpt-4o-mini">
-                    [Cloud Enterprise] OpenAI GPT-4o-mini (High-Speed Multimodal)
-                  </option>
-                </select>
 
-                {/* Dynamic Cloud Settings Box */}
-                {processingMode !== "local" ? (
-                  <div className="p-3 bg-purple-50 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] space-y-2 mt-2">
-                    <div className="flex items-center justify-between text-xs font-mono font-bold text-purple-900">
-                      <span className="flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                        <span>
-                          Advance Cloud Mode Active — Large PDFs & books will process at
-                          lightning speed on cloud server.
+                  {/* Hardware Pill */}
+                  {processingMode === "local" && (
+                    <div className="flex items-center gap-1 bg-white px-2.5 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] font-mono text-[11px] font-black text-black">
+                      {activeHardwareMode === "gpu" && specs.has_gpu_access ? (
+                        <span className="flex items-center gap-1 text-emerald-800">
+                          <Zap className="w-3.5 h-3.5 text-amber-500 fill-current" />
+                          <span>GPU Active</span>
                         </span>
-                      </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-neutral-800">
+                          <Cpu className="w-3.5 h-3.5 text-black" />
+                          <span>CPU ({specs.cpu_threads || 8}T)</span>
+                        </span>
+                      )}
                     </div>
-                    <input
-                      type="password"
-                      value={cloudApiKey}
-                      onChange={(e) => setCloudApiKey(e.target.value)}
-                      placeholder="Enter Cloud API Key (Optional — leave blank to use preconfigured server key)"
-                      className="w-full bg-white border-2 border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none"
-                    />
-                  </div>
-                ) : (
-                  <div className="text-[11px] font-mono text-emerald-900 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-300 mt-1 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <span>
-                      <strong>100% Local Mode Active:</strong> Documents and vectors never leave your PC. All embedding and inference runs completely on-device.
-                    </span>
-                  </div>
-                )}
+                  )}
+
+                  {/* Advanced Settings Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-black border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px] ${
+                      showAdvancedSettings
+                        ? "bg-black text-[#ffe600]"
+                        : "bg-white text-black hover:bg-gray-100"
+                    }`}
+                    title="Toggle Advanced Pipeline & Engine Settings"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Pipeline Settings</span>
+                    {showAdvancedSettings ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
-              {/* COMPACT & AESTHETIC HARDWARE ACCELERATION ENGINE */}
-              {processingMode === "local" && (
-                <div className="space-y-1.5 md:col-span-2">
-                  <div className="p-3 bg-white rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-black text-[#ffe600] flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000]">
-                        <Cpu className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
+              {/* COLLAPSIBLE ADVANCED SETTINGS ACCORDION */}
+              <AnimatePresence>
+                {showAdvancedSettings && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 sm:p-5 bg-white rounded-2xl border-2 border-black shadow-[4px_4px_0px_#000] space-y-4 font-mono">
+                      <div className="flex items-center justify-between border-b-2 border-gray-200 pb-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black font-mono uppercase tracking-wide text-black truncate">
-                            Hardware Engine
-                          </span>
-                          <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded border border-black bg-emerald-100 text-emerald-900 shrink-0 flex items-center gap-1">
-                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
-                            <span>{activeHardwareMode === "gpu" ? "GPU Active" : "CPU Active"}</span>
-                          </span>
+                          <Settings2 className="w-4 h-4 text-black" />
+                          <h3 className="text-xs sm:text-sm font-black uppercase text-black">
+                            Advanced Engine & Ingestion Pipeline Settings
+                          </h3>
                         </div>
-                        <p className="text-[10px] font-mono text-gray-500 truncate mt-0.5">
-                          {activeHardwareMode === "cpu"
-                            ? `Multi-threaded CPU execution (${specs.cpu_threads || 8} Threads) • Universal stability`
-                            : `Hardware CUDA offload on ${specs.gpu_name || "GPU"}`}
-                        </p>
+                        <span className="text-[10px] text-gray-500 font-bold hidden sm:inline">
+                          Configure embeddings, hardware offload & vision pipeline
+                        </span>
                       </div>
-                    </div>
 
-                    {/* Compact Segmented Switch */}
-                    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border-2 border-black shrink-0 self-start sm:self-auto">
-                      {/* CPU Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => handleSwitchHardware("cpu")}
-                        disabled={switchingHardware}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-black transition cursor-pointer ${
-                          activeHardwareMode === "cpu"
-                            ? "bg-black text-white shadow-[2px_2px_0px_#000]"
-                            : "text-gray-700 hover:text-black hover:bg-white/60"
-                        }`}
-                      >
-                        <Cpu className="w-3.5 h-3.5" />
-                        <span>CPU ({specs.cpu_threads || 8}T)</span>
-                      </button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* COMPUTE ARCHITECTURE */}
+                        <div className="space-y-1.5 md:col-span-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-black uppercase tracking-wider text-gray-700 block">
+                              Compute Architecture
+                            </label>
+                            <span className="text-[10px] font-bold text-gray-500">
+                              {processingMode === "local" ? "Offline On-Device" : "Cloud Hosted"}
+                            </span>
+                          </div>
+                          <select
+                            value={processingMode}
+                            onChange={(e) => setProcessingMode(e.target.value)}
+                            className="w-full bg-white font-mono text-xs font-bold border-2 border-black rounded-xl p-2.5 shadow-[2px_2px_0px_#000] focus:outline-none cursor-pointer"
+                          >
+                            <option value="local">
+                              [Local] 100% On-Device (Zero Budget • Offline • Privacy Guaranteed • Ollama) [DEFAULT]
+                            </option>
+                            <option value="groq:llama-3.3-70b-versatile">
+                              [Cloud Turbo] Groq Llama-3.3 70B (500+ Page Fast Cloud Processing)
+                            </option>
+                            <option value="gemini:gemini-1.5-flash">
+                              [Cloud Reasoning] Google Gemini 1.5 Flash (1M Long Context)
+                            </option>
+                            <option value="openai:gpt-4o-mini">
+                              [Cloud Enterprise] OpenAI GPT-4o-mini (High-Speed Multimodal)
+                            </option>
+                          </select>
 
-                      {/* GPU Toggle with Tooltip */}
-                      <div className="relative group">
-                        <button
-                          type="button"
-                          onClick={() => handleSwitchHardware("gpu")}
-                          disabled={switchingHardware || !specs.has_gpu_access}
-                          title={
-                            !specs.has_gpu_access
-                              ? specs.gpu_disabled_reason || "GPU acceleration disabled on this device."
-                              : "Switch computation & Ollama to GPU"
-                          }
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-black transition ${
-                            !specs.has_gpu_access
-                              ? "text-gray-400 bg-gray-200/60 cursor-not-allowed"
-                              : activeHardwareMode === "gpu"
-                                ? "bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] cursor-pointer"
-                                : "text-gray-700 hover:text-black hover:bg-white/60 cursor-pointer"
-                          }`}
-                        >
-                          <Zap className="w-3.5 h-3.5" />
-                          <span>GPU Offload</span>
-                          {!specs.has_gpu_access && (
-                            <Lock className="w-3 h-3 text-gray-400 ml-0.5" />
-                          )}
-                        </button>
-
-                        {!specs.has_gpu_access && (
-                          <div className="hidden group-hover:block absolute z-30 bottom-full right-0 mb-2 w-64 p-2.5 bg-black text-white text-[10px] font-mono rounded-lg border border-gray-700 shadow-xl pointer-events-none">
-                            <div className="font-bold text-amber-300 flex items-center gap-1 mb-0.5">
-                              <Lock className="w-3 h-3" />
-                              <span>GPU Acceleration Locked</span>
+                          {processingMode !== "local" && (
+                            <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-300 space-y-1.5 mt-2">
+                              <input
+                                type="password"
+                                value={cloudApiKey}
+                                onChange={(e) => setCloudApiKey(e.target.value)}
+                                placeholder="Enter Cloud API Key (Optional — leave blank to use server key)"
+                                className="w-full bg-white border border-black rounded-lg p-2 font-mono text-xs font-bold focus:outline-none"
+                              />
                             </div>
-                            <p className="text-gray-300 leading-tight">
-                              {specs.gpu_disabled_reason ||
-                                "No CUDA runtime detected. Automatically routed through CPU engine for stability."}
-                            </p>
+                          )}
+                        </div>
+
+                        {/* HARDWARE ACCELERATION ENGINE */}
+                        {processingMode === "local" && (
+                          <div className="space-y-1.5 md:col-span-2">
+                            <div className="p-3 bg-gray-50 rounded-xl border border-gray-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-black text-[#ffe600] flex items-center justify-center shrink-0">
+                                  <Cpu className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black uppercase text-black">
+                                      Hardware Acceleration Engine
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-gray-500 truncate">
+                                    {activeHardwareMode === "cpu"
+                                      ? `Multi-threaded CPU execution (${specs.cpu_threads || 8} Threads)`
+                                      : `Hardware CUDA offload on ${specs.gpu_name || "GPU"}`}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Segmented Switch */}
+                              <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-black shrink-0 self-start sm:self-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSwitchHardware("cpu")}
+                                  disabled={switchingHardware}
+                                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-black transition cursor-pointer ${
+                                    activeHardwareMode === "cpu"
+                                      ? "bg-black text-white"
+                                      : "text-gray-700 hover:text-black"
+                                  }`}
+                                >
+                                  <Cpu className="w-3 h-3" />
+                                  <span>CPU ({specs.cpu_threads || 8}T)</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSwitchHardware("gpu")}
+                                  disabled={switchingHardware || !specs.has_gpu_access}
+                                  title={
+                                    !specs.has_gpu_access
+                                      ? specs.gpu_disabled_reason || "GPU acceleration disabled on this device."
+                                      : "Switch computation & Ollama to GPU"
+                                  }
+                                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-black transition ${
+                                    !specs.has_gpu_access
+                                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                                      : activeHardwareMode === "gpu"
+                                        ? "bg-[#ffe600] text-black cursor-pointer"
+                                        : "text-gray-700 hover:text-black cursor-pointer"
+                                  }`}
+                                >
+                                  <Zap className="w-3 h-3" />
+                                  <span>GPU Offload</span>
+                                  {!specs.has_gpu_access && (
+                                    <Lock className="w-2.5 h-2.5 text-gray-400 ml-0.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Feedback Notice */}
+                            {hardwareNotice ? (
+                              <div className="text-[10px] font-bold p-2 rounded-lg border border-black bg-[#ffe600] text-black flex items-center gap-1.5">
+                                <Info className="w-3 h-3 shrink-0" />
+                                <span>{hardwareNotice}</span>
+                              </div>
+                            ) : !specs.has_gpu_access && (
+                              <div className="text-[10px] text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-200 flex items-center gap-1.5">
+                                <Info className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span>
+                                  <strong>Hardware Status:</strong>{" "}
+                                  {specs.gpu_disabled_reason ||
+                                    `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected. Multi-threaded CPU mode active.`}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        {/* DENSE EMBEDDING ENGINE */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-black uppercase tracking-wider text-gray-700 block">
+                              Dense Embedding Model
+                            </label>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
+                              384 / 768-dim
+                            </span>
+                          </div>
+                          <select
+                            value={embeddingModel}
+                            onChange={(e) => setEmbeddingModel(e.target.value)}
+                            className="w-full bg-white font-mono text-xs font-bold border-2 border-black rounded-xl p-2.5 shadow-[2px_2px_0px_#000] focus:outline-none cursor-pointer"
+                          >
+                            <option value="all-MiniLM-L6-v2">
+                              all-MiniLM-L6-v2 (Ultra-Fast 5x • 80MB • CPU Friendly)
+                            </option>
+                            <option value="bge-small-en-v1.5">
+                              bge-small-en-v1.5 (Balanced 3x • 130MB • Standard PC)
+                            </option>
+                            <option value="bge-base-en-v1.5">
+                              bge-base-en-v1.5 (SOTA Precision • 430MB • 768-dim)
+                            </option>
+                            <option value="nomic-embed-text">
+                              nomic-embed-text (Ollama Native 8K • 768-dim)
+                            </option>
+                          </select>
+                        </div>
+
+                        {/* SESSION LIFETIME */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-black uppercase tracking-wider text-gray-700 block">
+                            Session Cache Lifetime
+                          </label>
+                          <select
+                            value={sessionLifetime}
+                            onChange={(e) => setSessionLifetime(e.target.value)}
+                            className="w-full bg-white font-mono text-xs font-bold border-2 border-black rounded-xl p-2.5 shadow-[2px_2px_0px_#000] focus:outline-none cursor-pointer"
+                          >
+                            <option value="1 Hour">1 Hour</option>
+                            <option value="3 Hours">3 Hours</option>
+                            <option value="24 Hours">24 Hours</option>
+                            <option value="Unlimited">Unlimited Persistent</option>
+                          </select>
+                        </div>
+
+                        {/* VISION OCR PIPELINE */}
+                        <div className="space-y-2 md:col-span-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                              <Eye className="w-3.5 h-3.5 text-black" />
+                              <span>Vision OCR & Diagram Reasoning Pipeline</span>
+                            </label>
+                            <span className="text-[10px] font-mono font-bold text-gray-500">
+                              {visionOCR ? `Active: ${selectedVisionModel}` : "Disabled"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {/* Option 1: moondream:latest */}
+                            <label
+                              onClick={() => {
+                                setVisionOCR(true);
+                                setSelectedVisionModel("moondream:latest");
+                                try {
+                                  localStorage.setItem("insightrag_vision_model", "moondream:latest");
+                                } catch {}
+                              }}
+                              className={`flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer font-mono transition-all ${
+                                visionOCR && selectedVisionModel === "moondream:latest"
+                                  ? "border-black bg-[#fffde6] shadow-[3px_3px_0px_#000]"
+                                  : "border-gray-300 bg-white hover:border-black"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="vision_model_choice"
+                                checked={visionOCR && selectedVisionModel === "moondream:latest"}
+                                onChange={() => {}}
+                                className="w-4 h-4 mt-0.5 accent-black cursor-pointer shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-black text-black">moondream:latest</span>
+                                  <span className="bg-emerald-400 text-black text-[9px] font-black px-1.5 py-0.2 rounded border border-black">
+                                    FAST OCR (800MB)
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-gray-600 font-medium mt-0.5">
+                                  Ultra-lightweight. Fast scanned text extraction & quick figure captioning on any CPU.
+                                </p>
+                              </div>
+                            </label>
+
+                            {/* Option 2: qwen2.5vl:3b */}
+                            <label
+                              onClick={() => {
+                                setVisionOCR(true);
+                                setSelectedVisionModel("qwen2.5vl:3b");
+                                try {
+                                  localStorage.setItem("insightrag_vision_model", "qwen2.5vl:3b");
+                                } catch {}
+                              }}
+                              className={`flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer font-mono transition-all ${
+                                visionOCR && selectedVisionModel === "qwen2.5vl:3b"
+                                  ? "border-black bg-purple-50 shadow-[3px_3px_0px_#000]"
+                                  : "border-gray-300 bg-white hover:border-black"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="vision_model_choice"
+                                checked={visionOCR && selectedVisionModel === "qwen2.5vl:3b"}
+                                onChange={() => {}}
+                                className="w-4 h-4 mt-0.5 accent-black cursor-pointer shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-black text-purple-950">qwen2.5vl:3b</span>
+                                  <span className="bg-purple-400 text-black text-[9px] font-black px-1.5 py-0.2 rounded border border-black">
+                                    SOTA MULTIMODAL (3.2GB)
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-purple-900 font-medium mt-0.5">
+                                  Deep diagram reasoning, flowchart OCR, architecture schematics & table parsing.
+                                </p>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Compact Status / Feedback Line (only if notice or locked) */}
-                  {hardwareNotice ? (
-                    <div className="text-[10px] font-mono font-bold p-2 rounded-lg border-2 border-black bg-[#ffe600] text-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 animate-pulse">
-                      <Info className="w-3.5 h-3.5 shrink-0" />
-                      <span>{hardwareNotice}</span>
-                    </div>
-                  ) : !specs.has_gpu_access ? (
-                    <div className="text-[10px] font-mono text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-300 flex items-center gap-1.5">
-                      <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>
-                        <strong>Hardware Status:</strong>{" "}
-                        {specs.gpu_disabled_reason ||
-                          `${specs.hardware_adapter_name || specs.gpu_name || "GPU"} detected without CUDA runtime. CPU engine active for error-free stability.`}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-300 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>
-                        <strong>GPU Acceleration Ready:</strong> {specs.gpu_name} (
-                        {specs.vram_gb} GB VRAM) supported and available for hardware offload.
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* LOCAL LLM MODEL (OLLAMA) - CLEAN & AESTHETIC */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                    <Bot className="w-3.5 h-3.5 text-black" />
-                    <span>LOCAL LLM MODEL (OLLAMA)</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowModelHubModal(true)}
-                    className="text-[10px] font-mono font-black text-black bg-[#ffe600] hover:bg-yellow-400 px-2.5 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1 cursor-pointer active:translate-x-[1px] active:translate-y-[1px]"
-                    title="Open Model Hub to install or switch models"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>Model Hub</span>
-                  </button>
-                </div>
-
-                <select
-                  value={selectedLLM}
-                  onChange={(e) => handleSwitchModel(e.target.value)}
-                  disabled={processingMode !== "local"}
-                  className="w-full bg-white disabled:bg-gray-100 disabled:text-gray-400 font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-                >
-                  {specs.installed_models && specs.installed_models.length > 0 ? (
-                    specs.installed_models.map((m: string) => (
-                      <option key={m} value={m}>
-                        {m} {m === "qwen2.5vl:3b" ? "[Vision & OCR SOTA]" : m === "llama3.2:3b" ? "[Fast & Lightweight]" : ""}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="llama3.2:3b">llama3.2:3b [Fast & Lightweight]</option>
-                  )}
-                </select>
-
-                <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-300">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    <span className="font-bold text-black truncate">{selectedLLM}</span>
-                    <span className="text-gray-500 truncate hidden xs:inline">
-                      • {CURATED_MODELS.find((m) => m.id === selectedLLM)?.tagline || "Local Private Inference"}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowModelHubModal(true)}
-                    className="text-[10px] font-black underline text-blue-700 hover:text-blue-900 shrink-0 ml-1.5 cursor-pointer"
-                  >
-                    + Install
-                  </button>
-                </div>
-              </div>
-
-              {/* SESSION LIFETIME */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                  SESSION LIFETIME
-                </label>
-                <select
-                  value={sessionLifetime}
-                  onChange={(e) => setSessionLifetime(e.target.value)}
-                  className="w-full bg-white font-mono text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-                >
-                  <option value="1 Hour">1 Hour</option>
-                  <option value="3 Hours">3 Hours</option>
-                  <option value="24 Hours">24 Hours</option>
-                  <option value="Unlimited">Unlimited Persistent</option>
-                </select>
-              </div>
-
-              {/* DENSE EMBEDDING ENGINE */}
-              <div className="space-y-1.5 md:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 block">
-                    DENSE EMBEDDING ENGINE (GPU / CPU MODULAR VECTORS)
-                  </label>
-                  <span className="bg-emerald-400 text-black text-[10px] font-black font-mono px-2 py-0.5 rounded border border-black uppercase">
-                    {specs.acceleration_mode || "GPU / CPU ACCELERATED"}
-                  </span>
-                </div>
-                <select
-                  value={embeddingModel}
-                  onChange={(e) => setEmbeddingModel(e.target.value)}
-                  className="w-full bg-white font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 shadow-[3px_3px_0px_#000] focus:outline-none cursor-pointer"
-                >
-                  <option value="all-MiniLM-L6-v2">
-                    all-MiniLM-L6-v2 (Ultra-Fast 5x • 4GB+ RAM • 384-dim • CPU Friendly)
-                  </option>
-                  <option value="bge-small-en-v1.5">
-                    bge-small-en-v1.5 (Balanced 3x • 6GB+ RAM • 384-dim • Standard PC)
-                  </option>
-                  <option value="bge-base-en-v1.5">
-                    bge-base-en-v1.5 (SOTA High Precision • 8-16GB RAM/GPU • 768-dim • Research)
-                  </option>
-                  <option value="nomic-embed-text">
-                    nomic-embed-text (Ollama Native 8K • 8GB+ RAM • 768-dim • Long Context)
-                  </option>
-                </select>
-
-                {/* Dynamic Helper Note */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
-                  {embeddingModel === "all-MiniLM-L6-v2" && (
-                    <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-400 font-bold flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                      <span>
-                        <strong>Ultra-Fast (5x Speed)</strong>: Super lightweight (80MB).
-                        Recommended for laptops, CPU mode & rapid indexing.
-                      </span>
-                    </span>
-                  )}
-                  {embeddingModel === "bge-small-en-v1.5" && (
-                    <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-lg border border-sky-400 font-bold flex items-center gap-1.5">
-                      <Scale className="w-3.5 h-3.5 text-sky-700 shrink-0" />
-                      <span>
-                        <strong>Balanced (3x Speed)</strong>: Optimal mix of low latency & high
-                        accuracy across standard documents.
-                      </span>
-                    </span>
-                  )}
-                  {embeddingModel === "bge-base-en-v1.5" && (
-                    <span className="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-lg border border-yellow-400 font-bold flex items-center gap-1.5">
-                      <Brain className="w-3.5 h-3.5 text-yellow-700 shrink-0" />
-                      <span>
-                        <strong>High Precision (SOTA)</strong>: 768-dim vectors. Best for dense
-                        medical research, legal & technical books.
-                      </span>
-                    </span>
-                  )}
-                  {embeddingModel === "nomic-embed-text" && (
-                    <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg border border-purple-400 font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-700 shrink-0" />
-                      <span>
-                        <strong>Ollama Native (8K Context)</strong>: Runs 100% via local Ollama
-                        service. Supports large chunks up to 8192 tokens.
-                      </span>
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* VISION OCR MODELS */}
-              <div className="space-y-1.5 md:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-black font-mono uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                    <Eye className="w-3.5 h-3.5 text-black" />
-                    <span>VISION OCR & DIAGRAM REASONING PIPELINE</span>
-                  </label>
-                  <span className="text-[10px] font-mono font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                    <span>Active Ingestion</span>
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="flex items-center gap-2 bg-white hover:bg-yellow-50/60 border-2 border-black px-4 py-2 rounded-xl shadow-[3px_3px_0px_#000] cursor-pointer font-mono text-xs font-bold transition-all">
-                    <input
-                      type="checkbox"
-                      checked={visionOCR}
-                      onChange={(e) => setVisionOCR(e.target.checked)}
-                      className="w-4 h-4 rounded accent-black cursor-pointer"
-                    />
-                    <span>moondream:latest</span>
-                    <span className="bg-emerald-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded border border-black">
-                      FAST OCR
-                    </span>
-                  </label>
-
-                  <div className="flex items-center gap-2 bg-purple-50 border-2 border-black px-3.5 py-2 rounded-xl shadow-[2px_2px_0px_#000] font-mono text-xs font-bold text-purple-950">
-                    <span>qwen2.5vl:3b</span>
-                    <span className="bg-purple-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded border border-black">
-                      SOTA MULTIMODAL
-                    </span>
-                  </div>
-
-                  <span className="text-[10px] font-mono text-gray-500 font-semibold">
-                    Automatically rasterizes scanned pages and extracts figures & charts
-                  </span>
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* LOCAL ENGINE OFFLINE ADVISORY */}
@@ -2857,13 +2883,18 @@ function KnowledgeBaseStudioPage() {
                 </button>
               </div>
 
-              {/* Modal Curated Grid */}
-              <div className="space-y-3">
-                <div className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-black" />
-                  <span>Curated Top-Tier Open-Source LLMs</span>
+              {/* Modal Curated Stacked List */}
+              <div className="space-y-2.5">
+                <div className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-black" />
+                    <span>Curated Top-Tier Open-Source LLMs</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-bold">
+                    {CURATED_MODELS.length} Models Available
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
                   {CURATED_MODELS.map((model) => {
                     const isInstalled = isModelInstalled(model.id);
                     const isActive = selectedLLM === model.id;
@@ -2874,56 +2905,55 @@ function KnowledgeBaseStudioPage() {
                     return (
                       <div
                         key={model.id}
-                        className={`border-2 border-black rounded-2xl p-4 flex flex-col justify-between shadow-[3px_3px_0px_#000] ${
+                        className={`border-2 border-black rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[2px_2px_0px_#000] transition-all ${
                           isActive
-                            ? "bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500"
+                            ? "bg-emerald-50/90 border-emerald-600 ring-2 ring-emerald-500"
                             : isInstalled
-                              ? "bg-gray-50/80"
-                              : "bg-white"
+                              ? "bg-gray-50/90 hover:bg-yellow-50/40"
+                              : "bg-white hover:bg-gray-50"
                         }`}
                       >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-1">
-                            <span
-                              className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md border border-black ${model.badgeColor}`}
-                            >
-                              {model.badge}
-                            </span>
-                            <span className="text-[10px] font-mono font-black text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-300">
-                              {model.size}
-                            </span>
-                          </div>
-
-                          <div>
-                            <div className="font-mono font-black text-sm text-black flex items-center gap-1.5">
+                        {/* Left: Info, Name, Tags & Description */}
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-black text-xs sm:text-sm text-black flex items-center gap-1.5">
                               <span>{model.name}</span>
                               {model.isVisionCapable && (
                                 <span title="Multimodal Vision & OCR Capable" className="inline-flex items-center text-purple-700">
                                   <Eye className="w-3.5 h-3.5" />
                                 </span>
                               )}
-                            </div>
-                            <div className="text-[11px] font-mono text-gray-500 font-bold">
-                              {model.tagline}
-                            </div>
+                            </span>
+                            <span
+                              className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded border border-black ${model.badgeColor}`}
+                            >
+                              {model.badge}
+                            </span>
+                            <span className="text-[9px] font-mono font-black text-gray-600 bg-white px-1.5 py-0.2 rounded border border-gray-300">
+                              {model.size}
+                            </span>
                           </div>
 
-                          <p className="text-[11px] font-mono text-gray-600 leading-relaxed">
+                          <div className="text-[11px] font-mono text-gray-600 font-bold truncate">
+                            {model.tagline}
+                          </div>
+
+                          <p className="text-[10px] font-mono text-gray-500 leading-snug line-clamp-1 sm:line-clamp-2">
                             {model.description}
                           </p>
                         </div>
 
-                        {/* Action Buttons & Progress */}
-                        <div className="mt-4 pt-3 border-t border-gray-200">
+                        {/* Right: Action Button or Progress */}
+                        <div className="shrink-0 sm:min-w-[170px] flex items-center justify-end">
                           {isPulling ? (
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-[11px] font-mono font-bold text-black">
-                                <span className="truncate max-w-[200px]">
-                                  {statusText || "Downloading from Ollama..."}
+                            <div className="w-full space-y-1">
+                              <div className="flex justify-between text-[10px] font-mono font-bold text-black">
+                                <span className="truncate max-w-[120px]">
+                                  {statusText || "Downloading..."}
                                 </span>
                                 <span>{progress}%</span>
                               </div>
-                              <div className="w-full bg-gray-200 h-3 rounded-full border border-black overflow-hidden">
+                              <div className="w-full bg-gray-200 h-2.5 rounded-full border border-black overflow-hidden">
                                 <div
                                   className="bg-[#ffe600] h-full transition-all duration-200"
                                   style={{ width: `${progress}%` }}
@@ -2931,9 +2961,9 @@ function KnowledgeBaseStudioPage() {
                               </div>
                             </div>
                           ) : isActive ? (
-                            <div className="flex items-center justify-center gap-2 bg-emerald-400 text-black py-2 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000]">
-                              <CheckCircle2 className="w-4 h-4 text-black" />
-                              <span>CURRENTLY ACTIVE MODEL</span>
+                            <div className="w-full flex items-center justify-center gap-1.5 bg-emerald-400 text-black py-2 px-3 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[1px_1px_0px_#000]">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-black" />
+                              <span>ACTIVE MODEL</span>
                             </div>
                           ) : isInstalled ? (
                             <button
@@ -2943,20 +2973,20 @@ function KnowledgeBaseStudioPage() {
                                 setShowModelHubModal(false);
                                 setShowModal(false);
                               }}
-                              className="w-full bg-black hover:bg-gray-800 text-[#ffe600] py-2 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                              className="w-full bg-black hover:bg-gray-800 text-[#ffe600] py-2 px-3 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
                             >
-                              <Zap className="w-4 h-4 text-[#ffe600]" />
-                              <span>Switch to this Model</span>
+                              <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
+                              <span>Switch Model</span>
                             </button>
                           ) : (
                             <button
                               type="button"
                               onClick={() => handleInstallModel(model.id)}
                               disabled={pullingModelId !== null}
-                              className="w-full bg-[#ffe600] hover:bg-yellow-400 disabled:opacity-50 text-black py-2 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                              className="w-full bg-[#ffe600] hover:bg-yellow-400 disabled:opacity-50 text-black py-2 px-3 rounded-xl border-2 border-black font-mono font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
                             >
-                              <Download className="w-4 h-4" />
-                              <span>Direct 1-Click Install ({model.size})</span>
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Install ({model.size})</span>
                             </button>
                           )}
                         </div>

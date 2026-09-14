@@ -218,16 +218,60 @@ def check_and_setup_ollama_models():
 def check_hardware():
     threads = os.cpu_count() or 8
     has_gpu = False
+    physical_gpu_name = None
+
+    # Check physical GPU via nvidia-smi or Windows video controller
+    try:
+        if shutil.which("nvidia-smi"):
+            out = subprocess.check_output(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"], text=True, stderr=subprocess.DEVNULL, timeout=2.0).strip()
+            if out:
+                physical_gpu_name = out.splitlines()[0].strip()
+        elif os.name == 'nt':
+            out = subprocess.check_output(["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"], text=True, stderr=subprocess.DEVNULL, timeout=2.0).strip()
+            for line in out.splitlines():
+                line = line.strip()
+                if any(x in line.lower() for x in ["nvidia", "geforce", "rtx", "gtx", "quadro"]):
+                    physical_gpu_name = line
+                    break
+    except Exception:
+        pass
+
     try:
         import torch
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
             has_gpu = True
             gpu_name = torch.cuda.get_device_name(0)
             print_step(f"Hardware Architecture: NVIDIA CUDA [{gpu_name}]", "ACTIVE GPU", ANSI_GREEN)
     except Exception:
         pass
+
     if not has_gpu:
-        print_step(f"Hardware Architecture: Standard Multi-Core CPU ({threads} Threads)", "ACTIVE CPU", ANSI_GREEN)
+        if physical_gpu_name:
+            print_step(f"Hardware Architecture: {physical_gpu_name}", "DETECTED (CPU TORCH)", ANSI_YELLOW)
+            print(f"\n{ANSI_BOLD}{ANSI_CYAN}[i] NVIDIA GPU '{physical_gpu_name}' detected! PyTorch is currently CPU-only.{ANSI_RESET}")
+            try:
+                ans = input(f"{ANSI_BOLD}    Enable high-speed CUDA GPU acceleration now? (y/n) [default: y]: {ANSI_RESET}").strip().lower()
+            except Exception:
+                ans = "n"
+            if ans in ("", "y", "yes"):
+                print(f"{ANSI_YELLOW}[*] Installing PyTorch with CUDA 12.4 support (~2.5GB)...{ANSI_RESET}")
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu124"])
+                    print(f"{ANSI_GREEN}[OK] PyTorch CUDA acceleration enabled!{ANSI_RESET}")
+                    try:
+                        import importlib
+                        import torch
+                        importlib.reload(torch)
+                        if torch.cuda.is_available():
+                            has_gpu = True
+                            print_step(f"Hardware Architecture: NVIDIA CUDA [{torch.cuda.get_device_name(0)}]", "ACTIVE GPU", ANSI_GREEN)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    print(f"{ANSI_RED}[!] Could not auto-install CUDA PyTorch: {e}{ANSI_RESET}")
+                    print(f"    You can manually run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124")
+        if not has_gpu:
+            print_step(f"Hardware Architecture: Standard Multi-Core CPU ({threads} Threads)", "ACTIVE CPU", ANSI_GREEN)
 
 def install_deps():
     print(f"\n{ANSI_BOLD}[*] Checking & downloading dependencies with live status:{ANSI_RESET}")
