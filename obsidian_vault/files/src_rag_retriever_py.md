@@ -37,7 +37,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\retriever.py (565 lines)
+Module: src\rag\retriever.py (567 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class RAGRetriever:, def __init__, def retrieve, def _lexical_search, def _reciprocal_rank_fusion

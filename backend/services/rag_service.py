@@ -128,8 +128,8 @@ def get_b64_images(images: Optional[List[str]], visual_diagrams: List[Dict[str, 
                     candidate_paths = [
                         Path("./uploads/extracted_images") / sub_path,
                         Path("../uploads/extracted_images") / sub_path,
-                        Path(r"C:\Users\itska\InsightRAG\uploads\extracted_images") / sub_path,
-                        Path(r"c:\Users\itska\OneDrive\Desktop\Insight-Forge-master\Insight-Forge-master\uploads\extracted_images") / sub_path,
+                        Path(os.environ.get("LOCALAPPDATA", "")) / "InsightRAG" / "uploads" / "extracted_images" / sub_path,
+                        Path(os.environ.get("USERPROFILE", "")) / "InsightRAG" / "uploads" / "extracted_images" / sub_path,
                     ]
                     for cp in candidate_paths:
                         if cp.exists():
@@ -145,102 +145,90 @@ def build_chatgpt_rag_prompt(
     history_str: str = "",
     target_page: Optional[int] = None,
     is_visual_query: bool = False,
-    visual_diagrams: Optional[List[Dict[str, Any]]] = None
+    visual_diagrams: Optional[List[Dict[str, Any]]] = None,
+    model: str = ""
 ) -> str:
     """
-    Constructs an articulate, structured, ChatGPT-grade prompt.
-    Ensures:
-    1. Deep question comprehension and multi-part decomposition.
-    2. Grounded facts with bracketed citations [1], [2].
-    3. Clear structured markdown output (Executive Summary, ### Sections, Bullet points, Tables).
-    4. Seamless understanding of natural language, English, and Hinglish queries.
-    5. Graceful explanation of available information without rigid refusals.
+    Constructs an articulate, structured, ChatGPT-grade prompt with model-aware token budgeting.
+    Provides dual intelligence:
+    1. Rich natural conversational abilities (general knowledge, coding, explanations, friendly chat in English/Hindi/Hinglish).
+    2. Deep document grounding (extracts facts, figures, page numbers, and diagrams with high precision).
     """
+    model_lower = (model or "").lower()
+    is_tiny = any(k in model_lower for k in ["moondream", "tiny"])
+    is_cloud = any(k in model_lower for k in ["groq", "gemini", "openai", "claude"])
+
+    max_chunks = 2 if is_tiny else (8 if is_cloud else 5)
+    max_chunk_chars = 400 if is_tiny else (2000 if is_cloud else 1200)
+
+    context_str = ""
     if results:
         context_blocks = []
-        for i, r in enumerate(results[:8]):
+        for i, r in enumerate(results[:max_chunks]):
             r_meta = r.get("metadata", {})
             p_num = r_meta.get("page_number") or r_meta.get("page")
             p_str = f"Page {p_num}" if p_num else "Excerpt"
             f_name = r_meta.get("file_name") or r_meta.get("title") or "Doc"
-            chunk_text = r.get('text', '').strip()[:2500]
+            chunk_text = r.get('text', '').strip()[:max_chunk_chars]
             context_blocks.append(f"[{i+1}] ({f_name} | {p_str}):\n{chunk_text}")
         context_str = "\n\n".join(context_blocks)
 
-        page_instruction = (
-            f"CRITICAL PAGE FOCUS: The user specifically asked about Page {target_page}. You MUST detail the content on Page {target_page} using the context provided below.\n"
-            if target_page else ""
-        )
-        
-        visual_diagram_lines = []
-        if visual_diagrams:
-            for vd in visual_diagrams[:5]:
-                desc = f": {vd['description']}" if vd.get('description') else ""
-                visual_diagram_lines.append(
-                    f"- {vd.get('caption', 'Diagram')} [Page {vd.get('page', 1)}]{desc} (URL: {vd.get('image_url', '')})"
-                )
+    page_instruction = (
+        f"PAGE EMPHASIS: The user specifically asked about Page {target_page}. Detail the content and figures on Page {target_page} using the context provided.\n"
+        if target_page else ""
+    )
 
-        visual_instruction = (
-            "ATTACHED VISUAL DIAGRAMS & FIGURES:\n"
-            "The following diagrams/figures from the document are attached to this answer:\n"
-            + "\n".join(visual_diagram_lines) + "\n"
-            "Explain the visual structure, flow, and components referenced in these diagrams. Do NOT write disclaimers saying you cannot display images; the UI automatically displays the interactive visual viewer cards below.\n\n"
-            if visual_diagram_lines else (
-                "VISUAL QUERIES & FIGURES: If the user asks about an image, architecture diagram, flowchart, or visual snapshot, explain the components, workflow, and structure described in the text. NEVER output apologies or disclaimers like 'images are not included in this response'; the UI handles visual rendering automatically.\n\n"
-                if is_visual_query else ""
+    visual_diagram_lines = []
+    if visual_diagrams:
+        for vd in visual_diagrams[:3]:
+            desc = f": {vd['description']}" if vd.get('description') else ""
+            visual_diagram_lines.append(
+                f"- {vd.get('caption', 'Diagram')} [Page {vd.get('page', 1)}]{desc}"
             )
-        )
 
-        neg_constraint_block = ""
-        try:
-            from rag.feedback_store import FeedbackStore
-            neg_directives = FeedbackStore().get_negative_constraints(max_constraints=3)
-            if neg_directives:
-                neg_constraint_block = (
-                    "NEGATIVE CONSTRAINTS (AVOID PAST DIRECT USER CORRECTIONS):\n"
-                    + "\n".join(f"- {d}" for d in neg_directives) + "\n\n"
-                )
-        except Exception:
-            pass
+    visual_instruction = (
+        "ATTACHED VISUAL DIAGRAMS & FIGURES:\n"
+        "The following diagrams/figures from the document are attached to this answer:\n"
+        + "\n".join(visual_diagram_lines) + "\n"
+        "Explain the visual structure, flow, and components referenced in these diagrams. Do NOT write disclaimers saying you cannot display images; the UI displays the interactive visual viewer cards below.\n\n"
+        if visual_diagram_lines else ""
+    )
 
+    if is_tiny:
         return (
-            "You are InsightRAG AI, an elite, articulate, and comprehensive AI document intelligence consultant inspired by the depth, clarity, and helpfulness of ChatGPT.\n"
-            "Your objective is to thoroughly answer the user's question, address every facet or sub-part asked, and provide an aesthetically pleasing, executive-grade response grounded in the document context.\n\n"
-            "CORE OPERATING PRINCIPLES:\n"
-            "1. QUESTION COMPREHENSION & BREAKDOWN:\n"
-            "   - Break down the user's question into its core components and systematically answer each part.\n"
-            "   - If the user asks in Hindi, Hinglish, or English, understand their intent deeply and respond in an articulate, clear, and natural tone (using clear English or natural bilingual explanation as best fits the query).\n\n"
-            "2. FACTUAL GROUNDING & PRECISE CITATIONS:\n"
-            "   - Base all statements, metrics, specifications, and dates on the provided context chunks.\n"
-            "   - Cite every factual claim using bracketed markers like [1], [2], or [1][3] immediately after the relevant statement.\n"
-            "   - If certain specific details requested are not mentioned in the context, state clearly what the document DOES specify, and politely clarify what details are not present, rather than shutting down or refusing.\n\n"
-            "3. EXECUTIVE & AESTHETIC PRESENTATION FORMAT:\n"
-            "   - **Executive Summary / Direct Opening**: Start directly with a crisp, compelling 1-2 sentence overview answering the core question (do NOT prefix with the literal text 'Executive Summary:').\n"
-            "   - **Detailed Breakdown & Clean Hierarchy**: Structure answers using clean markdown headings (###) for distinct projects, modules, or themes.\n"
-            "   - **Structured Feature Cards**: Under each project/section, avoid repetitive boilerplate headings. Instead, use clean, informative bullet anchors such as:\n"
-            "     * 🎯 **Objective & Scope**: What the project/component achieves.\n"
-            "     * 🛠️ **Tech Stack & Architecture**: Core libraries, frameworks, tools, and algorithms used.\n"
-            "     * ⚡ **Key Engineering & Analysis Highlights**: Critical methodology, workflows, or pipeline steps.\n"
-            "     * 📊 **Impact & Deliverables**: Metrics (e.g., accuracy, RMSE, latency), dashboards, or stakeholder outputs.\n"
-            "   - **Comparative Markdown Tables**: When multiple projects, tools, or quantitative metrics are involved, always include a clean Markdown Table summarizing them at a glance (e.g., Project | Tech Stack | Key Highlights | Core Impact).\n"
-            "   - **Strict Visual Rules**: NEVER write meta-disclaimers such as 'Please note that visual diagrams are not included in this response' or 'As an AI I cannot display pictures'. Focus purely on describing the facts and workflows; the UI renders high-res diagram cards automatically.\n\n"
-            f"{neg_constraint_block}"
-            f"{visual_instruction}"
+            "You are InsightRAG AI. Answer the user's question directly and helpfully.\n"
+            "If the question is about the document, use the context below. If it is a general question, answer naturally.\n\n"
             f"{page_instruction}"
+            f"{visual_instruction}"
             f"{history_str}"
             f"DOCUMENT CONTEXT:\n{context_str}\n\n"
             f"QUESTION: {query}\n"
             f"ANSWER:"
         )
-    else:
-        return (
-            "You are InsightRAG AI, a brilliant, articulate, and helpful document intelligence assistant inspired by ChatGPT.\n"
-            "Provide a comprehensive, well-structured, and helpful answer to the user's question using clear markdown formatting.\n"
-            "If the question specifically refers to proprietary document data that has not yet been indexed, provide a helpful conceptual answer and politely remind the user to upload their documents (.pdf, .txt, .md, .docx, .csv) for document-grounded answers.\n\n"
-            f"{history_str}"
-            f"QUESTION: {query}\n"
-            f"ANSWER:"
-        )
+
+    context_section = f"DOCUMENT CONTEXT (from uploaded files):\n{context_str}\n\n" if context_str else ""
+
+    return (
+        "You are InsightRAG AI, a brilliant, articulate, and friendly AI assistant inspired by ChatGPT.\n\n"
+        "CORE CAPABILITIES:\n"
+        "1. NATURAL CONVERSATION & GENERAL KNOWLEDGE:\n"
+        "   - You can converse naturally about anything: general knowledge, coding, writing, brainstorming, explanations, science, advice, or friendly chitchat in English, Hindi, or Hinglish.\n"
+        "   - If the user asks a general question, greets you, asks for code, or wants to talk normally, answer warmly and comprehensively from your knowledge.\n"
+        "   - NEVER refuse a general question by saying 'this is not in the uploaded documents'. Only clarify document absence if the user explicitly asks what their uploaded document specifies about something and it isn't there.\n\n"
+        "2. DOCUMENT INTELLIGENCE & GROUNDED FACTS:\n"
+        "   - When the user asks about their uploaded documents, reports, page numbers, or diagrams, use the DOCUMENT CONTEXT as your primary source.\n"
+        "   - Cite document claims with bracketed citations like [1], [2].\n"
+        "   - When helpful, combine document facts with broader explanations, examples, or code to give a complete, high-quality answer.\n\n"
+        "3. CLEAN & ENGAGING FORMATTING:\n"
+        "   - Use clean Markdown hierarchy (### for sections, bold bullet points, and tables when comparing multiple items).\n"
+        "   - NEVER write meta-disclaimers like 'I cannot display pictures'; the UI renders high-res diagram cards automatically.\n\n"
+        f"{visual_instruction}"
+        f"{page_instruction}"
+        f"{history_str}"
+        f"{context_section}"
+        f"QUESTION: {query}\n"
+        f"ANSWER:"
+    )
 
 
 class RAGService:
@@ -671,8 +659,8 @@ class RAGService:
 
                             local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
                             candidate_models = []
-                            if b64_images:
-                                candidate_models.extend(["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"])
+                            if images:
+                                candidate_models.extend(["llama3.2-vision", "qwen2.5vl:3b", "qwen2.5vl", "moondream:latest", "moondream"])
                             candidate_models.extend([local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"])
                             for inst in installed_models:
                                 if inst not in candidate_models:
@@ -681,15 +669,27 @@ class RAGService:
                             successful_model = candidate_models[0]
                             for cand in candidate_models:
                                 try:
+                                    is_cand_moondream = "moondream" in cand.lower()
+                                    cand_ctx = 2048 if is_cand_moondream else 8192
+                                    cand_predict = 350 if is_cand_moondream else 1024
+                                    cand_prompt = build_chatgpt_rag_prompt(
+                                        query=query,
+                                        results=results,
+                                        history_str=history_str,
+                                        target_page=intent_info.get("target_page"),
+                                        is_visual_query=intent_info.get("is_visual", False) or bool(b64_images),
+                                        visual_diagrams=visual_diagrams,
+                                        model=cand
+                                    )
                                     payload = {
                                         "model": cand,
-                                        "prompt": prompt,
+                                        "prompt": cand_prompt,
                                         "stream": False,
                                         "keep_alive": "30m",
                                         "options": {
-                                            "num_ctx": 8192,
+                                            "num_ctx": cand_ctx,
                                             "temperature": 0.35,
-                                            "num_predict": 2048,
+                                            "num_predict": cand_predict,
                                             "num_thread": _cpu_threads,
                                             "top_k": 40,
                                             "top_p": 0.9,
@@ -998,16 +998,6 @@ class RAGService:
             }
         }
 
-        # Build ChatGPT-grade prompt
-        prompt = build_chatgpt_rag_prompt(
-            query=query,
-            results=results,
-            history_str=history_str,
-            target_page=target_page,
-            is_visual_query=is_visual_query or bool(b64_images),
-            visual_diagrams=visual_diagrams
-        )
-
         # Local Ollama Streaming
         from .ollama_manager import get_working_ollama_host, get_installed_models
         working_endpoint = ollama_url or await get_working_ollama_host(auto_start=True) or "http://127.0.0.1:11434"
@@ -1021,8 +1011,9 @@ class RAGService:
             installed = []
 
         stream_model = local_model
-        if b64_images and installed:
-            for v_cand in ["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"]:
+        user_uploaded_image = bool(images)
+        if user_uploaded_image and installed and not any(v in local_model.lower() for v in ["vision", "vl", "moondream"]):
+            for v_cand in ["llama3.2-vision", "qwen2.5vl:3b", "qwen2.5vl", "moondream:latest", "moondream"]:
                 if any(v_cand in m.lower() for m in installed):
                     stream_model = v_cand
                     break
@@ -1035,6 +1026,17 @@ class RAGService:
                 preferred = [m for m in installed if any(k in m.lower() for k in ["llama", "qwen", "mistral", "moondream", "phi"])]
                 stream_model = preferred[0] if preferred else installed[0]
                 logger.info(f"Requested model '{local_model}' not installed in Ollama. Auto-switched to installed model '{stream_model}'")
+
+        # Build prompt with knowledge of stream_model so token budgeting matches the exact model architecture!
+        prompt = build_chatgpt_rag_prompt(
+            query=query,
+            results=results,
+            history_str=history_str,
+            target_page=target_page,
+            is_visual_query=is_visual_query or bool(b64_images),
+            visual_diagrams=visual_diagrams,
+            model=stream_model
+        )
 
         first_token = True
         ttft_ms = 0.0
@@ -1066,10 +1068,11 @@ class RAGService:
             accumulated_tokens = [no_model_msg]
             token_count = len(no_model_msg.split())
         else:
-            is_vision = "vl" in stream_model or "vision" in stream_model or "moondream" in stream_model
-            # Vision models on CPU need conservative context to avoid thrashing CPU cache and RAM
-            num_ctx = 3072 if is_vision else 4096
-            num_predict = 512 if is_vision else 1024
+            is_moondream = "moondream" in stream_model.lower()
+            is_vision = "vl" in stream_model or "vision" in stream_model or is_moondream
+            # Moondream has a strict 2048 architecture context limit. Large models easily support 8192.
+            num_ctx = 2048 if is_moondream else (4096 if is_vision else 8192)
+            num_predict = 350 if is_moondream else (512 if is_vision else 1024)
 
             try:
                 stream_payload = {
@@ -1116,34 +1119,86 @@ class RAGService:
                                 except Exception:
                                     pass
                         else:
-                            # Ollama returned non-200 (e.g. 404 model not found)
+                            # Ollama returned non-200 (e.g. 400 context size exceeded or 404)
                             err_bytes = await resp.aread()
                             err_text = err_bytes.decode("utf-8", errors="ignore")
                             logger.warning(f"Ollama returned HTTP {resp.status_code}: {err_text}")
-                            err_detail = "Model not found in Ollama"
-                            try:
-                                err_detail = json.loads(err_text).get("error", err_detail)
-                            except Exception:
-                                pass
 
-                            err_fallback = (
-                                f"⚠️ **Ollama Local Engine Notice ({resp.status_code})**: {err_detail}\n\n"
-                                f"👉 **Quick Fix**: Run `ollama pull {stream_model}` in PowerShell or select an installed model from the top Model Hub.\n\n"
-                                f"---\n\n"
-                            )
-                            if results:
-                                err_fallback += "### 📄 Extracted Document Context:\n\n"
-                                for i, r in enumerate(results[:3]):
-                                    p_num = r.get('metadata', {}).get('page_number') or r.get('metadata', {}).get('page', 1)
-                                    err_fallback += f"• **Page {p_num}**: {r.get('text', '').strip()[:350]}...\n\n"
-                            else:
-                                err_fallback += "No document context available for this query."
+                            recovered = False
+                            # Auto-recovery for context size exceeded
+                            if resp.status_code == 400 and any(k in err_text.lower() for k in ["context size", "exceed", "token"]):
+                                logger.info(f"Auto-recovering from context size error for {stream_model} with compact context...")
+                                top_excerpt = (results[0].get("text", "")[:300] if results else "").strip()
+                                page_focus = f" (Focus on Page {target_page})" if target_page else ""
+                                emergency_prompt = (
+                                    f"You are InsightRAG AI. Answer the user's question accurately using this document context{page_focus}.\n"
+                                    f"CONTEXT: {top_excerpt}\n\n"
+                                    f"QUESTION: {query}\n"
+                                    f"ANSWER:"
+                                )
+                                emergency_payload = {
+                                    "model": stream_model,
+                                    "prompt": emergency_prompt,
+                                    "stream": True,
+                                    "keep_alive": "30m",
+                                    "options": {
+                                        "num_ctx": 2048,
+                                        "temperature": 0.35,
+                                        "num_predict": 300,
+                                        "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
+                                    }
+                                }
+                                try:
+                                    async with aclient.stream(
+                                        "POST",
+                                        f"{working_endpoint}/api/generate",
+                                        json=emergency_payload
+                                    ) as retry_resp:
+                                        if retry_resp.status_code == 200:
+                                            async for rline in retry_resp.aiter_lines():
+                                                if not rline.strip():
+                                                    continue
+                                                try:
+                                                    r_json = json.loads(rline)
+                                                    r_tok = r_json.get("response", "")
+                                                    if r_tok:
+                                                        if first_token:
+                                                            ttft_ms = round((time.perf_counter() - gen_start) * 1000.0, 2)
+                                                            first_token = False
+                                                        token_count += 1
+                                                        accumulated_tokens.append(r_tok)
+                                                        yield {"event": "token", "data": {"token": r_tok}}
+                                                except Exception:
+                                                    pass
+                                            recovered = (token_count > 0)
+                                except Exception as rec_err:
+                                    logger.warning(f"Emergency retry failed: {rec_err}")
 
-                            for word in err_fallback.split(" "):
-                                yield {"event": "token", "data": {"token": word + " "}}
-                                await asyncio.sleep(0.005)
-                            accumulated_tokens.append(err_fallback)
-                            token_count = len(err_fallback.split())
+                            if not recovered:
+                                err_detail = "Model not found in Ollama"
+                                try:
+                                    err_detail = json.loads(err_text).get("error", err_detail)
+                                except Exception:
+                                    pass
+
+                                err_fallback = (
+                                    f"⚠️ **Ollama Local Engine Notice ({resp.status_code})**: {err_detail}\n\n"
+                                    f"👉 **Quick Fix**: Run `ollama pull {stream_model}` in PowerShell or select an installed model from the top Model Hub.\n\n"
+                                    f"---\n\n"
+                                )
+                                if results:
+                                    err_fallback += "### 📄 Extracted Document Context:\n\n"
+                                    for i, r in enumerate(results[:3]):
+                                        p_num = r.get('metadata', {}).get('page_number') or r.get('metadata', {}).get('page', 1)
+                                        err_fallback += f"• **Page {p_num}**: {r.get('text', '').strip()[:350]}...\n\n"
+                                else:
+                                    err_fallback += "No document context available for this query."
+
+                                for word in err_fallback.split(" "):
+                                    yield {"event": "token", "data": {"token": word + " "}}
+                                    await asyncio.sleep(0.005)
+                                accumulated_tokens.append(err_fallback)
+                                token_count = len(err_fallback.split())
 
             except Exception as err:
                 err_msg = str(err).strip() or err.__class__.__name__

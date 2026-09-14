@@ -134,10 +134,12 @@ class RAGRetriever:
             # Inspect both the raw query and the rewritten query for explicit page numbers
             import re
             pm = re.search(
-                r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b',
+                r'\b(?:page|opage|pge|pag|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b',
                 f"{query.query} {effective_retrieval_query}",
                 re.IGNORECASE
             )
+            if not pm:
+                pm = re.search(r'\b(\d+)\s*(?:th|st|nd|rd)?\s*(?:page|opage)\b', f"{query.query} {effective_retrieval_query}", re.IGNORECASE)
             target_page = int(pm.group(1)) if pm else (query.filters.get("page_number") if query.filters else None)
 
             if target_page is not None:

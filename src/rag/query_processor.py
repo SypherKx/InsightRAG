@@ -33,8 +33,9 @@ class QueryProcessor:
     }
 
     PAGE_PATTERNS = [
-        re.compile(r'\b(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', re.IGNORECASE),
-        re.compile(r'\b(\d+)\s*(?:th|st|nd|rd)?\s*(?:page|number\s*page)\b', re.IGNORECASE),
+        re.compile(r'\b(?:page|opage|pge|pag|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b', re.IGNORECASE),
+        re.compile(r'\b(?:on|at|in|see)\s+(?:page|opage|pge)\s*[:#\-]?\s*(\d+)\b', re.IGNORECASE),
+        re.compile(r'\b(\d+)\s*(?:th|st|nd|rd)?\s*(?:page|opage|number\s*page)\b', re.IGNORECASE),
     ]
 
     @classmethod

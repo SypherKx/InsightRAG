@@ -24,6 +24,7 @@ import {
   MessageSquarePlus,
   ArrowLeft,
   ArrowRight,
+  ArrowDown,
   Eye,
   CheckCheck,
   RefreshCw,
@@ -325,17 +326,32 @@ function KnowledgeBaseStudioPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef<boolean>(true);
+  const [userScrolledUp, setUserScrolledUp] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync chat messages to localStorage & auto-scroll
+  const handleChatScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    // If user is within 80px of bottom, consider them locked to bottom; otherwise user scrolled up
+    const atBottom = scrollHeight - scrollTop - clientHeight < 80;
+    isAtBottomRef.current = atBottom;
+    setUserScrolledUp(!atBottom);
+  };
+
+  // Sync chat messages to localStorage & smart auto-scroll only if user is at bottom
   useEffect(() => {
     try {
       localStorage.setItem("insightrag_chat_history", JSON.stringify(chatMessages));
     } catch (e) {
       console.warn("Failed saving chat history to localStorage", e);
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only auto-scroll if user has NOT scrolled up to read previous messages
+    if (isAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [chatMessages, querying]);
 
   // Fetch specs & RAG stats on mount and auto-poll while waiting for terminal launch
@@ -603,6 +619,11 @@ function KnowledgeBaseStudioPage() {
 
     setChatMessages((prev) => [...prev, userMsg]);
     setQuerying(true);
+    isAtBottomRef.current = true;
+    setUserScrolledUp(false);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 40);
 
     const isCloud = processingMode !== "local";
     const modelToUse = isCloud ? processingMode : selectedLLM;
@@ -1348,7 +1369,11 @@ function KnowledgeBaseStudioPage() {
             </div>
 
             {/* Full-Screen Chat Messages Container */}
-            <div className="flex-1 min-h-[460px] max-h-[64vh] overflow-y-auto space-y-4 p-3 sm:p-4 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black">
+            <div
+              ref={chatContainerRef}
+              onScroll={handleChatScroll}
+              className="relative flex-1 min-h-[460px] max-h-[64vh] overflow-y-auto space-y-4 p-3 sm:p-4 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black scroll-smooth"
+            >
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-20 space-y-3">
                   <div className="w-14 h-14 bg-white rounded-2xl border-2 border-black mx-auto flex items-center justify-center shadow-[3px_3px_0px_#000]">
@@ -1616,6 +1641,28 @@ function KnowledgeBaseStudioPage() {
               )}
 
               <div ref={messagesEndRef} />
+
+              {/* Floating resume auto-scroll button when user scrolled up */}
+              <AnimatePresence>
+                {userScrolledUp && (
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, y: 8, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.9 }}
+                    onClick={() => {
+                      isAtBottomRef.current = true;
+                      setUserScrolledUp(false);
+                      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="sticky bottom-2 left-1/2 -translate-x-1/2 bg-black text-[#ffe600] hover:bg-neutral-800 px-3.5 py-1.5 rounded-full border-2 border-black shadow-[2px_2px_0px_#000] font-mono font-black text-[11px] flex items-center gap-1.5 cursor-pointer z-30 transition-all active:scale-95 mx-auto"
+                    title="Scroll down to latest response"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5 animate-bounce" />
+                    <span>Scroll to Latest</span>
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Input Bar Form */}

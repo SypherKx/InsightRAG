@@ -326,24 +326,16 @@ def check_frontend():
             pass
 
     if needs_install:
-        print(f"\n{ANSI_YELLOW}[*] Frontend packages (node_modules) need to be installed/updated (~30s).{ANSI_RESET}")
+        print(f"\n{ANSI_YELLOW}[*] Installing/updating frontend packages (~30s)...{ANSI_RESET}")
+        subprocess.check_call([npm_cmd, "install"], cwd=str(frontend_dir))
         try:
-            ans = input(f"{ANSI_BOLD}    Install frontend packages with npm? (y/n) [default: y]: {ANSI_RESET}").strip().lower()
+            if pkg_json.exists():
+                import hashlib
+                current_hash = hashlib.md5(pkg_json.read_bytes()).hexdigest()
+                hash_file.write_text(current_hash)
         except Exception:
-            ans = "y"
-        if ans in ("", "y", "yes"):
-            print(f"{ANSI_YELLOW}[*] Running npm install...{ANSI_RESET}")
-            subprocess.check_call([npm_cmd, "install"], cwd=str(frontend_dir))
-            try:
-                if pkg_json.exists():
-                    import hashlib
-                    current_hash = hashlib.md5(pkg_json.read_bytes()).hexdigest()
-                    hash_file.write_text(current_hash)
-            except Exception:
-                pass
-            print(f"{ANSI_GREEN}[OK] Frontend packages updated!{ANSI_RESET}")
-        else:
-            print(f"{ANSI_YELLOW}[!] Warning: Skipping npm install. Studio UI may fail to start.{ANSI_RESET}")
+            pass
+        print(f"{ANSI_GREEN}[OK] Frontend packages updated!{ANSI_RESET}")
     else:
         print_step("Checking frontend npm packages", "OK", ANSI_GREEN)
 
@@ -386,7 +378,6 @@ def main():
     if not skip_checks:
         check_python()
         check_and_start_ollama()
-        check_and_setup_ollama_models()
         check_hardware()
         install_deps()
         check_frontend()
