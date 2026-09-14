@@ -90,18 +90,16 @@ function LandingPage() {
               </a>
             </nav>
 
-            {/* Top Right Action Button */}
+            {/* Top Right Action Button - 1-Line Quickstart Copy */}
             <div className="flex items-center gap-2 z-10">
-              <Link to="/app/upload">
-                <button
-                  className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-black" />
-                  <span className="hidden xs:inline">OPEN STUDIO</span>
-                  <span className="xs:hidden">STUDIO</span>
-                  <ArrowRight className="w-3 h-3 text-black" />
-                </button>
-              </Link>
+              <button
+                onClick={handleCopyCLI}
+                className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Terminal className="w-3.5 h-3.5 text-black" />}
+                <span className="hidden xs:inline">{copied ? "COPIED CMD!" : "1-LINE LAUNCH"}</span>
+                <span className="xs:hidden">{copied ? "COPIED" : "LAUNCH"}</span>
+              </button>
             </div>
           </div>
 
@@ -198,36 +196,26 @@ function LandingPage() {
                   Paste &amp; run this in <strong className="text-white">PowerShell</strong>
                 </span>
               </span>
-              <span className="text-gray-500">Auto-launches browser on completion</span>
+              <span className="text-[#ffe600] font-bold">Terminal setup auto-launches Studio upon completion</span>
             </div>
           </div>
 
           {/* Action Buttons (Mobile stacked, tablet/desktop row) */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-1 sm:pt-2 max-w-md sm:max-w-none mx-auto">
-            <Link to="/app/upload" className="w-full sm:w-auto">
-              <button
-                className="w-full sm:w-auto bg-[#ffe600] text-black hover:bg-yellow-400 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
-              >
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
-                <span>OPEN STUDIO WORKSPACE</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
-
             <button
               onClick={handleCopyCLI}
-              className="w-full sm:w-auto bg-white text-black hover:bg-gray-100 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
+              className="w-full sm:w-auto bg-[#ffe600] text-black hover:bg-yellow-400 font-black font-mono text-xs sm:text-sm px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[5px_5px_0px_#000] flex items-center justify-center gap-2.5 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]"
             >
               {copied ? (
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
               ) : (
                 <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
               )}
-              <span>{copied ? "COPIED 1-LINER!" : "COPY 1-LINE LAUNCHER"}</span>
+              <span>{copied ? "COPIED 1-LINE COMMAND!" : "COPY 1-LINE LAUNCH COMMAND"}</span>
             </button>
 
             <Link to="/docs" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto bg-[#0d1117] text-white hover:bg-gray-900 font-black font-mono text-xs sm:text-sm px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]">
+              <button className="w-full sm:w-auto bg-[#0d1117] text-white hover:bg-gray-900 font-black font-mono text-xs sm:text-sm px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] sm:shadow-[5px_5px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px]">
                 <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 <span>EXPLORE DOCS</span>
               </button>

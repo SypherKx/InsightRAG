@@ -40,7 +40,7 @@ def find_ollama_executable() -> str:
         os.path.join(local_appdata, "Ollama", "ollama.exe"),
         os.path.join(user_home, "AppData", "Local", "Programs", "Ollama", "ollama.exe"),
         os.path.join(program_files, "Ollama", "ollama.exe"),
-        "C:\\Users\\itska\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+        "C:\\Program Files\\Ollama\\ollama.exe",
     ]
 
     for cand in candidates:

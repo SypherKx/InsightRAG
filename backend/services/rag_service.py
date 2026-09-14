@@ -659,22 +659,24 @@ class RAGService:
                         if not working_endpoint:
                             working_endpoint = "http://127.0.0.1:11434"
 
-                        try:
-                            installed_models = asyncio.run(get_installed_models())
-                        except Exception:
-                            installed_models = []
-
-                        local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
-                        candidate_models = []
-                        if b64_images:
-                            candidate_models.extend(["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"])
-                        candidate_models.extend([local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"])
-                        for inst in installed_models:
-                            if inst not in candidate_models:
-                                candidate_models.append(inst)
-
+                        installed_models = []
                         _cpu_threads = max(1, (os.cpu_count() or 4) - 1)
                         with httpx.Client(timeout=120.0) as client:
+                            try:
+                                tags_resp = client.get(f"{working_endpoint}/api/tags", timeout=2.0)
+                                if tags_resp.status_code == 200:
+                                    installed_models = [m.get("name", "") for m in tags_resp.json().get("models", [])]
+                            except Exception:
+                                installed_models = []
+
+                            local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
+                            candidate_models = []
+                            if b64_images:
+                                candidate_models.extend(["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"])
+                            candidate_models.extend([local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"])
+                            for inst in installed_models:
+                                if inst not in candidate_models:
+                                    candidate_models.append(inst)
                             resp = None
                             successful_model = candidate_models[0]
                             for cand in candidate_models:
@@ -1011,78 +1013,145 @@ class RAGService:
         working_endpoint = ollama_url or await get_working_ollama_host(auto_start=True) or "http://127.0.0.1:11434"
         local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
 
+        # Check what models are ACTUALLY installed in Ollama on this machine
+        installed: List[str] = []
+        try:
+            installed = await get_installed_models()
+        except Exception:
+            installed = []
+
         stream_model = local_model
-        if b64_images:
-            try:
-                installed = await get_installed_models()
-                for v_cand in ["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"]:
-                    if v_cand in installed:
-                        stream_model = v_cand
-                        break
-            except Exception:
-                pass
+        if b64_images and installed:
+            for v_cand in ["moondream:latest", "moondream", "qwen2.5vl:3b", "qwen2.5vl", "llama3.2-vision"]:
+                if any(v_cand in m.lower() for m in installed):
+                    stream_model = v_cand
+                    break
+
+        # If models exist, ensure stream_model is present, or auto-fallback to best installed model
+        if installed:
+            target_base = stream_model.split(':')[0].lower()
+            is_present = any(stream_model.lower() == m.lower() or stream_model.lower() in m.lower() or target_base in m.lower() for m in installed)
+            if not is_present:
+                preferred = [m for m in installed if any(k in m.lower() for k in ["llama", "qwen", "mistral", "moondream", "phi"])]
+                stream_model = preferred[0] if preferred else installed[0]
+                logger.info(f"Requested model '{local_model}' not installed in Ollama. Auto-switched to installed model '{stream_model}'")
 
         first_token = True
         ttft_ms = 0.0
         token_count = 0
         gen_start = time.perf_counter()
 
-        is_vision = "vl" in stream_model or "vision" in stream_model or "moondream" in stream_model
-        # Vision models on CPU need conservative context to avoid thrashing CPU cache and RAM
-        num_ctx = 3072 if is_vision else 4096
-        num_predict = 512 if is_vision else 1024
+        # If NO models are installed in Ollama on this machine, provide immediate helpful answer from context!
+        if not installed:
+            no_model_msg = (
+                f"⚠️ **Local AI model `{local_model}` is not yet installed in your local Ollama.**\n\n"
+                f"To enable 100% offline conversational answers:\n"
+                f"1. Click **Model Hub** (top-right of Studio) and click **Download** for `{local_model}`.\n"
+                f"2. Or open PowerShell and run: `ollama pull {local_model}`\n"
+                f"3. Or switch to **Advance Turbo Cloud** mode (Groq / Gemini / OpenAI) in the top bar.\n\n"
+                f"---\n\n"
+            )
+            if results:
+                no_model_msg += f"### 📄 Document Intelligence (Direct Extracted Answers):\n\n"
+                for i, r in enumerate(results[:3]):
+                    p_num = r.get('metadata', {}).get('page_number') or r.get('metadata', {}).get('page', 1)
+                    no_model_msg += f"• **Passage {i+1} (Page {p_num})**:\n"
+                    no_model_msg += f"> {r.get('text', '').strip()[:400]}...\n\n"
+            else:
+                no_model_msg += "No matching text passages were found in the uploaded documents for this query."
 
-        try:
-            stream_payload = {
-                "model": stream_model,
-                "prompt": prompt,
-                "stream": True,
-                "keep_alive": "30m",
-                "options": {
-                    "num_ctx": num_ctx,
-                    "temperature": 0.35,
-                    "num_predict": num_predict,
-                    "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
-                    "top_k": 40,
-                    "top_p": 0.9,
+            for word in no_model_msg.split(" "):
+                yield {"event": "token", "data": {"token": word + " "}}
+                await asyncio.sleep(0.005)
+            accumulated_tokens = [no_model_msg]
+            token_count = len(no_model_msg.split())
+        else:
+            is_vision = "vl" in stream_model or "vision" in stream_model or "moondream" in stream_model
+            # Vision models on CPU need conservative context to avoid thrashing CPU cache and RAM
+            num_ctx = 3072 if is_vision else 4096
+            num_predict = 512 if is_vision else 1024
+
+            try:
+                stream_payload = {
+                    "model": stream_model,
+                    "prompt": prompt,
+                    "stream": True,
+                    "keep_alive": "30m",
+                    "options": {
+                        "num_ctx": num_ctx,
+                        "temperature": 0.35,
+                        "num_predict": num_predict,
+                        "num_thread": max(1, (__import__('os').cpu_count() or 4) - 1),
+                        "top_k": 40,
+                        "top_p": 0.9,
+                    }
                 }
-            }
-            if b64_images and is_vision:
-                # 1 resized image is ideal for CPU inference latency and clarity
-                stream_payload["images"] = b64_images[:1]
+                if b64_images and is_vision:
+                    # 1 resized image is ideal for CPU inference latency and clarity
+                    stream_payload["images"] = b64_images[:1]
 
-            # 240s client timeout with distinct read timeout for CPU model generation
-            client_timeout = httpx.Timeout(240.0, connect=15.0, read=240.0, write=30.0)
-            accumulated_tokens = []
-            async with httpx.AsyncClient(timeout=client_timeout) as aclient:
-                async with aclient.stream(
-                    "POST",
-                    f"{working_endpoint}/api/generate",
-                    json=stream_payload
-                ) as resp:
-                    if resp.status_code == 200:
-                        async for line in resp.aiter_lines():
-                            if not line.strip():
-                                continue
+                # 240s client timeout with distinct read timeout for CPU model generation
+                client_timeout = httpx.Timeout(240.0, connect=15.0, read=240.0, write=30.0)
+                accumulated_tokens = []
+                async with httpx.AsyncClient(timeout=client_timeout) as aclient:
+                    async with aclient.stream(
+                        "POST",
+                        f"{working_endpoint}/api/generate",
+                        json=stream_payload
+                    ) as resp:
+                        if resp.status_code == 200:
+                            async for line in resp.aiter_lines():
+                                if not line.strip():
+                                    continue
+                                try:
+                                    chunk_json = json.loads(line)
+                                    token = chunk_json.get("response", "")
+                                    if token:
+                                        if first_token:
+                                            ttft_ms = round((time.perf_counter() - gen_start) * 1000.0, 2)
+                                            first_token = False
+                                        token_count += 1
+                                        accumulated_tokens.append(token)
+                                        yield {"event": "token", "data": {"token": token}}
+                                except Exception:
+                                    pass
+                        else:
+                            # Ollama returned non-200 (e.g. 404 model not found)
+                            err_bytes = await resp.aread()
+                            err_text = err_bytes.decode("utf-8", errors="ignore")
+                            logger.warning(f"Ollama returned HTTP {resp.status_code}: {err_text}")
+                            err_detail = "Model not found in Ollama"
                             try:
-                                chunk_json = json.loads(line)
-                                token = chunk_json.get("response", "")
-                                if token:
-                                    if first_token:
-                                        ttft_ms = round((time.perf_counter() - gen_start) * 1000.0, 2)
-                                        first_token = False
-                                    token_count += 1
-                                    accumulated_tokens.append(token)
-                                    yield {"event": "token", "data": {"token": token}}
+                                err_detail = json.loads(err_text).get("error", err_detail)
                             except Exception:
                                 pass
-        except Exception as err:
-            err_msg = str(err).strip() or err.__class__.__name__
-            logger.warning(f"Ollama streaming interrupted or timed out ({err_msg})")
-            # If no tokens generated yet, provide immediate graceful answer from retrieved context
-            if token_count == 0:
-                if visual_diagrams:
-                    top_diag = visual_diagrams[0]
+
+                            err_fallback = (
+                                f"⚠️ **Ollama Local Engine Notice ({resp.status_code})**: {err_detail}\n\n"
+                                f"👉 **Quick Fix**: Run `ollama pull {stream_model}` in PowerShell or select an installed model from the top Model Hub.\n\n"
+                                f"---\n\n"
+                            )
+                            if results:
+                                err_fallback += "### 📄 Extracted Document Context:\n\n"
+                                for i, r in enumerate(results[:3]):
+                                    p_num = r.get('metadata', {}).get('page_number') or r.get('metadata', {}).get('page', 1)
+                                    err_fallback += f"• **Page {p_num}**: {r.get('text', '').strip()[:350]}...\n\n"
+                            else:
+                                err_fallback += "No document context available for this query."
+
+                            for word in err_fallback.split(" "):
+                                yield {"event": "token", "data": {"token": word + " "}}
+                                await asyncio.sleep(0.005)
+                            accumulated_tokens.append(err_fallback)
+                            token_count = len(err_fallback.split())
+
+            except Exception as err:
+                err_msg = str(err).strip() or err.__class__.__name__
+                logger.warning(f"Ollama streaming interrupted or timed out ({err_msg})")
+                # If no tokens generated yet, provide immediate graceful answer from retrieved context
+                if token_count == 0:
+                    if visual_diagrams:
+                        top_diag = visual_diagrams[0]
                     intro = "Here is the visual diagram and extracted information from your document:\n\n"
                     intro += f"• **{top_diag.get('caption', 'Diagram')}** (Page {top_diag.get('page', 1)})\n"
                     if len(visual_diagrams) > 1:

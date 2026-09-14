@@ -338,10 +338,16 @@ function KnowledgeBaseStudioPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, querying]);
 
-  // Fetch specs & RAG stats on mount
+  // Fetch specs & RAG stats on mount and auto-poll while waiting for terminal launch
   useEffect(() => {
     loadSpecsAndStats();
-  }, []);
+    const interval = setInterval(() => {
+      if (backendOnline !== true) {
+        loadSpecsAndStats();
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [backendOnline]);
 
   const loadSpecsAndStats = async () => {
     setCheckingHealth(true);
@@ -703,7 +709,9 @@ function KnowledgeBaseStudioPage() {
             if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
               updated[streamMsgIndex.current] = {
                 ...updated[streamMsgIndex.current],
-                text: streamedText || "No answer generated.",
+                text:
+                  streamedText ||
+                  "No response received from local AI engine. Please verify Ollama is running and a model is downloaded in the Model Hub.",
                 sources: streamSources,
                 visual_snippet: streamVisual,
                 visual_diagrams: streamVisualDiagrams,
@@ -859,9 +867,155 @@ function KnowledgeBaseStudioPage() {
         )}
       </AnimatePresence>
 
-      <div
-        className={`mx-auto space-y-4 sm:space-y-6 w-full ${activeView === "chat" ? "max-w-6xl" : "max-w-5xl"}`}
-      >
+      {/* 
+        ========================================================================
+        TERMINAL SETUP REQUIRED — LOCKED STUDIO GATE
+        Only unlocks once terminal installation / run_local.py completes!
+        ========================================================================
+      */}
+      {backendOnline === null ? (
+        <div className="max-w-md mx-auto my-auto w-full py-20 text-center space-y-4 font-mono">
+          <div className="w-12 h-12 border-4 border-black border-t-[#ffe600] rounded-full animate-spin mx-auto shadow-[3px_3px_0px_#000]" />
+          <p className="font-black text-sm text-black">
+            Connecting to Local InsightRAG Engine...
+          </p>
+          <p className="text-xs text-gray-600 font-bold">
+            Checking on-device service on port 8000
+          </p>
+        </div>
+      ) : backendOnline === false ? (
+        <div className="max-w-3xl mx-auto my-auto w-full py-4 sm:py-8 space-y-5">
+          {/* Header Back Link & Locked Badge */}
+          <div className="flex items-center justify-between">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 bg-white text-black font-mono font-black text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] hover:bg-neutral-100 transition active:translate-x-[1px] active:translate-y-[1px]"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>RETURN TO HOMEPAGE</span>
+            </Link>
+            <div className="flex items-center gap-1.5 bg-red-500 text-white font-mono font-black text-[11px] px-3 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] animate-pulse">
+              <Lock className="w-3.5 h-3.5" />
+              <span>STUDIO LOCKED</span>
+            </div>
+          </div>
+
+          {/* Neo-brutalist Main Locked Card */}
+          <div className="bg-white border-4 border-black rounded-3xl p-5 sm:p-8 md:p-10 shadow-[8px_8px_0px_#000] space-y-6 text-black">
+            {/* Top Lock Badge & Title */}
+            <div className="space-y-2.5 text-center sm:text-left">
+              <div className="inline-flex items-center gap-2 bg-[#ffe600] text-black font-mono font-black text-xs px-3.5 py-1.5 rounded-full border-2 border-black shadow-[2px_2px_0px_#000]">
+                <Terminal className="w-4 h-4 text-black" />
+                <span>TERMINAL SETUP REQUIRED</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black font-sans tracking-tight text-black">
+                InsightRAG Studio Unlocks After Terminal Launch
+              </h1>
+              <p className="font-mono text-xs sm:text-sm text-neutral-700 font-bold leading-relaxed">
+                InsightRAG operates <strong className="text-black">100% locally on your machine</strong> with zero cloud servers or data leakage. This Studio workspace is locked until the local engine is initialized via the terminal launch command.
+              </p>
+            </div>
+
+            {/* Terminal Command Box */}
+            <div className="bg-black text-white p-4 sm:p-5 rounded-2xl border-3 border-black shadow-[4px_4px_0px_#000] space-y-3 font-mono">
+              <div className="flex items-center justify-between text-[11px] border-b border-neutral-800 pb-2">
+                <span className="text-[#ffe600] font-black flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
+                  <span>STEP 1: RUN THIS IN WINDOWS POWERSHELL</span>
+                </span>
+                <span className="text-emerald-400 font-bold hidden sm:inline">100% Local Air-Gapped</span>
+              </div>
+
+              <div className="flex items-center gap-2 justify-between bg-[#0d1117] rounded-xl p-2.5 sm:p-3 border border-neutral-800">
+                <div className="flex items-center gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0 scrollbar-none">
+                  <span className="text-neutral-500 flex-shrink-0 text-xs">PS&gt;</span>
+                  <code className="whitespace-nowrap text-xs sm:text-sm text-emerald-300 select-all">
+                    irm https://www.insightrag.tech/install.ps1 | iex
+                  </code>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText("irm https://www.insightrag.tech/install.ps1 | iex");
+                    setCopiedInstall(true);
+                    setTimeout(() => setCopiedInstall(false), 2000);
+                  }}
+                  className="bg-[#ffe600] text-black font-black font-mono text-xs px-3.5 py-2 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1.5 active:scale-95 transition"
+                >
+                  {copiedInstall ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5 text-black" />}
+                  <span>{copiedInstall ? "COPIED!" : "COPY COMMAND"}</span>
+                </button>
+              </div>
+
+              <div className="text-[11px] text-neutral-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <span>Terminal completes setup &amp; this page will automatically unlock!</span>
+              </div>
+            </div>
+
+            {/* 4 Steps Checklist */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="bg-neutral-50 border-2 border-black rounded-2xl p-3.5 space-y-1">
+                <div className="flex items-center gap-2 font-mono font-black text-xs">
+                  <span className="w-5 h-5 rounded-full bg-black text-[#ffe600] flex items-center justify-center text-[10px]">1</span>
+                  <span>Open PowerShell</span>
+                </div>
+                <p className="text-[11px] font-mono text-neutral-600 font-bold pl-7">
+                  Press <kbd className="bg-neutral-200 px-1 rounded border border-neutral-400 text-black">Win + X</kbd> and select PowerShell or Terminal.
+                </p>
+              </div>
+
+              <div className="bg-neutral-50 border-2 border-black rounded-2xl p-3.5 space-y-1">
+                <div className="flex items-center gap-2 font-mono font-black text-xs">
+                  <span className="w-5 h-5 rounded-full bg-black text-[#ffe600] flex items-center justify-center text-[10px]">2</span>
+                  <span>Paste &amp; Run 1-Liner</span>
+                </div>
+                <p className="text-[11px] font-mono text-neutral-600 font-bold pl-7">
+                  Paste the command and hit Enter. No manual setup needed.
+                </p>
+              </div>
+
+              <div className="bg-neutral-50 border-2 border-black rounded-2xl p-3.5 space-y-1">
+                <div className="flex items-center gap-2 font-mono font-black text-xs">
+                  <span className="w-5 h-5 rounded-full bg-black text-[#ffe600] flex items-center justify-center text-[10px]">3</span>
+                  <span>Terminal Configures AI</span>
+                </div>
+                <p className="text-[11px] font-mono text-neutral-600 font-bold pl-7">
+                  Auto-checks Python, Ollama, Vector DB, and boots engine on port 8000.
+                </p>
+              </div>
+
+              <div className="bg-neutral-50 border-2 border-black rounded-2xl p-3.5 space-y-1">
+                <div className="flex items-center gap-2 font-mono font-black text-xs text-emerald-700">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black">4</span>
+                  <span>Studio Auto-Unlocks!</span>
+                </div>
+                <p className="text-[11px] font-mono text-neutral-600 font-bold pl-7">
+                  This page continuously pings port 8000 and unlocks automatically.
+                </p>
+              </div>
+            </div>
+
+            {/* Live Engine Status Detector */}
+            <div className="border-t-2 border-neutral-200 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 font-mono text-xs font-bold text-neutral-700">
+                <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse border border-black" />
+                <span>Waiting for terminal steps to complete (port 8000)...</span>
+              </div>
+              <button
+                onClick={loadSpecsAndStats}
+                disabled={checkingHealth}
+                className="bg-black text-[#ffe600] hover:bg-neutral-800 font-mono font-black text-xs px-4 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2 cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${checkingHealth ? "animate-spin" : ""}`} />
+                <span>{checkingHealth ? "Detecting Engine..." : "Check Status Now"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`mx-auto space-y-4 sm:space-y-6 w-full ${activeView === "chat" ? "max-w-6xl" : "max-w-5xl"}`}
+        >
         {/* 1. TOP SYSTEM SPECS BADGE */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-black text-white p-3 sm:px-5 sm:py-3 rounded-2xl shadow-xl border-2 border-black font-mono text-xs">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-bold">
@@ -2292,6 +2446,7 @@ function KnowledgeBaseStudioPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* 5.5 INTERACTIVE INGESTION & PAGE RANGE SCOPE MODAL */}
       <AnimatePresence>

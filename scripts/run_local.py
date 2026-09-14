@@ -30,6 +30,7 @@ ANSI_CYAN   = "\033[96m"
 ANSI_GREEN  = "\033[92m"
 ANSI_YELLOW = "\033[93m"
 ANSI_RED    = "\033[91m"
+ANSI_DARKGRAY = "\033[90m"
 ANSI_BOLD   = "\033[1m"
 ANSI_RESET  = "\033[0m"
 
@@ -133,6 +134,87 @@ def check_and_start_ollama():
         except Exception:
             pass
 
+def check_and_setup_ollama_models():
+    """
+    Check if essential local Ollama models (e.g. llama3.2:3b for text chat, moondream for vision)
+    are downloaded. If missing, prompt user with (y/n) to pull them so chat works 100% out-of-the-box.
+    """
+    ollama_bin = shutil.which("ollama")
+    if not ollama_bin:
+        local_appdata = os.getenv("LOCALAPPDATA", "")
+        cand = os.path.join(local_appdata, "Programs", "Ollama", "ollama.exe")
+        if os.path.exists(cand):
+            ollama_bin = cand
+
+    models = []
+    try:
+        import urllib.request
+        import json
+        req = urllib.request.Request("http://127.0.0.1:11434/api/tags", headers={"User-Agent": "InsightRAG"})
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                models = [m.get("name", "") for m in data.get("models", [])]
+    except Exception:
+        pass
+
+    model_prefixes = [m.split(":")[0].lower() for m in models]
+    has_llama32 = any("llama3.2" in m.lower() for m in models)
+
+    print(f"\n{ANSI_BOLD}[*] Checking Local Ollama AI Models:{ANSI_RESET}")
+    print("-" * 65)
+
+    if has_llama32:
+        print_step("Local Chat LLM (llama3.2:3b)", "INSTALLED", ANSI_GREEN)
+    elif models:
+        first_model = models[0]
+        print_step(f"Local Chat LLM ({first_model})", "INSTALLED (Alternative)", ANSI_GREEN)
+    else:
+        print_step("Local Chat LLM (llama3.2:3b)", "NOT DETECTED", ANSI_YELLOW)
+        print(f"\n{ANSI_BOLD}{ANSI_YELLOW}[?] InsightRAG offline chat requires a local LLM like 'llama3.2:3b' (~2.0 GB).{ANSI_RESET}")
+        try:
+            ans = input(f"{ANSI_BOLD}    Would you like to auto-download 'llama3.2:3b' now? (y/n) [default: y]: {ANSI_RESET}").strip().lower()
+        except Exception:
+            ans = "y"
+
+        if ans in ("", "y", "yes"):
+            if ollama_bin:
+                print(f"{ANSI_CYAN}[*] Pulling 'llama3.2:3b' from Ollama library (one-time download)...{ANSI_RESET}")
+                try:
+                    subprocess.run([ollama_bin, "pull", "llama3.2:3b"], check=True)
+                    print(f"{ANSI_GREEN}[OK] 'llama3.2:3b' successfully downloaded!{ANSI_RESET}")
+                except Exception as e:
+                    print(f"{ANSI_RED}[!] Could not pull model: {e}{ANSI_RESET}")
+            else:
+                print(f"{ANSI_YELLOW}[!] Ollama CLI not found in PATH to auto-pull model.{ANSI_RESET}")
+                print(f"    You can manually run in terminal: ollama pull llama3.2:3b")
+        else:
+            print(f"  {ANSI_CYAN}[i] Skipping local LLM download. You can still use Cloud LLMs (Groq, Gemini, OpenAI) in Studio!{ANSI_RESET}")
+
+    # Vision model check (optional)
+    has_moondream = any("moondream" in p or "llava" in p for p in model_prefixes)
+    if has_moondream:
+        print_step("Vision AI Model (moondream:latest)", "INSTALLED", ANSI_GREEN)
+    else:
+        print_step("Vision AI Model (moondream:latest)", "NOT DETECTED (Optional)", ANSI_DARKGRAY)
+        try:
+            ans = input(f"{ANSI_BOLD}    Download optional Vision model 'moondream' (800MB) for image RAG? (y/n) [default: n]: {ANSI_RESET}").strip().lower()
+        except Exception:
+            ans = "n"
+
+        if ans in ("y", "yes"):
+            if ollama_bin:
+                print(f"{ANSI_CYAN}[*] Pulling 'moondream' from Ollama library...{ANSI_RESET}")
+                try:
+                    subprocess.run([ollama_bin, "pull", "moondream"], check=True)
+                    print(f"{ANSI_GREEN}[OK] 'moondream' successfully downloaded!{ANSI_RESET}")
+                except Exception as e:
+                    print(f"{ANSI_RED}[!] Error pulling model: {e}{ANSI_RESET}")
+            else:
+                print(f"    Run manually: ollama pull moondream")
+        else:
+            print(f"  {ANSI_DARKGRAY}[i] Skipping vision model. On-device OCR is active for image text!{ANSI_RESET}")
+
 def check_hardware():
     threads = os.cpu_count() or 8
     has_gpu = False
@@ -179,9 +261,17 @@ def install_deps():
             missing.append(pip_name)
             print(f"  {ANSI_YELLOW}- {pip_name:<30} [ INSTALLING ]{ANSI_RESET}")
     if missing:
-        print(f"\n{ANSI_YELLOW}[*] Installing {len(missing)} missing package(s)...{ANSI_RESET}")
-        subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
-        print(f"{ANSI_GREEN}[OK] All Python packages successfully installed!{ANSI_RESET}")
+        print(f"\n{ANSI_YELLOW}[*] Found {len(missing)} missing Python package(s): {', '.join(missing)}{ANSI_RESET}")
+        try:
+            ans = input(f"{ANSI_BOLD}    Install missing Python packages now? (y/n) [default: y]: {ANSI_RESET}").strip().lower()
+        except Exception:
+            ans = "y"
+        if ans in ("", "y", "yes"):
+            print(f"{ANSI_YELLOW}[*] Installing {len(missing)} package(s)...{ANSI_RESET}")
+            subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
+            print(f"{ANSI_GREEN}[OK] All Python packages successfully installed!{ANSI_RESET}")
+        else:
+            print(f"{ANSI_YELLOW}[!] Warning: Skipping package installation. Some features may not work.{ANSI_RESET}")
 
 def prewarm_vector_models():
     """
@@ -236,16 +326,24 @@ def check_frontend():
             pass
 
     if needs_install:
-        print(f"\n{ANSI_YELLOW}[*] Installing/updating frontend packages (~30s)...{ANSI_RESET}")
-        subprocess.check_call([npm_cmd, "install"], cwd=str(frontend_dir))
+        print(f"\n{ANSI_YELLOW}[*] Frontend packages (node_modules) need to be installed/updated (~30s).{ANSI_RESET}")
         try:
-            if pkg_json.exists():
-                import hashlib
-                current_hash = hashlib.md5(pkg_json.read_bytes()).hexdigest()
-                hash_file.write_text(current_hash)
+            ans = input(f"{ANSI_BOLD}    Install frontend packages with npm? (y/n) [default: y]: {ANSI_RESET}").strip().lower()
         except Exception:
-            pass
-        print(f"{ANSI_GREEN}[OK] Frontend packages updated!{ANSI_RESET}")
+            ans = "y"
+        if ans in ("", "y", "yes"):
+            print(f"{ANSI_YELLOW}[*] Running npm install...{ANSI_RESET}")
+            subprocess.check_call([npm_cmd, "install"], cwd=str(frontend_dir))
+            try:
+                if pkg_json.exists():
+                    import hashlib
+                    current_hash = hashlib.md5(pkg_json.read_bytes()).hexdigest()
+                    hash_file.write_text(current_hash)
+            except Exception:
+                pass
+            print(f"{ANSI_GREEN}[OK] Frontend packages updated!{ANSI_RESET}")
+        else:
+            print(f"{ANSI_YELLOW}[!] Warning: Skipping npm install. Studio UI may fail to start.{ANSI_RESET}")
     else:
         print_step("Checking frontend npm packages", "OK", ANSI_GREEN)
 
@@ -288,6 +386,7 @@ def main():
     if not skip_checks:
         check_python()
         check_and_start_ollama()
+        check_and_setup_ollama_models()
         check_hardware()
         install_deps()
         check_frontend()
