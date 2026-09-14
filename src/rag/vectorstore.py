@@ -117,11 +117,9 @@ class FAISSVectorStore:
             prev_total_vectors = self.total_vectors
 
             try:
-                # Collect embeddings
                 if embeddings is not None:
                     chunk_embeddings = embeddings
                 else:
-                    # Extract embeddings from chunks
                     chunk_embeddings = []
                     missing_embeddings = []
 
@@ -136,23 +134,17 @@ class FAISSVectorStore:
 
                     chunk_embeddings = np.array(chunk_embeddings, dtype=np.float32)
 
-                # Ensure 2D array
                 if chunk_embeddings.ndim == 1:
                     chunk_embeddings = chunk_embeddings.reshape(1, -1)
 
-                # Normalize embeddings for cosine similarity (IndexFlatIP expects normalized)
+                # Normalize vectors for cosine similarity in IndexFlatIP
                 faiss.normalize_L2(chunk_embeddings)
-
-                # Add to FAISS index
                 self.index.add(chunk_embeddings)
                 added_count = chunk_embeddings.shape[0]
 
-                # Store metadata
                 faiss_ids = []
                 for i, chunk in enumerate(chunks):
                     faiss_id = self._next_id + i
-
-                    # Store chunk data (excluding embedding to save memory)
                     self.metadata[faiss_id] = {
                         "chunk_id": chunk.id,
                         "document_id": chunk.document_id,
@@ -163,8 +155,6 @@ class FAISSVectorStore:
                         "embedded_text": getattr(chunk, "embedded_text", chunk.text) or chunk.text,
                         "metadata": chunk.metadata.copy()
                     }
-
-                    # Track mapping
                     self.chunk_id_to_faiss_id[chunk.id] = faiss_id
                     faiss_ids.append(faiss_id)
 
@@ -209,7 +199,6 @@ class FAISSVectorStore:
                 logger.warning("Empty index, no vectors to search")
                 return []
 
-            # Ensure query is 2D and normalized
             if query_embedding.ndim == 1:
                 query_embedding = query_embedding.reshape(1, -1)
 
@@ -217,27 +206,23 @@ class FAISSVectorStore:
             if query_norm > 0:
                 query_embedding = query_embedding / query_norm
 
-            # Search
-            k_search = min(k * 2, self.index.ntotal)  # Fetch more in case we filter
+            k_search = min(k * 2, self.index.ntotal)
             distances, indices = self.index.search(query_embedding.astype(np.float32), k_search)
 
             results = []
             for i, (distance, faiss_id) in enumerate(zip(distances[0], indices[0])):
-                if faiss_id == -1:  # FAISS returns -1 for padded results
+                if faiss_id == -1:
                     continue
 
-                # Get metadata
                 meta = self.metadata.get(int(faiss_id))
                 if not meta:
                     logger.warning(f"Missing metadata for FAISS ID {faiss_id}")
                     continue
 
-                # Apply filter if provided
                 if filter_func and not filter_func(meta):
                     continue
 
-                # Convert inner product to cosine similarity (already normalized)
-                # Clamp to [0, 1] — float precision can push IP slightly above 1.0
+                # Clamp float precision to [0.0, 1.0] cosine similarity range
                 similarity = min(max(float(distance), 0.0), 1.0)
 
                 result = {
@@ -250,10 +235,8 @@ class FAISSVectorStore:
                     "metadata": meta["metadata"],
                     "rank": len(results) + 1
                 }
-
                 results.append(result)
 
-                # Stop if we have enough results
                 if len(results) >= k:
                     break
 

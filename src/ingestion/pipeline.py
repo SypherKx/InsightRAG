@@ -301,9 +301,7 @@ class IngestionPipeline:
         )
 
         try:
-            # ========================================
-            # STEP 1: File Validation
-            # ========================================
+            # Step 1: File validation
             logger.info("Step 1: Validating file")
             file_size_mb = file_path.stat().st_size / (1024 * 1024)
             is_valid, validation_errors = self._validate_file(file_path, file_size_mb)
@@ -327,9 +325,7 @@ class IngestionPipeline:
             file_hash = self._compute_file_hash(file_path)
             metadata.file_hash = file_hash
 
-            # ========================================
-            # STEP 2: Schema Inference
-            # ========================================
+            # Step 2: Schema inference
             logger.info("Step 2: Inferring schema")
             metadata.status = DatasetStatus.PARSING
 
@@ -346,9 +342,7 @@ class IngestionPipeline:
             metadata.column_schema = column_schemas
             metadata.column_count = len(column_schemas)
 
-            # ========================================
-            # STEP 3: Identify Time Column and Dimensions
-            # ========================================
+            # Step 3: Identify time column and dimensions
             logger.info("Step 3: Identifying time column and dimensions")
             time_column = self._infer_time_column(column_schemas, request.time_column)
             metadata.time_column = time_column
@@ -356,9 +350,7 @@ class IngestionPipeline:
             dimensions = self._identify_dimensions(column_schemas, request.dimensions)
             metadata.dimensions = dimensions
 
-            # ========================================
-            # STEP 4: Load Full Data
-            # ========================================
+            # Step 4: Load full dataset
             logger.info("Step 4: Loading full dataset")
             metadata.status = DatasetStatus.LOADING
 
@@ -372,9 +364,7 @@ class IngestionPipeline:
             metadata.row_count = len(df)
             logger.info(f"Loaded {len(df)} rows, {len(df.columns)} columns")
 
-            # ========================================
-            # STEP 5: Data Quality Validation
-            # ========================================
+            # Step 5: Data quality validation
             logger.info("Step 5: Validating data quality")
             metadata.status = DatasetStatus.VALIDATING
 
@@ -397,9 +387,7 @@ class IngestionPipeline:
             # Store quality score
             metadata.quality_score = validation_report.quality_metrics.missing_values_percentage / 100.0
 
-            # ========================================
-            # STEP 6: Data Cleaning (Optional)
-            # ========================================
+            # Step 6: Data cleaning (optional)
             logger.info("Step 6: Cleaning data")
             metadata.status = DatasetStatus.CLEANING
 
@@ -413,9 +401,7 @@ class IngestionPipeline:
 
             logger.info(f"Cleaning complete: {len(df)} -> {len(df_clean)} rows")
 
-            # ========================================
-            # STEP 7: Store to Object Storage
-            # ========================================
+            # Step 7: Object storage persistence
             logger.info("Step 7: Storing to object storage")
             metadata.status = DatasetStatus.STORING
 
@@ -440,18 +426,14 @@ class IngestionPipeline:
                 )
                 cleaned_path.unlink(missing_ok=True)  # Clean up local temp file
 
-            # ========================================
-            # STEP 8: Save Metadata
-            # ========================================
+            # Step 8: Save metadata
             logger.info("Step 8: Saving metadata")
             metadata.status = DatasetStatus.COMPLETED
             metadata.processing_completed_at = datetime.utcnow()
 
             self.storage.create_dataset_record(metadata)
 
-            # ========================================
-            # STEP 9: Publish Event (Async)
-            # ========================================
+            # Step 9: Publish event (async)
             if self.enable_async:
                 logger.info("Step 9: Publishing event")
                 self._publish_event("dataset_uploaded", {
@@ -465,9 +447,7 @@ class IngestionPipeline:
                     "quality_score": metadata.quality_score
                 })
 
-            # ========================================
-            # COMPLETE
-            # ========================================
+            # Pipeline execution summary
             elapsed_time = time.time() - start_time
             self.pipeline_stats["datasets_processed"] += 1
             self.pipeline_stats["total_rows_ingested"] += len(df)

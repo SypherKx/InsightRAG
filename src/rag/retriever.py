@@ -67,8 +67,7 @@ class RAGRetriever:
         start_time = time.time()
 
         try:
-            # 1. Step 1: Conversation-Aware Query Rewriting
-            # Before embedding, rewrite the query into a standalone question using chat history
+            # Step 1: Conversation-aware query rewriting
             rewritten_query = query.rewritten_query
             was_rewritten = False
 
@@ -80,14 +79,14 @@ class RAGRetriever:
 
             effective_retrieval_query = rewritten_query or query.query
 
-            # 2. Step 2: Query Decomposition & Multi-Query Formulation
+            # Step 2: Query decomposition and sub-query formulation
             sub_queries = QueryProcessor.decompose_query(effective_retrieval_query)
             if not sub_queries:
                 sub_queries = [effective_retrieval_query]
             elif effective_retrieval_query not in sub_queries:
                 sub_queries = [effective_retrieval_query] + sub_queries
 
-            # 3. Generate embeddings in batch for all sub-queries
+            # Step 3: Batch embedding generation
             emb_start = time.time()
             if len(sub_queries) == 1:
                 query_embeddings = [self.embedding_gen.generate_single(sub_queries[0])]
@@ -95,10 +94,10 @@ class RAGRetriever:
                 query_embeddings = self.embedding_gen.generate(sub_queries)
             emb_time_ms = (time.time() - emb_start) * 1000
 
-            # 4. Define filter function based on query filters
+            # Step 4: Metadata filtering
             filter_func = self._build_filter(query.filters) if query.filters else None
 
-            # 5. Multi-Query Dense + Lexical Candidate Retrieval
+            # Step 5: Dense and lexical candidate retrieval
             search_start = time.time()
             candidate_k = max(query.top_k * 3, 10)
             ranking_lists = []
@@ -130,8 +129,7 @@ class RAGRetriever:
                 k=60
             ) if ranking_lists else []
 
-            # 6.1 Page-Aware Candidate Injection:
-            # Inspect both the raw query and the rewritten query for explicit page numbers
+            # Step 6: Page-aware candidate injection
             import re
             pm = re.search(
                 r'\b(?:page|opage|pge|pag|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*(\d+)\b',
@@ -165,7 +163,7 @@ class RAGRetriever:
                 if page_candidates:
                     fused_candidates = page_candidates + fused_candidates
 
-            # 7. Lightweight Semantic Reranking against standalone query
+            # Step 7: Semantic reranking against standalone query
             rerank_start = time.time()
             reranked_results = self._rerank_candidates(
                 effective_retrieval_query,
@@ -175,13 +173,13 @@ class RAGRetriever:
             )
             rerank_time_ms = (time.time() - rerank_start) * 1000
 
-            # 8. Format results with proper ranks
+            # Step 8: Format results with proper ranks
             retrieval_results = self._format_results(
                 reranked_results,
                 load_documents=load_documents
             )
 
-            # 9. Build response (keeps raw query for display/logging)
+            # Step 9: Build structured response
             query_time = (time.time() - start_time) * 1000
             response = RAGResponse(
                 query=query.query,

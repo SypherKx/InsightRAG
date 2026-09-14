@@ -338,6 +338,7 @@ export async function streamRAGQuery(
   apiKey?: string,
   history?: Array<{ role: string; text?: string; content?: string }>,
   callbacks?: StreamCallbacks,
+  signal?: AbortSignal,
 ): Promise<void> {
   const url = `${API_BASE}/rag/query/stream`;
   const body = {
@@ -351,61 +352,75 @@ export async function streamRAGQuery(
     history: history || [],
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    callbacks?.onError(`Server error: ${response.status}`);
-    return;
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    callbacks?.onError("No stream reader available");
-    return;
-  }
-
-  const decoder = new TextDecoder();
-  let buffer = "";
-
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+    if (!response.ok) {
+      callbacks?.onError(`Server error: ${response.status}`);
+      return;
+    }
 
-      let currentEvent = "message";
-      for (const line of lines) {
-        if (line.startsWith("event: ")) {
-          currentEvent = line.slice(7).trim();
-        } else if (line.startsWith("data: ")) {
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-          try {
-            const parsed = JSON.parse(raw);
-            if (currentEvent === "token") {
-              callbacks?.onToken(parsed.token || "");
-            } else if (currentEvent === "metadata") {
-              callbacks?.onMetadata(parsed);
-            } else if (currentEvent === "done") {
-              callbacks?.onDone(parsed);
-            } else if (currentEvent === "error") {
-              callbacks?.onError(parsed.error || "Stream error");
+    const reader = response.body?.getReader();
+    if (!reader) {
+      callbacks?.onError("No stream reader available");
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        if (signal?.aborted) {
+          callbacks?.onDone?.({});
+          return;
+        }
+
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        let currentEvent = "message";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            const raw = line.slice(6).trim();
+            if (!raw) continue;
+            try {
+              const parsed = JSON.parse(raw);
+              if (currentEvent === "token") {
+                callbacks?.onToken(parsed.token || "");
+              } else if (currentEvent === "metadata") {
+                callbacks?.onMetadata(parsed);
+              } else if (currentEvent === "done") {
+                callbacks?.onDone(parsed);
+              } else if (currentEvent === "error") {
+                callbacks?.onError(parsed.error || "Stream error");
+              }
+            } catch {
+              // skip malformed JSON
             }
-          } catch {
-            // skip malformed JSON
           }
         }
       }
+    } finally {
+      reader.releaseLock();
     }
-  } finally {
-    reader.releaseLock();
+  } catch (err: any) {
+    if (err?.name === "AbortError" || signal?.aborted) {
+      callbacks?.onDone?.({});
+      return;
+    }
+    callbacks?.onError(err?.message || "Stream error");
   }
 }
 

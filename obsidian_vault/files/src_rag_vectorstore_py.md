@@ -34,7 +34,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\vectorstore.py (416 lines)
+Module: src\rag\vectorstore.py (399 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class FAISSVectorStore:, def __init__, def _init_index, def add_chunks, def search

@@ -119,26 +119,13 @@ class RootCauseAnalyzer:
         try:
             logger.info(f"Starting root cause analysis for anomaly {anomaly_id} on metric {metric}")
 
-            # Validate inputs
-            if data.empty:
-                logger.error(f"Empty dataset for anomaly {anomaly_id}")
+            if data.empty or time_column not in data.columns or metric not in data.columns:
+                logger.error(f"Invalid input data for anomaly {anomaly_id}")
                 return None
 
-            if time_column not in data.columns:
-                logger.error(f"Time column '{time_column}' not in dataset")
-                return None
-
-            if metric not in data.columns:
-                logger.error(f"Metric '{metric}' not in dataset")
-                return None
-
-            # Calculate expected value from range
             expected_value = (expected_range[0] + expected_range[1]) / 2
-
-            # Prepare time column
             data[time_column] = pd.to_datetime(data[time_column])
 
-            # Get anomaly time (or closest available)
             anomaly_times = data[data[time_column] <= anomaly_timestamp][time_column]
             if len(anomaly_times) == 0:
                 logger.error(f"No data before or at anomaly time {anomaly_timestamp}")
@@ -156,13 +143,9 @@ class RootCauseAnalyzer:
                 dimensions=dimensions,
                 time_column=time_column,
             )
-
-            # Calculate contribution percentages
             segment_contributions = calculate_segment_contributions(
                 segment_contributions, total_impact, metric
             )
-
-            # Convert to SegmentContribution models
             primary_drivers = self._convert_segment_contributions(
                 segment_contributions[:self.max_primary_drivers]
             )
@@ -176,8 +159,6 @@ class RootCauseAnalyzer:
                 time_column=time_column,
                 max_metrics=50,
             )
-
-            # Convert to CorrelationResult models
             correlation_objects = self._convert_correlations(
                 correlations[:self.max_correlations]
             )

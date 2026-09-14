@@ -62,24 +62,15 @@ from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """
-    Appends enterprise-grade HTTP security headers to all responses.
-    Defends against Clickjacking, MIME-sniffing, XSS, and DevTools/Inspect exploits.
-    """
+    """Appends OWASP HTTP security headers to all incoming responses."""
+
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
-        
-        # Clickjacking Defense
         response.headers["X-Frame-Options"] = "DENY"
-        # MIME-Type Sniffing Defense
         response.headers["X-Content-Type-Options"] = "nosniff"
-        # Cross-Site Scripting Filter
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        # Referrer Policy
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        # Permissions Policy
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
-        # Content Security Policy (allows local SPA, styles, fonts, and trusted LLM APIs)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self' data: blob:; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
@@ -93,7 +84,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-# 2. CORS Policy
+# CORS Policy configuration
 cors_origins = settings.cors_origin_list
 allow_creds = True if cors_origins != ["*"] else False
 
@@ -106,7 +97,7 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# 3. Global Exception Handler (Prevents Internal Stack Trace Leaks to DevTools/Inspect)
+# Global Exception Handler (sanitized error output)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception(f"Unhandled server error at {request.url.path}: {exc}")

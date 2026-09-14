@@ -136,7 +136,7 @@ if ($isFreshInstall) {
 # 2. Register Global Offline Command (Run 'insightrag' from anywhere)
 try {
     $cliPath = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\insightrag.cmd"
-    $cmdContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -File `"$TargetDir\launch.ps1`""
+    $cmdContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -File `"$TargetDir\launch.ps1`" %*"
     Set-Content -Path $cliPath -Value $cmdContent -Force -ErrorAction SilentlyContinue
 } catch {}
 

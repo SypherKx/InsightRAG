@@ -685,9 +685,7 @@ class DocumentIngester:
         return content, metadata
 
 
-# =========================================================================
-# MULTIMODAL & TABLE EXTRACTION HELPERS
-# =========================================================================
+# Multimodal & table extraction helpers
 
 def _table_to_markdown(table_data: list) -> str:
     """Convert a 2D list of table cells into a clean, valid Markdown table."""

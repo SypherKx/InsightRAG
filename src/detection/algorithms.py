@@ -40,48 +40,33 @@ def detect_zscore(
     if len(series) < min_periods:
         return [], [], []
 
-    # Remove NaN values for statistical calculations
     clean_series = series.dropna()
     if len(clean_series) < min_periods:
         return [], [], []
 
-    # Calculate z-scores
     if rolling_window and rolling_window > 1:
-        # Ensure min_periods <= window for pandas rolling
         effective_min_periods = min(min_periods, rolling_window)
-        # Rolling z-score - compare to past values only (shifted)
-        # This prevents the current point from diluting its own anomaly score
+        # Shift window by 1 so current point is evaluated against past history only
         rolling_mean = clean_series.shift(1).rolling(window=rolling_window, min_periods=effective_min_periods).mean()
         rolling_std = clean_series.shift(1).rolling(window=rolling_window, min_periods=effective_min_periods).std()
 
-        # Handle zero std
         epsilon = 1e-9
         safe_std = rolling_std.copy()
         safe_std[safe_std < epsilon] = epsilon
 
-        # Align to original series
         z_scores = (clean_series - rolling_mean) / safe_std
     else:
-        # Global z-score
         mean = clean_series.mean()
         std = clean_series.std()
         if std == 0:
             return [], [], []
         z_scores = (clean_series - mean) / std
 
-    # Find anomalies
     anomaly_mask = np.abs(z_scores.values) > threshold
     anomaly_indices = clean_series.index[anomaly_mask].tolist()
     anomaly_scores = z_scores.loc[anomaly_mask].tolist()
 
-    # Classify as spike or drop
-    anomaly_types = []
-    for idx, score in zip(anomaly_indices, anomaly_scores):
-        if score > 0:
-            anomaly_types.append("spike")
-        else:
-            anomaly_types.append("drop")
-
+    anomaly_types = ["spike" if score > 0 else "drop" for score in anomaly_scores]
     return anomaly_indices, anomaly_scores, anomaly_types
 
 
@@ -111,7 +96,6 @@ def detect_iqr(
     if len(clean_series) < min_periods:
         return [], [], []
 
-    # Calculate quartiles
     q1 = clean_series.quantile(0.25)
     q3 = clean_series.quantile(0.75)
     iqr = q3 - q1
@@ -122,21 +106,17 @@ def detect_iqr(
     lower_bound = q1 - multiplier * iqr
     upper_bound = q3 + multiplier * iqr
 
-    # Find anomalies
     anomaly_mask = (clean_series < lower_bound) | (clean_series > upper_bound)
     anomaly_indices = clean_series.index[anomaly_mask].tolist()
 
-    # Calculate deviation score (how far beyond the fences)
     anomaly_scores = []
     anomaly_types = []
     for idx, value in clean_series.loc[anomaly_mask].items():
         if value > upper_bound:
-            score = (value - upper_bound) / iqr
-            anomaly_scores.append(score)
+            anomaly_scores.append((value - upper_bound) / iqr)
             anomaly_types.append("spike")
         else:
-            score = (lower_bound - value) / iqr
-            anomaly_scores.append(score)
+            anomaly_scores.append((lower_bound - value) / iqr)
             anomaly_types.append("drop")
 
     return anomaly_indices, anomaly_scores, anomaly_types
@@ -171,17 +151,12 @@ def detect_moving_average(
     if len(clean_idx) < min_periods:
         return [], [], []
 
-    # Reindex series to avoid index issues
     clean_series = series.loc[clean_idx]
-
-    # Calculate rolling statistics - use shifted window to compare current to past only
-    # This avoids the current point diluting its own anomaly score
     effective_min_periods = min(min_periods, window)
-    # Use shift(1) to exclude current point from the reference statistics
+    # Shift window by 1 so current point is evaluated against past history only
     rolling_mean = clean_series.shift(1).rolling(window=window, min_periods=effective_min_periods).mean()
     rolling_std = clean_series.shift(1).rolling(window=window, min_periods=effective_min_periods).std()
 
-    # Align and remove NaN from rolling calculations
     valid_mask = ~(rolling_mean.isna() | rolling_std.isna())
     valid_series = clean_series[valid_mask]
     valid_mean = rolling_mean[valid_mask]
@@ -190,26 +165,15 @@ def detect_moving_average(
     if valid_series.empty:
         return [], [], []
 
-    # Handle zero std: if std is very small, any deviation is significant
     epsilon = 1e-9
     safe_std = valid_std.copy()
     safe_std[safe_std < epsilon] = epsilon
 
-    # Calculate deviation
     deviation = (valid_series - valid_mean) / safe_std
-
-    # Find anomalies
     anomaly_mask = np.abs(deviation.values) > deviation_threshold
     anomaly_indices = valid_series.index[anomaly_mask].tolist()
     anomaly_scores = deviation.loc[anomaly_mask].tolist()
-
-    # Classify
-    anomaly_types = []
-    for score in anomaly_scores:
-        if score > 0:
-            anomaly_types.append("spike")
-        else:
-            anomaly_types.append("drop")
+    anomaly_types = ["spike" if score > 0 else "drop" for score in anomaly_scores]
 
     return anomaly_indices, anomaly_scores, anomaly_types
 

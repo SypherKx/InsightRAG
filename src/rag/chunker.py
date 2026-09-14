@@ -305,10 +305,7 @@ class TextChunker:
             logger.warning(f"Empty text provided for document {document_id}")
             return []
 
-        # Clean text
         text = self._clean_text(text)
-
-        # Split into base segments
         segments = self._split_by_separators(text)
 
         chunks = []
@@ -322,7 +319,7 @@ class TextChunker:
             if not current_section and sec_title:
                 current_section = sec_title
 
-            # If segment itself is larger than max chunk size, force split
+            # Force split if single segment exceeds maximum allowed chunk size
             if segment_tokens > self.config.max_chunk_size:
                 logger.warning(f"Segment too large ({segment_tokens} tokens), force splitting")
                 char_limit = self.config.chunk_size * 4
@@ -332,7 +329,7 @@ class TextChunker:
                         segments.append((sec_title, forced_segment))
                 continue
 
-            # When transitioning to a new distinct section, or adding this segment exceeds chunk size
+            # Check boundary conditions: section transition or token capacity limit
             section_changed = bool(sec_title and current_section and sec_title != current_section)
             exceeds_size = bool(current_token_count + segment_tokens > self.config.chunk_size)
 
@@ -355,13 +352,12 @@ class TextChunker:
                 })
                 chunk_index += 1
 
-                # Start new chunk with overlap: keep some segments (unless section changed or table)
+                # Carry over overlap segments for contiguous context (tables excluded from overlap)
                 overlap_tokens = 0
                 overlap_segments = []
                 if not section_changed:
                     for seg in reversed(current_chunk):
                         if is_markdown_table(seg):
-                            # Don't duplicate full table in overlap to keep tables clean
                             break
                         seg_tokens = self._count_tokens(seg)
                         if overlap_tokens + seg_tokens <= self.config.overlap:
@@ -374,13 +370,12 @@ class TextChunker:
                 current_token_count = overlap_tokens
                 current_section = sec_title
 
-            # Add current segment
             current_chunk.append(segment)
             current_token_count += segment_tokens
             if sec_title:
                 current_section = sec_title
 
-        # Don't forget the last chunk
+        # Flush final remaining chunk
         if current_chunk:
             raw_chunk_text = self.config.separator.join(current_chunk).strip()
             embedded_chunk_text = (
@@ -399,13 +394,11 @@ class TextChunker:
                 "segment_count": len(current_chunk)
             })
 
-        # Filter out chunks that are too small
         chunks = [
             c for c in chunks
             if self.config.min_chunk_size <= c["token_count"] <= self.config.max_chunk_size
         ]
 
-        # Add document_id and final IDs
         for i, chunk in enumerate(chunks):
             chunk["document_id"] = document_id
             chunk["chunk_id"] = f"{document_id}_chunk_{i}"

@@ -32,7 +32,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\root_cause\attribution.py (528 lines)
+Module: src\root_cause\attribution.py (520 lines)
 Tags: #code, #rootcause
 Hub: 04_Root_Cause_Engine_Hub
 Exports: class AttributionAnalyzer:, def __init__, def attribute_impact, def _calculate_expected_value, def _get_baseline_period

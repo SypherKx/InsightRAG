@@ -25,7 +25,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: frontend\src\services\api.ts (412 lines)
+Module: frontend\src\services\api.ts (427 lines)
 Tags: #code, #frontend
 Hub: 06_Frontend_App_Hub
 Exports: export interface RAGTaskStatus {, export interface PullModelCallbacks {, export interface StreamCallbacks {

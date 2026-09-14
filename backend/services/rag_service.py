@@ -542,9 +542,7 @@ class RAGService:
                 )
                 profiler.end_stage("prompt_prep_ms")
 
-                # =========================================================
-                # 1. ADVANCE TURBO CLOUD / SERVER ACCELERATED MODE
-                # =========================================================
+                # Mode 1: Cloud accelerated inference (Groq, Gemini, OpenAI)
                 is_cloud_mode = (processing_mode in ["cloud", "turbo", "advance"]) or model.startswith(("groq", "gemini", "openai", "claude"))
                 
                 if is_cloud_mode:
@@ -628,9 +626,7 @@ class RAGService:
                     finally:
                         profiler.end_stage("cloud_generation_ms")
 
-                # =========================================================
-                # 2. 100% LOCAL ON-DEVICE MODE (OLLAMA ENGINE)
-                # =========================================================
+                # Mode 2: Local on-device inference (Ollama engine)
                 if not answer:
                     profiler.start_stage("local_ollama_ms")
                     try:
@@ -1003,7 +999,7 @@ class RAGService:
         working_endpoint = ollama_url or await get_working_ollama_host(auto_start=True) or "http://127.0.0.1:11434"
         local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
 
-        # Check what models are ACTUALLY installed in Ollama on this machine
+        # Check installed Ollama models
         installed: List[str] = []
         try:
             installed = await get_installed_models()
@@ -1018,7 +1014,7 @@ class RAGService:
                     stream_model = v_cand
                     break
 
-        # If models exist, ensure stream_model is present, or auto-fallback to best installed model
+        # Fall back to an installed model if requested model is unavailable
         if installed:
             target_base = stream_model.split(':')[0].lower()
             is_present = any(stream_model.lower() == m.lower() or stream_model.lower() in m.lower() or target_base in m.lower() for m in installed)
@@ -1027,7 +1023,7 @@ class RAGService:
                 stream_model = preferred[0] if preferred else installed[0]
                 logger.info(f"Requested model '{local_model}' not installed in Ollama. Auto-switched to installed model '{stream_model}'")
 
-        # Build prompt with knowledge of stream_model so token budgeting matches the exact model architecture!
+        # Build prompt with model-specific context budgeting
         prompt = build_chatgpt_rag_prompt(
             query=query,
             results=results,
@@ -1043,7 +1039,7 @@ class RAGService:
         token_count = 0
         gen_start = time.perf_counter()
 
-        # If NO models are installed in Ollama on this machine, provide immediate helpful answer from context!
+        # Graceful fallback if no local models are installed yet
         if not installed:
             no_model_msg = (
                 f"⚠️ **Local AI model `{local_model}` is not yet installed in your local Ollama.**\n\n"
@@ -1070,7 +1066,7 @@ class RAGService:
         else:
             is_moondream = "moondream" in stream_model.lower()
             is_vision = "vl" in stream_model or "vision" in stream_model or is_moondream
-            # Moondream has a strict 2048 architecture context limit. Large models easily support 8192.
+            # Context window and token limits tuned to model capability
             num_ctx = 2048 if is_moondream else (4096 if is_vision else 8192)
             num_predict = 350 if is_moondream else (512 if is_vision else 1024)
 
@@ -1090,10 +1086,9 @@ class RAGService:
                     }
                 }
                 if b64_images and is_vision:
-                    # 1 resized image is ideal for CPU inference latency and clarity
                     stream_payload["images"] = b64_images[:1]
 
-                # 240s client timeout with distinct read timeout for CPU model generation
+                # HTTP client configuration with extended read timeout for CPU generation
                 client_timeout = httpx.Timeout(240.0, connect=15.0, read=240.0, write=30.0)
                 accumulated_tokens = []
                 async with httpx.AsyncClient(timeout=client_timeout) as aclient:
@@ -1119,13 +1114,13 @@ class RAGService:
                                 except Exception:
                                     pass
                         else:
-                            # Ollama returned non-200 (e.g. 400 context size exceeded or 404)
+                            # Handle non-200 responses (e.g. context limit exceeded)
                             err_bytes = await resp.aread()
                             err_text = err_bytes.decode("utf-8", errors="ignore")
                             logger.warning(f"Ollama returned HTTP {resp.status_code}: {err_text}")
 
                             recovered = False
-                            # Auto-recovery for context size exceeded
+                            # Auto-recovery retry with compact context if model context limit was exceeded
                             if resp.status_code == 400 and any(k in err_text.lower() for k in ["context size", "exceed", "token"]):
                                 logger.info(f"Auto-recovering from context size error for {stream_model} with compact context...")
                                 top_excerpt = (results[0].get("text", "")[:300] if results else "").strip()

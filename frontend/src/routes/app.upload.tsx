@@ -40,6 +40,8 @@ import {
   Camera,
   Image as ImageIcon,
   Terminal,
+  Square,
+  Pencil,
 } from "lucide-react";
 import {
   uploadRAGDocuments,
@@ -235,7 +237,7 @@ const PARSING_STAGES = [
 ];
 
 function KnowledgeBaseStudioPage() {
-  // Hardware Specs State
+  // System & hardware acceleration state
   const [specs, setSpecs] = useState<any>({
     cpu_threads: 0,
     ram_gb: 0,
@@ -246,13 +248,11 @@ function KnowledgeBaseStudioPage() {
     acceleration_mode: "LOCAL ENGINE",
     installed_models: ["llama3.2:3b", "moondream:latest"],
   });
-
-  // Hardware Switch States (CPU vs GPU)
   const [activeHardwareMode, setActiveHardwareMode] = useState<"cpu" | "gpu">("cpu");
   const [switchingHardware, setSwitchingHardware] = useState(false);
   const [hardwareNotice, setHardwareNotice] = useState<string | null>(null);
 
-  // Model & Config Selection States
+  // Model selection & engine configuration
   const [selectedLLM, setSelectedLLM] = useState<string>(() => {
     try {
       return localStorage.getItem("insightrag_selected_model") || "llama3.2:3b";
@@ -266,14 +266,18 @@ function KnowledgeBaseStudioPage() {
   const [processingMode, setProcessingMode] = useState("local");
   const [cloudApiKey, setCloudApiKey] = useState("");
 
-  // Model Hub & Switching States
+  // Model hub & downloads
   const [pullingModelId, setPullingModelId] = useState<string | null>(null);
   const [pullProgress, setPullProgress] = useState<Record<string, number>>({});
   const [pullStatusText, setPullStatusText] = useState<Record<string, string>>({});
   const [switchToast, setSwitchToast] = useState<string | null>(null);
   const [showModelHubModal, setShowModelHubModal] = useState<boolean>(false);
+  const [showModal, setShowModal] = useState(false);
+  const [customModel, setCustomModel] = useState("llama3.2:3b");
+  const [pulling, setPulling] = useState(false);
+  const [pullStatus, setPullStatus] = useState("");
 
-  // Upload & Scope Selection Modal States
+  // Upload, document ingestion & views
   const [drag, setDrag] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -285,24 +289,14 @@ function KnowledgeBaseStudioPage() {
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
   const [copiedInstall, setCopiedInstall] = useState(false);
-
-  // View state: 'upload' | 'processing' | 'chat'
   const [activeView, setActiveView] = useState<"upload" | "processing" | "chat">("upload");
   const [processingStep, setProcessingStep] = useState<number>(0);
   const [currentUploadingFiles, setCurrentUploadingFiles] = useState<string[]>([]);
-
-  // Page Range Slicing State (Controlled inside upload confirmation modal)
   const [usePageRange, setUsePageRange] = useState(false);
   const [startPage, setStartPage] = useState<number | "">(1);
   const [endPage, setEndPage] = useState<number | "">("");
 
-  // Model Download Modal State
-  const [showModal, setShowModal] = useState(false);
-  const [customModel, setCustomModel] = useState("llama3.2:3b");
-  const [pulling, setPulling] = useState(false);
-  const [pullStatus, setPullStatus] = useState("");
-
-  // RAG Query Chat State with LocalStorage Persistence
+  // Chat conversation & stream state
   const [query, setQuery] = useState("");
   const [chatMessages, setChatMessages] = useState<
     Array<{
@@ -325,6 +319,9 @@ function KnowledgeBaseStudioPage() {
   const [querying, setQuerying] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
+  const [editingMsgIdx, setEditingMsgIdx] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState<string>("");
+  const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef<boolean>(true);
@@ -335,26 +332,25 @@ function KnowledgeBaseStudioPage() {
   const handleChatScroll = () => {
     if (!chatContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    // If user is within 80px of bottom, consider them locked to bottom; otherwise user scrolled up
+    // Keep bottom lock if within 80px of bottom, otherwise pause auto-scroll
     const atBottom = scrollHeight - scrollTop - clientHeight < 80;
     isAtBottomRef.current = atBottom;
     setUserScrolledUp(!atBottom);
   };
 
-  // Sync chat messages to localStorage & smart auto-scroll only if user is at bottom
+  // Sync chat history to localStorage and conditionally auto-scroll if locked to bottom
   useEffect(() => {
     try {
       localStorage.setItem("insightrag_chat_history", JSON.stringify(chatMessages));
     } catch (e) {
       console.warn("Failed saving chat history to localStorage", e);
     }
-    // Only auto-scroll if user has NOT scrolled up to read previous messages
     if (isAtBottomRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages, querying]);
 
-  // Fetch specs & RAG stats on mount and auto-poll while waiting for terminal launch
+  // Initial load of hardware specs and knowledge base statistics
   useEffect(() => {
     loadSpecsAndStats();
     const interval = setInterval(() => {
@@ -599,7 +595,7 @@ function KnowledgeBaseStudioPage() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
-  const handleSendQuery = async (overridePrompt?: string) => {
+  const handleSendQuery = async (overridePrompt?: string, customHistory?: typeof chatMessages) => {
     const textToSend = (overridePrompt !== undefined ? overridePrompt : query).trim();
     if (!textToSend || querying) return;
     setQuery("");
@@ -611,13 +607,13 @@ function KnowledgeBaseStudioPage() {
       timestamp: nowTime,
     };
 
-    // Keep current history for API context
-    const historyPayload = chatMessages.slice(-6).map((m) => ({
+    const historySource = customHistory !== undefined ? customHistory : chatMessages;
+    const historyPayload = historySource.slice(-6).map((m) => ({
       role: m.role,
       text: m.text,
     }));
 
-    setChatMessages((prev) => [...prev, userMsg]);
+    setChatMessages([...historySource, userMsg]);
     setQuerying(true);
     isAtBottomRef.current = true;
     setUserScrolledUp(false);
@@ -627,6 +623,12 @@ function KnowledgeBaseStudioPage() {
 
     const isCloud = processingMode !== "local";
     const modelToUse = isCloud ? processingMode : selectedLLM;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     // For cloud mode, use blocking queryRAG. For local, use SSE streaming for instant tokens.
     if (isCloud) {
@@ -640,6 +642,7 @@ function KnowledgeBaseStudioPage() {
           cloudApiKey,
           historyPayload,
         );
+        if (controller.signal.aborted) return;
         setChatMessages((prev) => [
           ...prev,
           {
@@ -653,6 +656,7 @@ function KnowledgeBaseStudioPage() {
           },
         ]);
       } catch (err: any) {
+        if (err?.name === "AbortError" || controller.signal.aborted) return;
         setChatMessages((prev) => [
           ...prev,
           {
@@ -662,13 +666,15 @@ function KnowledgeBaseStudioPage() {
           },
         ]);
       } finally {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
         setQuerying(false);
       }
       return;
     }
 
     // ─── SSE STREAMING for Local Mode ───
-    // Create a placeholder assistant message that gets updated token-by-token
     const streamMsgIndex = { current: -1 };
     let streamedText = "";
     let streamSources: any[] = [];
@@ -690,72 +696,87 @@ function KnowledgeBaseStudioPage() {
     });
 
     try {
-      await streamRAGQuery(textToSend, 5, 0.0, modelToUse, "local", cloudApiKey, historyPayload, {
-        onToken: (token: string) => {
-          streamedText += token;
-          setChatMessages((prev) => {
-            const updated = [...prev];
-            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-              updated[streamMsgIndex.current] = {
-                ...updated[streamMsgIndex.current],
-                text: streamedText + "▍",
-              };
-            }
-            return updated;
-          });
+      await streamRAGQuery(
+        textToSend,
+        5,
+        0.0,
+        modelToUse,
+        "local",
+        cloudApiKey,
+        historyPayload,
+        {
+          onToken: (token: string) => {
+            if (controller.signal.aborted) return;
+            streamedText += token;
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  text: streamedText + "▍",
+                };
+              }
+              return updated;
+            });
+          },
+          onMetadata: (data: any) => {
+            if (controller.signal.aborted) return;
+            streamSources = data.results || [];
+            streamVisual = data.visual_snippet || null;
+            streamVisualDiagrams = data.visual_diagrams || [];
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  sources: streamSources,
+                  visual_snippet: streamVisual,
+                  visual_diagrams: streamVisualDiagrams,
+                };
+              }
+              return updated;
+            });
+          },
+          onDone: (data: any) => {
+            if (controller.signal.aborted) return;
+            streamModel = data.llm_model || modelToUse;
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  text:
+                    streamedText ||
+                    "No response received from local AI engine. Please verify Ollama is running and a model is downloaded in the Model Hub.",
+                  sources: streamSources,
+                  visual_snippet: streamVisual,
+                  visual_diagrams: streamVisualDiagrams,
+                  model: streamModel,
+                };
+              }
+              return updated;
+            });
+          },
+          onError: (error: string) => {
+            if (controller.signal.aborted) return;
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
+                updated[streamMsgIndex.current] = {
+                  ...updated[streamMsgIndex.current],
+                  text: `Stream error: ${error}\n\nPlease check that Ollama is running and try again.`,
+                };
+              }
+              return updated;
+            });
+          },
         },
-        onMetadata: (data: any) => {
-          streamSources = data.results || [];
-          streamVisual = data.visual_snippet || null;
-          streamVisualDiagrams = data.visual_diagrams || [];
-          // Update sources immediately so visual preview appears early
-          setChatMessages((prev) => {
-            const updated = [...prev];
-            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-              updated[streamMsgIndex.current] = {
-                ...updated[streamMsgIndex.current],
-                sources: streamSources,
-                visual_snippet: streamVisual,
-                visual_diagrams: streamVisualDiagrams,
-              };
-            }
-            return updated;
-          });
-        },
-        onDone: (data: any) => {
-          streamModel = data.llm_model || modelToUse;
-          // Finalize: remove cursor, set final text
-          setChatMessages((prev) => {
-            const updated = [...prev];
-            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-              updated[streamMsgIndex.current] = {
-                ...updated[streamMsgIndex.current],
-                text:
-                  streamedText ||
-                  "No response received from local AI engine. Please verify Ollama is running and a model is downloaded in the Model Hub.",
-                sources: streamSources,
-                visual_snippet: streamVisual,
-                visual_diagrams: streamVisualDiagrams,
-                model: streamModel,
-              };
-            }
-            return updated;
-          });
-        },
-        onError: (error: string) => {
-          setChatMessages((prev) => {
-            const updated = [...prev];
-            if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
-              updated[streamMsgIndex.current] = {
-                ...updated[streamMsgIndex.current],
-                text: `Stream error: ${error}\n\nPlease check that Ollama is running and try again.`,
-              };
-            }
-            return updated;
-          });
-        },
-      });
+        controller.signal,
+      );
     } catch (err: any) {
+      if (err?.name === "AbortError" || controller.signal.aborted) {
+        return;
+      }
       setChatMessages((prev) => {
         const updated = [...prev];
         if (streamMsgIndex.current >= 0 && updated[streamMsgIndex.current]) {
@@ -769,8 +790,58 @@ function KnowledgeBaseStudioPage() {
         return updated;
       });
     } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setQuerying(false);
     }
+  };
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setQuerying(false);
+    setChatMessages((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      if (last.role === "assistant" && last.text.endsWith("▍")) {
+        const cleanedText = last.text.slice(0, -1).trim();
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...last,
+          text: cleanedText || "(Generation paused)",
+        };
+        return updated;
+      }
+      return prev;
+    });
+  };
+
+  const handleStartEditMessage = (idx: number, text: string) => {
+    setEditingMsgIdx(idx);
+    setEditingText(text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMsgIdx(null);
+    setEditingText("");
+  };
+
+  const handleSaveAndSubmitEdit = async (idx: number) => {
+    const trimmed = editingText.trim();
+    if (!trimmed) return;
+    setEditingMsgIdx(null);
+    setEditingText("");
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    const preservedHistory = chatMessages.slice(0, idx);
+    await handleSendQuery(trimmed, preservedHistory);
   };
 
   // Check if a given model tag or base model name is installed
@@ -1428,6 +1499,16 @@ function KnowledgeBaseStudioPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
+                          {msg.role === "user" && editingMsgIdx !== idx && !querying && (
+                            <button
+                              onClick={() => handleStartEditMessage(idx, msg.text)}
+                              className="text-black/70 hover:text-black p-0.5 rounded hover:bg-black/10 transition cursor-pointer flex items-center gap-1 text-[10px]"
+                              title="Edit question"
+                            >
+                              <Pencil className="w-2.5 h-2.5" />
+                              <span className="text-[9px] font-mono font-bold">Edit</span>
+                            </button>
+                          )}
                           {msg.timestamp && (
                             <span className="text-[9px] text-gray-500 font-normal">
                               {msg.timestamp}
@@ -1458,6 +1539,41 @@ function KnowledgeBaseStudioPage() {
                           {msg.text.endsWith("▍") && (
                             <span className="inline-block w-2 h-3.5 bg-purple-600 animate-pulse ml-1 align-middle rounded-xs" />
                           )}
+                        </div>
+                      ) : editingMsgIdx === idx ? (
+                        <div className="space-y-2 w-full pt-1">
+                          <textarea
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            rows={Math.min(6, Math.max(2, editingText.split("\n").length))}
+                            className="w-full p-2 text-xs sm:text-sm bg-white text-black border-2 border-black rounded-lg font-sans font-normal focus:outline-hidden focus:ring-2 focus:ring-purple-500 resize-y"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSaveAndSubmitEdit(idx);
+                              } else if (e.key === "Escape") {
+                                handleCancelEdit();
+                              }
+                            }}
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="px-2.5 py-1 text-[11px] font-mono font-bold bg-white text-black border border-black rounded-md hover:bg-gray-100 transition shadow-[1px_1px_0px_#000] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveAndSubmitEdit(idx)}
+                              disabled={!editingText.trim()}
+                              className="px-3 py-1 text-[11px] font-mono font-bold bg-black text-[#ffe600] rounded-md hover:bg-gray-800 disabled:opacity-50 transition shadow-[1px_1px_0px_#000] cursor-pointer flex items-center gap-1"
+                            >
+                              Save & Submit
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="whitespace-pre-wrap leading-relaxed font-sans text-xs sm:text-sm text-gray-900 font-medium">
@@ -1678,24 +1794,34 @@ function KnowledgeBaseStudioPage() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ask any question about your uploaded documents (multi-turn conversation)..."
+                placeholder={
+                  querying
+                    ? "InsightRAG AI is streaming answer... (Click Pause / Stop to halt)"
+                    : "Ask any question about your uploaded documents (multi-turn conversation)..."
+                }
                 disabled={querying}
-                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 focus:outline-none focus:bg-white focus:ring-2 focus:ring-black shadow-inner"
+                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 focus:outline-none focus:bg-white focus:ring-2 focus:ring-black shadow-inner disabled:opacity-80"
               />
-              <button
-                type="submit"
-                disabled={querying || !query.trim()}
-                className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-4 sm:px-6 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 transition active:translate-x-[1px] active:translate-y-[1px]"
-              >
-                {querying ? (
-                  <Sparkles className="w-4 h-4 animate-spin text-[#ffe600]" />
-                ) : (
-                  <>
-                    <span>Send</span>
-                    <Send className="w-3.5 h-3.5 text-[#ffe600]" />
-                  </>
-                )}
-              </button>
+              {querying ? (
+                <button
+                  type="button"
+                  onClick={handleStopGeneration}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black font-mono text-xs px-4 sm:px-6 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition active:translate-x-[1px] active:translate-y-[1px] animate-pulse"
+                  title="Pause / Stop generation"
+                >
+                  <Square className="w-3.5 h-3.5 fill-current text-white" />
+                  <span>Pause</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!query.trim()}
+                  className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-4 sm:px-6 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 transition active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  <span>Send</span>
+                  <Send className="w-3.5 h-3.5 text-[#ffe600]" />
+                </button>
+              )}
             </form>
           </div>
         ) : (

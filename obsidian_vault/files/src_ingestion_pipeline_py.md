@@ -37,7 +37,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\ingestion\pipeline.py (657 lines)
+Module: src\ingestion\pipeline.py (637 lines)
 Tags: #code
 Hub: 00_Master_Hub
 Exports: class PipelineResult:, class IngestionPipeline:, def __post_init__, def __init__, def _validate_file

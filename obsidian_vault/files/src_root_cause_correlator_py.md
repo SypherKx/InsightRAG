@@ -30,7 +30,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\root_cause\correlator.py (383 lines)
+Module: src\root_cause\correlator.py (364 lines)
 Tags: #code, #rootcause
 Hub: 04_Root_Cause_Engine_Hub
 Exports: class CorrelationAnalyzer:, def __init__, def analyze, def _extract_window, def _compute_correlation

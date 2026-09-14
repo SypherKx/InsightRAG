@@ -87,10 +87,8 @@ class AttributionAnalyzer:
         if not dimensions:
             return {"attributions": [], "total_impact": 0}
 
-        # Ensure time column is datetime
         data[time_column] = pd.to_datetime(data[time_column])
 
-        # Get anomaly point
         anomaly_data = data[data[time_column] <= anomaly_timestamp].sort_values(time_column).tail(1)
         if anomaly_data.empty:
             logger.warning("No data at anomaly timestamp")
@@ -98,17 +96,14 @@ class AttributionAnalyzer:
 
         anomaly_value = anomaly_data[metric].iloc[0]
 
-        # Calculate or get expected value
         if expected_value is None:
             expected_value = self._calculate_expected_value(data, anomaly_timestamp, metric, time_column)
 
-        # Calculate baseline per segment
         baseline_period = self._get_baseline_period(data, anomaly_timestamp, time_column)
         total_impact = anomaly_value - expected_value if expected_value is not None else 0
 
-        # Get contributions by dimension
+        # Calculate dimensional contributions
         attributions = []
-
         for dimension in dimensions:
             if dimension not in data.columns:
                 continue
@@ -118,26 +113,23 @@ class AttributionAnalyzer:
             )
             attributions.extend(dim_contributions)
 
-        # Calculate interaction effects if multiple dimensions
+        # Multi-dimensional interaction effects
         if len(dimensions) > 1 and self.method == "interaction":
             interactions = self._calculate_interaction_effects(
                 anomaly_data, baseline_period, metric, dimensions, total_impact
             )
             attributions.extend(interactions)
 
-        # Filter by minimum contribution
+        # Filter and rank contributions
         attributions = [a for a in attributions if abs(a.get("contribution_pct", 0)) >= self.min_contribution]
-
-        # Sort by absolute contribution
         attributions.sort(key=lambda x: abs(x["contribution_pct"]), reverse=True)
 
-        # Normalize to 100%
         total_abs_contrib = sum(abs(a["contribution_pct"]) for a in attributions)
         if total_abs_contrib > 0:
             for a in attributions:
                 a["contribution_pct"] = (a["contribution_pct"] / total_abs_contrib) * 100
 
-        # Calculate confidence intervals if bootstrap enabled
+        # Optional bootstrap confidence interval estimation
         if self.bootstrap_samples > 0 and len(data) > 20:
             ci_results = self._bootstrap_confidence_intervals(
                 data, anomaly_timestamp, metric, dimensions, time_column, attributions

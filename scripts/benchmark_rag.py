@@ -67,9 +67,7 @@ Error E-2048 indicates an Ollama daemon connection timeout on port 11434.
 Error E-4096 represents an out-of-memory GPU allocation exception.
 """
 
-    # -------------------------------------------------------------
-    # 1. Structure-Aware Semantic Chunking Benchmark
-    # -------------------------------------------------------------
+    # 1. Structure-aware semantic chunking benchmark
     print(f"{C_BOLD}[1/5] Benchmarking Structure-Aware Semantic Chunking...{C_RESET}")
     chunker = TextChunker(ChunkConfig(chunk_size=100, overlap=20))
     t0 = time.perf_counter()
@@ -82,9 +80,7 @@ Error E-4096 represents an out-of-memory GPU allocation exception.
         sec = c.get('section') or 'General'
         print(f"    - Chunk [{i+1}] (Section: {C_YELLOW}{sec}{C_RESET}, Tokens: {c['token_count']}): {c['text'][:60]}...")
 
-    # -------------------------------------------------------------
-    # 2. Embedding Generation & LRU Cache Benchmark
-    # -------------------------------------------------------------
+    # 2. Embedding generation & LRU cache benchmark
     print(f"\n{C_BOLD}[2/5] Benchmarking Embeddings & Query Cache...{C_RESET}")
     emb_gen = EmbeddingGenerator(EmbeddingConfig())
     test_query = "What is error code E-1024?"
@@ -103,9 +99,7 @@ Error E-4096 represents an out-of-memory GPU allocation exception.
     print(f"  ✓ Cold Embedding Latency  : {C_YELLOW}{cold_time:.2f} ms{C_RESET}")
     print(f"  ✓ Cached Embedding Latency: {C_GREEN}{cached_time:.4f} ms{C_RESET} ({C_BOLD}{cold_time/max(cached_time, 0.0001):.1f}x speedup{C_RESET})")
 
-    # -------------------------------------------------------------
-    # 3. Hybrid Retrieval & Semantic Reranker Benchmark
-    # -------------------------------------------------------------
+    # 3. Hybrid retrieval & semantic reranker benchmark
     print(f"\n{C_BOLD}[3/5] Benchmarking Staged Hybrid Retrieval + Semantic Reranker...{C_RESET}")
     store = FAISSVectorStore(emb_gen)
     from src.rag.models import DocumentChunk
@@ -142,9 +136,7 @@ Error E-4096 represents an out-of-memory GPU allocation exception.
         top_text = resp.results[0].chunk.text.replace('\n', ' ')
         print(f"      \"{C_GREEN}{top_text[:120]}...{C_RESET}\"")
 
-    # -------------------------------------------------------------
-    # 4. Query Intent Classification & Conversational Rewriting
-    # -------------------------------------------------------------
+    # 4. Query intent classification & conversational rewriting
     print(f"\n{C_BOLD}[4/5] Benchmarking Query Understanding & Conversational Rewriting...{C_RESET}")
     conv_history = [
         {"role": "user", "text": "Explain the FAISS vector index structure."},
@@ -164,9 +156,7 @@ Error E-4096 represents an out-of-memory GPU allocation exception.
     print(f"  ✓ Rewritten Search Query  : \"{C_GREEN}{rewritten_q}{C_RESET}\"")
     print(f"  ✓ Compressed History (chars): {len(hist_str)}")
 
-    # -------------------------------------------------------------
-    # 5. Summary & Key Results
-    # -------------------------------------------------------------
+    # 5. Benchmark summary & results
     print(f"\n{C_CYAN}{C_BOLD}{'='*70}")
     print("  📊 Benchmark Summary & Optimization Verified")
     print(f"{'='*70}{C_RESET}")

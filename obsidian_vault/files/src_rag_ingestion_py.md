@@ -35,7 +35,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\ingestion.py (897 lines)
+Module: src\rag\ingestion.py (895 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class IngestionConfig:, class DocumentIngester:, def __post_init__, def __init__, def _init_extractors

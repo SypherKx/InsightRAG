@@ -412,9 +412,7 @@ function DocsPage() {
         {/* Right Main Content Area */}
         <main className="col-span-1 md:col-span-8 lg:col-span-9 min-w-0">
           {viewMode === "slide" ? (
-            /* ========================================================================= */
-            /* SLIDE MODE: Focus on one clean chapter at a time with smooth transition   */
-            /* ========================================================================= */
+            /* Slide mode: single chapter view with smooth transitions */
             <div className="space-y-6">
               {/* Slide Progress Topbar */}
               <div className="bg-white border-3 border-black rounded-2xl p-4 shadow-[4px_4px_0px_#000] flex items-center justify-between flex-wrap gap-3">
@@ -508,9 +506,7 @@ function DocsPage() {
               </AnimatePresence>
             </div>
           ) : (
-            /* ========================================================================= */
-            /* CONTINUOUS SCROLL MODE: All chapters visible sequentially                 */
-            /* ========================================================================= */
+            /* Continuous scroll mode: sequential chapters */
             <div className="space-y-12">
               {chapters.map((ch) => (
                 <section key={ch.id} id={ch.id} className="scroll-mt-24 space-y-6">
@@ -541,10 +537,7 @@ function DocsPage() {
   );
 }
 
-// =============================================================================
-// RENDERERS FOR INDIVIDUAL CHAPTER CONTENTS (Lean, beginner-friendly & crisp)
-// =============================================================================
-
+// Chapter Content Renderers
 function ChapterContent({
   id,
   copyToClipboard,
@@ -555,9 +548,7 @@ function ChapterContent({
   copiedCmd: string | null;
 }) {
   switch (id) {
-    // ---------------------------------------------------------------------------
-    // 1. QUICKSTART & LAUNCH
-    // ---------------------------------------------------------------------------
+    // 1. Quickstart & Launch
     case "quickstart":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -698,9 +689,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 2. DEEP INGESTION & VISUAL ROI
-    // ---------------------------------------------------------------------------
+    // 2. Deep Ingestion & Visual ROI
     case "ingestion":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -776,9 +765,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 3. FULLSCREEN STUDIO & CONVERSATIONAL MEMORY
-    // ---------------------------------------------------------------------------
+    // 3. Fullscreen Studio & Conversational Memory
     case "studio":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -861,9 +848,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 4. SELECTIVE PAGE RANGE SLICING
-    // ---------------------------------------------------------------------------
+    // 4. Selective Page Range Slicing
     case "slicing":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -941,9 +926,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 5. DUAL COMPUTE & SPEED-TIERED EMBEDDINGS
-    // ---------------------------------------------------------------------------
+    // 5. Dual Compute & Speed-Tiered Embeddings
     case "compute":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -1049,9 +1032,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 6. ENTERPRISE HARDENING & PRIVACY
-    // ---------------------------------------------------------------------------
+    // 6. Enterprise Hardening & Privacy
     case "security":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -1125,9 +1106,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 7. STANDALONE TURNKEY EXPORT
-    // ---------------------------------------------------------------------------
+    // 7. Standalone Turnkey Export
     case "standalone":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">
@@ -1201,9 +1180,7 @@ function ChapterContent({
         </div>
       );
 
-    // ---------------------------------------------------------------------------
-    // 8. REST API REFERENCE
-    // ---------------------------------------------------------------------------
+    // 8. REST API Reference
     case "api":
       return (
         <div className="bg-white border-3 border-black rounded-2xl p-6 sm:p-8 shadow-[6px_6px_0px_#000] space-y-6">

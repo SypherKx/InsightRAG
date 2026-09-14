@@ -84,57 +84,38 @@ class CorrelationAnalyzer:
         Returns:
             List of correlation results sorted by absolute correlation
         """
-        # Get numeric columns only
         numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
         numeric_cols = [col for col in numeric_cols if col != time_column]
 
-        # Limit to max_metrics (prioritize those that vary)
+        # Prioritize top metrics with highest variance if count exceeds threshold
         if len(numeric_cols) > max_metrics:
-            # Select metrics with highest variance
-            variances = {}
-            for col in numeric_cols:
-                if col != primary_metric:
-                    variances[col] = data[col].var()
+            variances = {col: data[col].var() for col in numeric_cols if col != primary_metric}
             numeric_cols = sorted(variances, key=variances.get, reverse=True)[:max_metrics]
 
-        # Extract window around anomaly
         window_data = self._extract_window(data, anomaly_timestamp, time_column)
-
         if len(window_data) < 10:
             logger.warning("Insufficient data points for correlation analysis")
             return []
 
-        # Extract primary metric series
         primary_series = window_data[primary_metric].values
-
         correlations = []
 
         for metric in numeric_cols:
-            if metric == primary_metric:
-                continue
-
-            if metric not in window_data.columns:
+            if metric == primary_metric or metric not in window_data.columns:
                 continue
 
             metric_series = window_data[metric].values
-
-            # Skip if too many NaNs
             if np.isnan(metric_series).sum() > len(metric_series) * 0.1:
                 continue
 
-            # Compute correlations
             result = self._compute_correlation(primary_series, metric_series, metric)
-
             if result and abs(result["coefficient"]) >= self.min_correlation:
                 correlations.append(result)
 
-        # Apply multiple testing correction
         if correlations:
             correlations = self._apply_correction(correlations)
 
-        # Sort by absolute correlation
         correlations.sort(key=lambda x: abs(x["coefficient"]), reverse=True)
-
         return correlations
 
     def _extract_window(

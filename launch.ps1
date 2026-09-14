@@ -55,19 +55,104 @@ function Write-Step {
     cw " ]" "White"
 }
 
+function Test-InternetConnection {
+    try {
+        $ping = New-Object System.Net.NetworkInformation.Ping
+        $reply = $ping.Send("8.8.8.8", 1500)
+        if ($reply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success) {
+            return $true
+        }
+    } catch {}
+    try {
+        $req = [System.Net.WebRequest]::Create("https://www.google.com")
+        $req.Timeout = 2000
+        $req.Method = "HEAD"
+        $resp = $req.GetResponse()
+        $resp.Close()
+        return $true
+    } catch {}
+    return $false
+}
+
+# Register or update global 'insightrag' command in WindowsApps
+try {
+    $cliPath = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\insightrag.cmd"
+    $cmdContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -File `"$ProjectRoot\launch.ps1`" %*"
+    Set-Content -Path $cliPath -Value $cmdContent -Force -ErrorAction SilentlyContinue
+} catch {}
+
+# Interactive update prompt
+$shouldCheckUpdates = $false
 if ($Update) {
+    $shouldCheckUpdates = $true
+} else {
     Sep
-    cw " [*] Checking & pulling latest updates from GitHub..." "Yellow"
-    Sep
-    if (Test-Path (Join-Path $ProjectRoot ".git")) {
-        try {
-            git merge --abort 2>&1 | Out-Null
-            git rebase --abort 2>&1 | Out-Null
-            git fetch origin main 2>&1 | Out-Null
-            git reset --hard origin/main 2>&1 | Out-Null
-            cw "[+] Project updated to latest version!" "Green"
-        } catch {}
+    cw " [?] Do you want to check for new updates? (y/N): " "Yellow" -NoNewline
+    $ans = Read-Host
+    if ($ans -and ($ans.Trim().ToLower() -in @("y", "yes"))) {
+        $shouldCheckUpdates = $true
     }
+}
+
+if ($shouldCheckUpdates) {
+    Sep
+    cw " [*] Checking internet connection..." "Cyan"
+    $isOnline = Test-InternetConnection
+    if ($isOnline) {
+        cw "[+] Internet connection active. Checking GitHub for updates..." "Green"
+        $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+        if ((Test-Path (Join-Path $ProjectRoot ".git")) -and $gitCmd) {
+            try {
+                Push-Location $ProjectRoot
+                git merge --abort 2>&1 | Out-Null
+                git rebase --abort 2>&1 | Out-Null
+                git fetch origin main 2>&1 | Out-Null
+                $localRev = git rev-parse HEAD 2>$null
+                $remoteRev = git rev-parse origin/main 2>$null
+                if ($localRev -and $remoteRev -and ($localRev -ne $remoteRev)) {
+                    cw "  -> Newer updates found! Updating repository..." "Yellow"
+                    git reset --hard origin/main 2>&1 | Out-Null
+                    cw "[+] Successfully updated to latest commit!" "Green"
+                } else {
+                    cw "[+] Already running the latest version." "Green"
+                }
+                Pop-Location
+            } catch {
+                Pop-Location
+                cw "[!] Update check encountered an issue. Proceeding with installed version." "Yellow"
+            }
+        } else {
+            cw "[*] Updating files from GitHub release archive..." "Yellow"
+            try {
+                $zipPath = "$env:TEMP\InsightRAG-latest.zip"
+                $extractTemp = "$env:TEMP\InsightRAG-update-temp"
+                if (Test-Path $extractTemp) { Remove-Item -Path $extractTemp -Recurse -Force -ErrorAction SilentlyContinue }
+                Invoke-WebRequest -Uri "https://github.com/SypherKx/InsightRAG/archive/refs/heads/main.zip" -OutFile $zipPath -UseBasicParsing
+                Expand-Archive -Path $zipPath -DestinationPath $extractTemp -Force
+                $sourceDir = Join-Path $extractTemp "InsightRAG-main"
+                if (Test-Path $sourceDir) {
+                    Get-ChildItem -Path $sourceDir | ForEach-Object {
+                        $destItem = Join-Path $ProjectRoot $_.Name
+                        if ($_.Name -in @("insightforge.db", ".env", "uploads") -and (Test-Path $destItem)) {
+                            # Preserve user database, settings, and uploaded files
+                        } else {
+                            Copy-Item -Path $_.FullName -Destination $ProjectRoot -Recurse -Force
+                        }
+                    }
+                    Remove-Item -Path $extractTemp -Recurse -Force -ErrorAction SilentlyContinue
+                    Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+                    cw "[+] Project files updated to latest version!" "Green"
+                }
+            } catch {
+                cw "[!] Could not complete archive update: $_. Proceeding with installed version." "Yellow"
+            }
+        }
+    } else {
+        cw "[!] No internet connection detected." "Yellow"
+        cw "[*] Proceeding offline with currently installed files..." "Cyan"
+    }
+} else {
+    cw "[*] Continuing with installed version..." "DarkGray"
 }
 
 # 1. Python Check & Auto-Installation

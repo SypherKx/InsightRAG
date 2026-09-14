@@ -34,7 +34,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\rag\chunker.py (586 lines)
+Module: src\rag\chunker.py (579 lines)
 Tags: #code, #rag
 Hub: 02_RAG_Pipeline_Hub
 Exports: class ChunkConfig:, class TextChunker:, def build_contextual_chunk, def is_section_heading, def is_markdown_table
