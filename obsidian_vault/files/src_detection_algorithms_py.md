@@ -30,7 +30,7 @@ tags:
 
 ## 💬 Token-Saving AI Summary
 ```text
-Module: src\detection\algorithms.py (568 lines)
+Module: src\detection\algorithms.py (574 lines)
 Tags: #code, #anomaly
 Hub: 03_Statistical_Anomaly_Hub
 Exports: def detect_zscore, def detect_iqr, def detect_moving_average, def detect_seasonal_decomposition, def detect_change_point

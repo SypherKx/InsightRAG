@@ -9,7 +9,10 @@ import numpy as np
 import pandas as pd
 from typing import Tuple, List, Optional, Dict
 from scipy import stats
-from statsmodels.tsa.seasonal import STL
+try:
+    from statsmodels.tsa.seasonal import STL
+except ImportError:
+    STL = None
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -210,12 +213,15 @@ def detect_seasonal_decomposition(
         clean_series = clean_series.bfill().ffill()
 
     try:
-        # STL decomposition
-        stl = STL(clean_series, period=period, robust=robust, seasonal=min(period, 13))
-        result = stl.fit()
+        if STL is not None:
+            stl = STL(clean_series, period=period, robust=robust, seasonal=min(period, 13))
+            result = stl.fit()
+            residual = result.resid
+        else:
+            rolling_baseline = clean_series.rolling(window=max(3, period), min_periods=1, center=True).median()
+            residual = clean_series - rolling_baseline
 
         # Anomalies in residual
-        residual = result.resid
         resid_mean = residual.mean()
         resid_std = residual.std()
 

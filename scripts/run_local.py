@@ -236,10 +236,12 @@ def install_deps():
         ("fastapi", "fastapi"),
         ("uvicorn", "uvicorn[standard]"),
         ("pydantic", "pydantic"),
+        ("pydantic_settings", "pydantic-settings"),
         ("httpx", "httpx"),
         ("pandas", "pandas"),
         ("numpy", "numpy"),
         ("scipy", "scipy"),
+        ("statsmodels", "statsmodels"),
         ("chardet", "chardet"),
         ("multipart", "python-multipart"),
         ("psutil", "psutil"),
@@ -251,6 +253,7 @@ def install_deps():
         ("faiss", "faiss-cpu"),
         ("pypdf", "pypdf"),
         ("docx", "python-docx"),
+        ("dateutil", "python-dateutil"),
     ]
     missing = []
     for mod_name, pip_name in packages:
