@@ -487,11 +487,16 @@ class RAGService:
         retrieval_query = QueryProcessor.normalize_hinglish_query(query)
         if history:
             try:
+                from .ollama_manager import get_best_available_model_sync
+                resolved_model = get_best_available_model_sync(
+                    requested_model=model if not model.startswith(("groq", "gemini", "openai")) else None,
+                    host=ollama_url
+                )
                 retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
                     current_query=query,
                     history=history,
                     ollama_url=ollama_url or "http://127.0.0.1:11434",
-                    model=model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b",
+                    model=resolved_model,
                 )
             except Exception as rewrite_err:
                 logger.warning(f"Query rewrite failed, using normalized query: {rewrite_err}")
@@ -653,11 +658,17 @@ class RAGService:
                             except Exception:
                                 installed_models = []
 
-                            local_model = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
+                            from .ollama_manager import get_best_available_model_sync
+                            best_cand = get_best_available_model_sync(
+                                requested_model=model if not model.startswith(("groq", "gemini", "openai")) else None,
+                                installed=installed_models,
+                                host=working_endpoint
+                            )
                             candidate_models = []
                             if images:
                                 candidate_models.extend(["llama3.2-vision", "qwen2.5vl:3b", "qwen2.5vl", "moondream:latest", "moondream"])
-                            candidate_models.extend([local_model, "llama3.2:3b", "llama3.2", "qwen2.5:3b", "mistral:latest"])
+                            if best_cand and best_cand not in candidate_models:
+                                candidate_models.append(best_cand)
                             for inst in installed_models:
                                 if inst not in candidate_models:
                                     candidate_models.append(inst)
@@ -906,15 +917,15 @@ class RAGService:
         retrieval_query = QueryProcessor.normalize_hinglish_query(query)
         if history:
             try:
-                # Fast text model for query rewriting instead of heavy vision model
-                rewrite_cand = model if not model.startswith(("groq", "gemini", "openai")) else "llama3.2:3b"
-                if "vl" in rewrite_cand.lower() or "vision" in rewrite_cand.lower():
-                    rewrite_cand = "llama3.2:3b"
+                from .ollama_manager import get_best_available_model
+                resolved_model = await get_best_available_model(
+                    requested_model=model if not model.startswith(("groq", "gemini", "openai")) else None
+                )
                 retrieval_query, was_rewritten = QueryProcessor.rewrite_query_with_llm(
                     current_query=query,
                     history=history,
                     ollama_url=ollama_url or "http://127.0.0.1:11434",
-                    model=rewrite_cand,
+                    model=resolved_model,
                 )
             except Exception as rewrite_err:
                 logger.warning(f"Query rewrite failed, using normalized query: {rewrite_err}")
@@ -1018,12 +1029,12 @@ class RAGService:
 
         # Fall back to an installed model if requested model is unavailable
         if installed:
-            target_base = stream_model.split(':')[0].lower()
-            is_present = any(stream_model.lower() == m.lower() or stream_model.lower() in m.lower() or target_base in m.lower() for m in installed)
-            if not is_present:
-                preferred = [m for m in installed if any(k in m.lower() for k in ["llama", "qwen", "mistral", "moondream", "phi"])]
-                stream_model = preferred[0] if preferred else installed[0]
-                logger.info(f"Requested model '{local_model}' not installed in Ollama. Auto-switched to installed model '{stream_model}'")
+            from .ollama_manager import get_best_available_model
+            best_model = await get_best_available_model(stream_model, installed)
+            if best_model:
+                if best_model != stream_model:
+                    logger.info(f"Requested model '{local_model}' not installed in Ollama. Auto-switched to installed model '{best_model}'")
+                stream_model = best_model
 
         # Build prompt with model-specific context budgeting
         prompt = build_chatgpt_rag_prompt(
@@ -1044,11 +1055,12 @@ class RAGService:
         # Graceful fallback if no local models are installed yet
         if not installed:
             no_model_msg = (
-                f"⚠️ **Local AI model `{local_model}` is not yet installed in your local Ollama.**\n\n"
+                f"⚠️ **No local AI models are currently installed in Ollama.**\n\n"
                 f"To enable 100% offline conversational answers:\n"
-                f"1. Click **Model Hub** (top-right of Studio) and click **Download** for `{local_model}`.\n"
-                f"2. Or open PowerShell and run: `ollama pull {local_model}`\n"
+                f"1. Click **Model Hub** (top-right of Studio) and download a model (e.g. `qwen2.5:3b`, `llama3.2:3b`, or `mistral`).\n"
+                f"2. Or open PowerShell / Terminal and run: `ollama pull qwen2.5:3b`\n"
                 f"3. Or switch to **Advance Turbo Cloud** mode (Groq / Gemini / OpenAI) in the top bar.\n\n"
+                f"*(InsightForge will auto-detect and activate the model as soon as installation completes!)*\n\n"
                 f"---\n\n"
             )
             if results:

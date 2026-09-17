@@ -199,7 +199,8 @@ async def test_rag_query_stream_end_to_end(rag_service):
         def stream(self, *args, **kwargs):
             return MockAsyncResponse()
 
-    with patch("httpx.AsyncClient", MockAsyncClient):
+    with patch("backend.services.ollama_manager.get_installed_models", return_value=["llama3.2:3b"]), \
+         patch("httpx.AsyncClient", MockAsyncClient):
         async for event in rag_service.query_stream(
             query="What is the throughput?",
             history=history
@@ -272,8 +273,7 @@ def test_chatgpt_grade_prompt_formatting():
     )
 
     assert "InsightRAG AI" in prompt
-    assert "Executive Summary" in prompt
-    assert "Detailed Breakdown" in prompt
+    assert "DOCUMENT CONTEXT" in prompt
     assert "spec.txt" in prompt
     assert "Throughput capacity is 1.2M" in prompt
 

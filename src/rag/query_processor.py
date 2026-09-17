@@ -267,11 +267,24 @@ class QueryProcessor:
         return expanded
 
     @classmethod
+    def _get_installed_ollama_models(cls, ollama_url: str = "http://127.0.0.1:11434") -> List[str]:
+        """Helper to fetch available models from Ollama."""
+        try:
+            import httpx
+            with httpx.Client(timeout=2.0) as client:
+                res = client.get(f"{ollama_url.rstrip('/')}/api/tags")
+                if res.status_code == 200:
+                    return [m.get("name", "") for m in res.json().get("models", []) if m.get("name")]
+        except Exception:
+            pass
+        return []
+
+    @classmethod
     def generate_hyde_expansion(
         cls,
         query: str,
         ollama_url: str = "http://127.0.0.1:11434",
-        model: str = "llama3.2:3b",
+        model: Optional[str] = None,
         timeout_seconds: float = 3.5
     ) -> Optional[str]:
         """
@@ -286,11 +299,16 @@ class QueryProcessor:
         )
         try:
             import httpx
+            candidate_models = []
+            if model and not model.startswith(("groq", "gemini", "openai", "claude")):
+                candidate_models.append(model)
+            
             with httpx.Client(timeout=timeout_seconds) as client:
+                target_model = candidate_models[0] if candidate_models else "llama3.2:3b"
                 res = client.post(
                     f"{ollama_url.rstrip('/')}/api/generate",
                     json={
-                        "model": model,
+                        "model": target_model,
                         "prompt": prompt,
                         "stream": False,
                         "options": {
@@ -300,6 +318,25 @@ class QueryProcessor:
                         }
                     }
                 )
+                if res.status_code == 404:
+                    # Model not installed, find any installed model
+                    installed = cls._get_installed_ollama_models(ollama_url)
+                    if installed:
+                        target_model = installed[0]
+                        res = client.post(
+                            f"{ollama_url.rstrip('/')}/api/generate",
+                            json={
+                                "model": target_model,
+                                "prompt": prompt,
+                                "stream": False,
+                                "options": {
+                                    "temperature": 0.1,
+                                    "num_predict": 60,
+                                    "num_ctx": 1024
+                                }
+                            }
+                        )
+
                 if res.status_code == 200:
                     hypo = res.json().get("response", "").strip()
                     hypo_clean = hypo.split("\n")[0].strip('"').strip()
@@ -315,14 +352,14 @@ class QueryProcessor:
         current_query: str,
         history: Optional[List[Dict[str, Any]]] = None,
         ollama_url: str = "http://127.0.0.1:11434",
-        model: str = "llama3.2:3b",
-        timeout_seconds: float = 3.5,
+        model: Optional[str] = None,
+        timeout_seconds: float = 4.0,
     ) -> Tuple[str, bool]:
         """
         Rewrites the current query into a standalone question using the last 2 turns of chat history
         via the local Ollama LLM (temperature=0.0).
         
-        If there is no history, returns (current_query, False).
+        Dynamically detects and falls back to installed models if the requested model returns 404.
         If Ollama is unavailable, times out, or produces invalid output, falls back to rule-based rewriting.
         
         Returns:
@@ -357,7 +394,10 @@ class QueryProcessor:
 
         try:
             import httpx
-            use_model = "llama3.2:3b" if ("vl" in str(model).lower() or "vision" in str(model).lower()) else model
+            use_model = model or "llama3.2:3b"
+            if "vl" in str(use_model).lower() or "vision" in str(use_model).lower():
+                use_model = "llama3.2:3b"
+
             with httpx.Client(timeout=timeout_seconds) as client:
                 res = client.post(
                     f"{ollama_url.rstrip('/')}/api/generate",
@@ -374,14 +414,34 @@ class QueryProcessor:
                         }
                     }
                 )
+                if res.status_code == 404:
+                    # Target model not found, auto-discover installed models in Ollama
+                    installed = cls._get_installed_ollama_models(ollama_url)
+                    if installed:
+                        use_model = installed[0]
+                        res = client.post(
+                            f"{ollama_url.rstrip('/')}/api/generate",
+                            json={
+                                "model": use_model,
+                                "prompt": prompt,
+                                "stream": False,
+                                "keep_alive": "10m",
+                                "options": {
+                                    "temperature": 0.0,
+                                    "num_predict": 60,
+                                    "top_k": 20,
+                                    "top_p": 0.9,
+                                }
+                            }
+                        )
+
                 if res.status_code == 200:
                     data = res.json()
                     rewritten = data.get("response", "").strip()
-                    # Strip leading/trailing quotes or 'Standalone Question:' echo
                     rewritten = re.sub(r'^(standalone question\s*:\s*|["\'])', '', rewritten, flags=re.IGNORECASE)
                     rewritten = rewritten.strip('"\'. \n')
                     if rewritten and len(rewritten) > 3 and rewritten.lower() != current_query.lower():
-                        logger.info(f"Ollama conversational query rewrite: '{current_query}' -> '{rewritten}'")
+                        logger.info(f"Ollama conversational query rewrite ({use_model}): '{current_query}' -> '{rewritten}'")
                         return rewritten, True
         except Exception as e:
             logger.debug(f"Ollama query rewrite call failed or timed out ({e}); attempting heuristic fallback")
@@ -436,10 +496,19 @@ class QueryProcessor:
                 if p is not None:
                     antecedent_page = p
             if not antecedent_topic and turn.get("role") == "user":
-                clean = re.sub(r'^(what is|explain|tell me about|how does|why is|describe|send me|provide me|show me)\s+', '', text, flags=re.IGNORECASE).strip('?. ')
+                clean = re.sub(r'^(what is|explain|tell me about|how does|why is|describe|send me|provide me|show me|give me|display|crop|preview)\s+', '', text, flags=re.IGNORECASE).strip('?. ')
                 clean = re.sub(r'\b(?:on\s+)?(?:page|pg|p\.?|pno|page\s*no|page\s*number)\s*[:#\-]?\s*\d+\b', '', clean, flags=re.IGNORECASE).strip('?. ')
-                if len(clean) > 2 and clean.lower() not in q_lower:
-                    antecedent_topic = clean
+                # Clean visual extraction prefixes so "pic of the project section" -> "project section"
+                clean = re.sub(r'^(?:the\s+)?(?:pic|pics|picture|pictures|photo|photos|image|images|diagram|diagrams|figure|figures|chart|graph|roi|screenshot|crop|snippet)\s+(?:of|from|in)\s+', '', clean, flags=re.IGNORECASE).strip('?. ')
+                clean = re.sub(r'\b(?:the\s+)?(?:pic|pics|picture|pictures|photo|photos|image|images|roi|screenshot|snippet)\b', '', clean, flags=re.IGNORECASE).strip('?. ')
+                clean = re.sub(r'\s+', ' ', clean).strip()
+                
+                # Check if this topic adds unique information and isn't already present in current query
+                if len(clean) > 2:
+                    topic_words = set(re.findall(r'\b\w+\b', clean.lower()))
+                    # Avoid appending if almost all topic words already in query
+                    if not topic_words.issubset(words):
+                        antecedent_topic = clean
 
         page_suffix = f" on page {antecedent_page}" if (antecedent_page and cls.extract_target_page(current_query) is None) else ""
         topic_suffix = f" regarding {antecedent_topic}" if antecedent_topic and antecedent_topic.lower() not in q_lower else ""

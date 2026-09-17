@@ -250,7 +250,7 @@ function KnowledgeBaseStudioPage() {
     has_gpu: false,
     has_gpu_access: false,
     acceleration_mode: "LOCAL ENGINE",
-    installed_models: ["llama3.2:3b", "moondream:latest"],
+    installed_models: [],
   });
   const [activeHardwareMode, setActiveHardwareMode] = useState<"cpu" | "gpu">("cpu");
   const [switchingHardware, setSwitchingHardware] = useState(false);
@@ -259,9 +259,9 @@ function KnowledgeBaseStudioPage() {
   // Model selection & engine configuration
   const [selectedLLM, setSelectedLLM] = useState<string>(() => {
     try {
-      return localStorage.getItem("insightrag_selected_model") || "llama3.2:3b";
+      return localStorage.getItem("insightrag_selected_model") || "";
     } catch {
-      return "llama3.2:3b";
+      return "";
     }
   });
   const [sessionLifetime, setSessionLifetime] = useState("3 Hours");
@@ -362,19 +362,23 @@ function KnowledgeBaseStudioPage() {
     }
   }, [chatMessages, querying]);
 
-  // Initial load of hardware specs and knowledge base statistics
+  // Initial load of hardware specs and knowledge base statistics with live background sync
   useEffect(() => {
     loadSpecsAndStats();
     const interval = setInterval(() => {
-      if (backendOnline !== true) {
-        loadSpecsAndStats();
-      }
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [backendOnline]);
+      loadSpecsAndStats();
+    }, 6000);
+
+    const onFocus = () => loadSpecsAndStats();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   const loadSpecsAndStats = async () => {
-    setCheckingHealth(true);
     try {
       const data = await getSystemSpecs();
       if (data && (data.cpu_threads || data.gpu_name)) {
@@ -385,6 +389,29 @@ function KnowledgeBaseStudioPage() {
           setActiveHardwareMode("cpu");
         }
         setBackendOnline(true);
+
+        // Auto-detect and auto-select available Ollama models
+        const installed: string[] = Array.isArray(data.installed_models) ? data.installed_models : [];
+        if (installed.length > 0) {
+          setSelectedLLM((prev) => {
+            const isInstalled = prev && installed.some((m) => m === prev || m.toLowerCase() === prev.toLowerCase() || m.toLowerCase().includes(prev.toLowerCase()));
+            if (!isInstalled) {
+              const preferred = installed.find((m) =>
+                ["qwen", "llama", "mistral", "phi", "gemma"].some((kw) => m.toLowerCase().includes(kw) && !m.toLowerCase().includes("vision") && !m.toLowerCase().includes("vl"))
+              ) || installed[0];
+
+              try {
+                localStorage.setItem("insightrag_selected_model", preferred);
+              } catch {}
+              if (prev && prev !== preferred) {
+                setSwitchToast(`✨ Local model auto-detected and connected: ${preferred}`);
+                setTimeout(() => setSwitchToast(null), 4500);
+              }
+              return preferred;
+            }
+            return prev;
+          });
+        }
       } else {
         setBackendOnline(false);
       }
@@ -1903,6 +1930,42 @@ function KnowledgeBaseStudioPage() {
               </div>
             </div>
 
+            {/* NO MODEL INSTALLED ALERT BANNER */}
+            {backendOnline && (!specs.installed_models || specs.installed_models.length === 0) && (
+              <div className="p-3.5 bg-amber-50 border-2 border-black rounded-2xl shadow-[3px_3px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400 border-2 border-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000]">
+                    <AlertTriangle className="w-4 h-4 text-black" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
+                      <span>No Local AI Model Detected in Ollama</span>
+                      <span className="bg-amber-200 text-[10px] font-mono px-2 py-0.5 rounded-full border border-black font-bold">Action Needed</span>
+                    </div>
+                    <div className="text-xs font-mono font-medium text-black/80 mt-0.5">
+                      100% offline chat requires a local LLM. Install with 1-click or run: <code className="bg-amber-200 px-1.5 py-0.5 rounded font-bold">ollama pull qwen2.5:3b</code>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                  <button
+                    onClick={() => handleInstallModel("qwen2.5:3b")}
+                    disabled={pullingModelId !== null}
+                    className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black border-2 border-black rounded-xl font-mono text-xs font-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-0.5 active:translate-y-0.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{pullingModelId === "qwen2.5:3b" ? `Installing (${pullProgress["qwen2.5:3b"] || 0}%)` : "Quick Install (qwen2.5:3b)"}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowModelHubModal(true)}
+                    className="px-3 py-1.5 bg-white hover:bg-gray-50 text-black border-2 border-black rounded-xl font-mono text-xs font-bold shadow-[2px_2px_0px_#000] cursor-pointer"
+                  >
+                    Model Hub
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 3. COMPACT QUICK CONTROL BAR & ADVANCED SETTINGS */}
             <div className="space-y-3">
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 sm:p-3.5 bg-gray-50/90 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000]">
@@ -1924,11 +1987,11 @@ function KnowledgeBaseStudioPage() {
                       {specs.installed_models && specs.installed_models.length > 0 ? (
                         specs.installed_models.map((m: string) => (
                           <option key={m} value={m}>
-                            {m} {m === "qwen2.5vl:3b" ? "[Vision & OCR]" : m === "llama3.2:3b" ? "[Fast & Lightweight]" : ""}
+                            {m} {m.includes("vl") || m.includes("vision") ? "[Vision & OCR]" : m.includes("coder") ? "[Code & Logic]" : m === "llama3.2:3b" ? "[Fast & Light]" : "[Local LLM]"}
                           </option>
                         ))
                       ) : (
-                        <option value="llama3.2:3b">llama3.2:3b [Fast & Lightweight]</option>
+                        <option value="">⚠️ No Local Models Installed</option>
                       )}
                     </select>
                   </div>

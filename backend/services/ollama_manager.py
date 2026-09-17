@@ -127,6 +127,89 @@ async def get_installed_models() -> List[str]:
     return []
 
 
+def get_installed_models_sync(host: Optional[str] = None) -> List[str]:
+    """Retrieve list of currently installed Ollama model names synchronously."""
+    endpoint = host or "http://127.0.0.1:11434"
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            resp = client.get(f"{endpoint}/api/tags")
+            if resp.status_code == 200:
+                data = resp.json()
+                models = [m.get("name") for m in data.get("models", []) if "name" in m]
+                return models
+    except Exception:
+        pass
+    return []
+
+
+def get_best_available_model_sync(
+    requested_model: Optional[str] = None,
+    installed: Optional[List[str]] = None,
+    host: Optional[str] = None
+) -> Optional[str]:
+    """
+    Synchronously resolves the optimal Ollama model to use.
+    If requested_model is installed (exact or prefix), returns it.
+    Otherwise returns the best installed chat/text model, or None if no models installed.
+    """
+    if installed is None:
+        installed = get_installed_models_sync(host)
+    if not installed:
+        return None
+
+    if requested_model:
+        # Avoid cloud model strings
+        req_clean = requested_model.lower().strip()
+        if not req_clean.startswith(("groq", "gemini", "openai", "claude")):
+            req_base = req_clean.split(":")[0]
+            for m in installed:
+                m_lower = m.lower()
+                m_base = m_lower.split(":")[0]
+                if req_clean == m_lower or req_base == m_base or req_base in m_lower or m_base in req_base:
+                    return m
+
+    # Preference ranking for local text/chat models
+    for candidate_kw in ["qwen2.5-coder", "qwen2.5", "qwen", "llama3.2", "llama3.1", "llama3", "llama", "mistral", "phi3", "phi", "gemma"]:
+        for m in installed:
+            if candidate_kw in m.lower() and not any(v in m.lower() for v in ["vision", "vl", "moondream"]):
+                return m
+
+    # Fallback to the first available installed model
+    return installed[0]
+
+
+async def get_best_available_model(
+    requested_model: Optional[str] = None,
+    installed: Optional[List[str]] = None
+) -> Optional[str]:
+    """
+    Asynchronously resolves the optimal Ollama model to use.
+    If requested_model is installed, returns it.
+    Otherwise returns the best installed chat/text model, or None if no models installed.
+    """
+    if installed is None:
+        installed = await get_installed_models()
+    if not installed:
+        return None
+
+    if requested_model:
+        req_clean = requested_model.lower().strip()
+        if not req_clean.startswith(("groq", "gemini", "openai", "claude")):
+            req_base = req_clean.split(":")[0]
+            for m in installed:
+                m_lower = m.lower()
+                m_base = m_lower.split(":")[0]
+                if req_clean == m_lower or req_base == m_base or req_base in m_lower or m_base in req_base:
+                    return m
+
+    for candidate_kw in ["qwen2.5-coder", "qwen2.5", "qwen", "llama3.2", "llama3.1", "llama3", "llama", "mistral", "phi3", "phi", "gemma"]:
+        for m in installed:
+            if candidate_kw in m.lower() and not any(v in m.lower() for v in ["vision", "vl", "moondream"]):
+                return m
+
+    return installed[0]
+
+
 async def check_model_availability(target_model: str = DEFAULT_MODEL) -> Dict[str, Any]:
     """Check if Ollama is running and whether a compatible model is installed."""
     host = await get_working_ollama_host()
@@ -140,36 +223,16 @@ async def check_model_availability(target_model: str = DEFAULT_MODEL) -> Dict[st
         }
 
     installed = await get_installed_models()
-    
-    # Check if ANY model is installed, or specifically matching target/llama
-    is_installed = False
-    active_model = target_model
-
-    if installed:
-        # 1. Exact or prefix match with target_model
-        target_base = target_model.split(':')[0]
-        for m in installed:
-            if target_model in m or target_base in m or m.startswith(target_base):
-                is_installed = True
-                active_model = m
-                break
-        
-        # 2. If target model not exact match, pick ANY llama or first available model!
-        if not is_installed:
-            llama_models = [m for m in installed if "llama" in m.lower()]
-            if llama_models:
-                is_installed = True
-                active_model = llama_models[0]
-            else:
-                is_installed = True
-                active_model = installed[0]
+    best_model = await get_best_available_model(target_model, installed)
+    is_installed = best_model is not None
+    active_model = best_model or target_model
 
     return {
         "ollama_running": True,
         "target_model": active_model,
         "model_installed": is_installed,
         "installed_models": installed,
-        "message": f"Local model '{active_model}' is ready." if is_installed else "No model found. Click to pull llama3.2."
+        "message": f"Local model '{active_model}' is ready." if is_installed else "No local AI models installed in Ollama. Install a model to enable offline chat."
     }
 
 
