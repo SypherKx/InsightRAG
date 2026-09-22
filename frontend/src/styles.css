@@ -338,3 +338,64 @@
   gap: 6px;
   border: 1px solid rgba(178, 182, 189, 0.12);
 }
+
+/* ==========================================================================
+   MOBILE & TOUCH OPTIMIZATIONS
+   ========================================================================== */
+@layer utilities {
+  /* Prevent tap highlight gray box on touch screens */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Safe area padding for notched mobile phones (iPhone X/11/12/13/14/15/16) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Touch momentum scrolling */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Mobile text input sizing to prevent iOS auto-zoom on focus */
+  @media (max-width: 640px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Custom sleek scrollbar for mobile & desktop */
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+  }
+}

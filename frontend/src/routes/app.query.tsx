@@ -153,8 +153,8 @@ function QueryPage() {
         description="Ask any question against your vector database. Synthesizes grounded responses with local Ollama Llama 3.2 models."
       />
 
-      <div className="p-6 md:p-8 space-y-6 bg-[#000000] min-h-screen text-white">
-        <div className="mx-auto max-w-4xl space-y-6">
+      <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 bg-[#000000] min-h-screen text-white">
+        <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
           {/* Module Identity Chip */}
           <div className="flex items-center justify-between">
             <div className="eyebrow-hashicorp text-[#00bcff] flex items-center gap-2">

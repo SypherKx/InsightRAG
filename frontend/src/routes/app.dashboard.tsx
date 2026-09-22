@@ -134,12 +134,12 @@ function DashboardPage() {
         }
       />
 
-      <div className="p-6 md:p-8 space-y-8 bg-[var(--canvas)] min-h-screen text-[var(--ink)] transition-colors duration-300">
+      <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 bg-[var(--canvas)] min-h-screen text-[var(--ink)] transition-colors duration-300">
         {/* 1. TOP METRIC STAT CARDS */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GlassCard
             variant="canvas"
-            className="p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
+            className="p-4 sm:p-5 border border-[var(--hairline)] shadow-sm bg-[var(--surface-card)]"
           >
             <div className="flex items-center justify-between">
               <span className="caption text-xs uppercase font-semibold text-[var(--muted)]">

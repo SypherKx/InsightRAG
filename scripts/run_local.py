@@ -400,7 +400,7 @@ def run_frontend_dev():
     frontend_dir = ROOT_DIR / "frontend"
     npm_cmd = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
     return subprocess.Popen(
-        [npm_cmd, "run", "dev", "--", "--clearScreen", "false"],
+        [npm_cmd, "run", "dev", "--", "--clearScreen", "false", "--no-open"],
         cwd=str(frontend_dir),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -471,15 +471,9 @@ def main():
         print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
         print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
         try:
-            if os.name == 'nt':
-                os.system(f'start "" "{STUDIO_URL}"')
-            else:
-                webbrowser.open(STUDIO_URL)
+            webbrowser.open(STUDIO_URL)
         except Exception:
-            try:
-                webbrowser.open(STUDIO_URL)
-            except Exception:
-                pass
+            pass
     else:
         print(f"\n{ANSI_YELLOW}[!] Open Studio manually: {STUDIO_URL}{ANSI_RESET}")
 

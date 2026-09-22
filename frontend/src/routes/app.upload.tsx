@@ -1364,41 +1364,41 @@ function KnowledgeBaseStudioPage() {
           </div>
         ) : activeView === "chat" ? (
           /* DEDICATED FULL-SCREEN CHAT STUDIO VIEW */
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-3 border-black shadow-[6px_6px_0px_#000] sm:shadow-[10px_10px_0px_#000] space-y-4 text-black min-h-[82vh] flex flex-col justify-between">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-3 sm:p-6 border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] sm:shadow-[10px_10px_0px_#000] space-y-3 sm:space-y-4 text-black min-h-[82vh] flex flex-col justify-between">
             {/* Top Navigation & Status Bar */}
-            <div className="flex flex-wrap items-center justify-between border-b-2 border-gray-200 pb-3.5 gap-3">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b-2 border-gray-200 pb-3 gap-2.5 sm:gap-3">
+              <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3">
                 <button
                   onClick={() => setActiveView("upload")}
-                  className="flex items-center gap-1.5 bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px]"
+                  className="flex items-center gap-1.5 bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] cursor-pointer transition active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                   title="Return to document manager"
                 >
-                  <ArrowLeft className="w-4 h-4 text-black" />
-                  <span>← Back to Upload & Documents</span>
+                  <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black shrink-0" />
+                  <span className="hidden sm:inline">← Back to Upload & Documents</span>
+                  <span className="sm:hidden">← Documents</span>
                 </button>
 
                 <div className="h-6 w-[2px] bg-gray-300 hidden sm:block" />
 
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000]">
-                    <Bot className="w-5 h-5" />
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-black flex items-center justify-center text-[#ffe600] shadow-[2px_2px_0px_#000] shrink-0">
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 font-mono font-black text-sm text-black uppercase tracking-tight">
-                      <span>InsightRAG Studio</span>
-                      <span className="bg-emerald-400/20 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-400">
-                        Full-Screen
+                    <div className="flex items-center gap-1.5 font-mono font-black text-xs sm:text-sm text-black uppercase tracking-tight">
+                      <span>Studio</span>
+                      <span className="bg-emerald-400/20 text-emerald-700 text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-bold border border-emerald-400">
+                        Active
                       </span>
                     </div>
-                    <div className="text-[11px] font-mono text-gray-500">
-                      {ragStats.files?.length || 0} doc(s) loaded • {ragStats.total_vectors || 0}{" "}
-                      vectors grounded
+                    <div className="text-[10px] sm:text-[11px] font-mono text-gray-500">
+                      {ragStats.files?.length || 0} doc(s) • {ragStats.total_vectors || 0} vectors
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-[11px] font-bold">
+              <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 font-mono text-[11px] font-bold">
                 <span className="hidden lg:inline-flex bg-emerald-400 text-black px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_#000] items-center gap-1">
                   <Zap className="w-3 h-3 text-black" />
                   <span>{embeddingModel}</span>
@@ -1406,11 +1406,11 @@ function KnowledgeBaseStudioPage() {
 
                 {/* Model Quick Switcher in Chat Header */}
                 {processingMode === "local" ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 sm:gap-1.5 flex-1 sm:flex-initial justify-end">
                     <select
                       value={selectedLLM}
                       onChange={(e) => handleSwitchModel(e.target.value)}
-                      className="bg-black text-[#ffe600] font-mono text-[11px] font-black px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] cursor-pointer focus:outline-none"
+                      className="bg-black text-[#ffe600] font-mono text-[10px] sm:text-[11px] font-black px-2 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] cursor-pointer focus:outline-none max-w-[140px] sm:max-w-none truncate"
                       title="Quick Switch Active Local Model"
                     >
                       {specs?.installed_models && specs.installed_models.length > 0 ? (
@@ -1429,15 +1429,15 @@ function KnowledgeBaseStudioPage() {
                     <button
                       type="button"
                       onClick={() => setShowModelHubModal(true)}
-                      className="bg-[#ffe600] hover:bg-yellow-400 text-black px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1 font-mono font-black text-[10px] cursor-pointer active:translate-x-[1px] active:translate-y-[1px]"
+                      className="bg-[#ffe600] hover:bg-yellow-400 text-black px-2 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] flex items-center gap-1 font-mono font-black text-[10px] cursor-pointer active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                       title="Open Open-Source Model Hub"
                     >
                       <Sparkles className="w-3 h-3" />
-                      <span className="hidden sm:inline">Hub</span>
+                      <span>Hub</span>
                     </button>
                   </div>
                 ) : (
-                  <span className="bg-purple-600 text-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] animate-pulse flex items-center gap-1">
+                  <span className="bg-purple-600 text-white px-2 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] animate-pulse flex items-center gap-1 text-[10px]">
                     <Zap className="w-3 h-3 text-white" />
                     <span>{processingMode.split(":")[0].toUpperCase()}</span>
                   </span>
@@ -1447,17 +1447,17 @@ function KnowledgeBaseStudioPage() {
                   <button
                     onClick={handleClearChatOnly}
                     title="Start fresh conversation"
-                    className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-black px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] transition active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
+                    className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-black px-2 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000] transition active:translate-x-[1px] active:translate-y-[1px] cursor-pointer shrink-0 text-[10px] sm:text-[11px]"
                   >
                     <RotateCcw className="w-3 h-3 text-red-600" />
-                    <span>New Chat</span>
+                    <span className="hidden xs:inline">New Chat</span>
                   </button>
                 )}
               </div>
             </div>
 
             {/* Suggested Prompt Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 font-mono text-[11px]">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 font-mono text-[11px] scrollbar-none touch-scroll">
               <span className="text-gray-500 font-bold shrink-0 flex items-center gap-1 text-[10px]">
                 <Sparkles className="w-3 h-3 text-[#ffe600]" /> SUGGESTIONS:
               </span>
@@ -1482,20 +1482,19 @@ function KnowledgeBaseStudioPage() {
             <div
               ref={chatContainerRef}
               onScroll={handleChatScroll}
-              className="relative flex-1 min-h-[460px] max-h-[64vh] overflow-y-auto space-y-4 p-3 sm:p-4 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black scroll-smooth"
+              className="relative flex-1 min-h-[380px] sm:min-h-[460px] max-h-[60vh] sm:max-h-[64vh] overflow-y-auto space-y-3 sm:space-y-4 p-2.5 sm:p-4 font-mono text-xs bg-gray-50/70 rounded-2xl border-2 border-black scroll-smooth touch-scroll"
             >
               {chatMessages.length === 0 ? (
-                <div className="text-center text-gray-500 py-20 space-y-3">
-                  <div className="w-14 h-14 bg-white rounded-2xl border-2 border-black mx-auto flex items-center justify-center shadow-[3px_3px_0px_#000]">
-                    <Sparkles className="w-7 h-7 text-black" />
+                <div className="text-center text-gray-500 py-16 sm:py-20 space-y-3">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-2xl border-2 border-black mx-auto flex items-center justify-center shadow-[3px_3px_0px_#000]">
+                    <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-black" />
                   </div>
                   <div>
-                    <p className="font-extrabold text-sm text-black">
+                    <p className="font-extrabold text-xs sm:text-sm text-black">
                       Start your grounded document consultation
                     </p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">
-                      Multi-turn memory enabled • Answers grounded strictly on your{" "}
-                      {ragStats.total_vectors} indexed vectors
+                    <p className="text-[10px] sm:text-[11px] text-gray-600 mt-0.5">
+                      Multi-turn memory enabled • Grounded on {ragStats.total_vectors} indexed vectors
                     </p>
                   </div>
                 </div>
@@ -1509,7 +1508,7 @@ function KnowledgeBaseStudioPage() {
                     className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                   >
                     <div
-                      className={`p-3.5 sm:p-4 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#000] space-y-2 max-w-[92%] sm:max-w-[85%] ${
+                      className={`p-3 sm:p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] space-y-2 max-w-[96%] sm:max-w-[85%] ${
                         msg.role === "user"
                           ? "bg-[#ffe600] text-black font-bold ml-auto"
                           : "bg-white text-black"
@@ -1826,7 +1825,7 @@ function KnowledgeBaseStudioPage() {
                 e.preventDefault();
                 handleSendQuery();
               }}
-              className="flex gap-2 pt-2 border-t border-gray-200"
+              className="flex gap-1.5 sm:gap-2 pt-2 border-t border-gray-200"
             >
               <input
                 ref={chatInputRef}
@@ -1836,26 +1835,26 @@ function KnowledgeBaseStudioPage() {
                 placeholder={
                   querying
                     ? "InsightRAG AI is streaming answer... (Click Pause / Stop to halt)"
-                    : "Ask any question about your uploaded documents (multi-turn conversation)..."
+                    : "Ask any question about your uploaded documents..."
                 }
                 disabled={querying}
-                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-3 focus:outline-none focus:bg-white focus:ring-2 focus:ring-black shadow-inner disabled:opacity-80"
+                className="flex-1 min-w-0 bg-gray-50 font-mono text-xs sm:text-sm font-bold border-2 border-black rounded-xl p-2.5 sm:p-3 focus:outline-none focus:bg-white focus:ring-2 focus:ring-black shadow-inner disabled:opacity-80"
               />
               {querying ? (
                 <button
                   type="button"
                   onClick={handleStopGeneration}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-black font-mono text-xs px-4 sm:px-6 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition active:translate-x-[1px] active:translate-y-[1px] animate-pulse"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black font-mono text-xs px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition active:translate-x-[1px] active:translate-y-[1px] animate-pulse"
                   title="Pause / Stop generation"
                 >
                   <Square className="w-3.5 h-3.5 fill-current text-white" />
-                  <span>Pause</span>
+                  <span className="hidden xs:inline">Pause</span>
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={!query.trim()}
-                  className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-4 sm:px-6 py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 transition active:translate-x-[1px] active:translate-y-[1px]"
+                  className="bg-black text-white hover:bg-gray-800 font-bold font-mono text-xs px-3.5 sm:px-6 py-2.5 sm:py-3 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0 transition active:translate-x-[1px] active:translate-y-[1px]"
                 >
                   <span>Send</span>
                   <Send className="w-3.5 h-3.5 text-[#ffe600]" />
@@ -1865,50 +1864,46 @@ function KnowledgeBaseStudioPage() {
           </div>
         ) : (
           /* 2. MAIN STUDIO CONTAINER CARD (UPLOAD VIEW) */
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-3 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-5 sm:space-y-6 text-black">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 md:p-8 border-2 sm:border-3 border-black shadow-[4px_4px_0px_rgba(0,0,0,0.9)] sm:shadow-[10px_10px_0px_rgba(0,0,0,0.9)] space-y-4 sm:space-y-6 text-black">
             {/* Header Title + Actions */}
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between border-b-2 border-black pb-4 sm:pb-5 gap-3.5">
-              {/* Left Side: Brand Icon, Title & Badges */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-black flex items-center justify-center text-[#ffe600] shadow-[3px_3px_0px_#000] shrink-0">
-                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffe600]" />
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between border-b-2 border-black pb-3.5 sm:pb-5 gap-3 sm:gap-3.5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="bg-[#ffe600] text-black font-mono font-black text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full border border-black uppercase tracking-wider">
+                    KNOWLEDGE STUDIO
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-900 font-mono font-bold text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full border border-emerald-400">
+                    AIR-GAPPED FAISS
+                  </span>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-black font-mono">
-                      Knowledge Base Studio
-                    </h1>
-                    <span className="bg-[#ffe600] text-black text-[10px] font-black font-mono px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000] uppercase shrink-0">
-                      Local Multimodal
-                    </span>
-                  </div>
-                  <div className="text-[11px] sm:text-xs font-mono text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="text-emerald-700 font-bold flex items-center gap-1.5 shrink-0">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      100% Private On-Device Engine
-                    </span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-gray-600 font-medium shrink-0">Hardware Vectors</span>
-                    <span className="text-gray-400 hidden sm:inline">•</span>
-                    <span className="text-gray-600 font-medium hidden sm:inline shrink-0">Visual OCR</span>
-                  </div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-black font-sans uppercase">
+                  Multi-Modal Document Intelligence
+                </h1>
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono text-gray-700 font-bold">
+                  <span className="text-gray-900 font-black">100% Confidential</span>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-gray-600 font-medium shrink-0">Zero Cloud Leakage</span>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-gray-600 font-medium shrink-0">Hardware Vectors</span>
+                  <span className="text-gray-400 hidden sm:inline">•</span>
+                  <span className="text-gray-600 font-medium hidden sm:inline shrink-0">Visual OCR</span>
                 </div>
               </div>
 
               {/* Right Side: Clean Unified Button Row */}
-              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full xl:w-auto justify-start xl:justify-end shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full xl:w-auto justify-start xl:justify-end shrink-0">
                 {ragStats.total_vectors > 0 && (
                   <button
                     onClick={() => setActiveView("chat")}
-                    className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                    className="bg-[#ffe600] hover:bg-yellow-400 text-black font-black font-mono text-xs px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                   >
-                    <Bot className="w-4 h-4 text-black" />
-                    <span>Open Chat Studio ({ragStats.total_vectors}) →</span>
+                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
+                    <span>Chat Studio ({ragStats.total_vectors}) →</span>
                   </button>
                 )}
                 <button
                   onClick={() => setShowModelHubModal(true)}
-                  className="bg-black text-[#ffe600] hover:bg-neutral-800 font-black font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                  className="bg-black text-[#ffe600] hover:bg-neutral-800 font-black font-mono text-xs px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                   title="Browse, install, and switch open-source LLMs"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#ffe600]" />
@@ -1916,14 +1911,14 @@ function KnowledgeBaseStudioPage() {
                 </button>
                 <Link
                   to="/docs"
-                  className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                  className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-black" />
                   <span>Docs</span>
                 </Link>
                 <Link
                   to="/"
-                  className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-3.5 py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                  className="bg-white hover:bg-gray-100 text-black font-bold font-mono text-xs px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] shrink-0"
                 >
                   Home
                 </Link>
