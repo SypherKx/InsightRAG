@@ -395,12 +395,87 @@ def run_backend():
     # Bind to 127.0.0.1 to guarantee local loopback without Windows Defender Firewall blocking popups
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, log_level="warning", reload=False)
 
+_browser_opened = False
+_browser_lock = threading.Lock()
+
+def open_browser(url: str):
+    """Reliably launch browser across all Windows/Mac/Linux setups without duplicates."""
+    global _browser_opened
+    with _browser_lock:
+        if _browser_opened:
+            return True
+        _browser_opened = True
+
+    # 1. Direct Windows native ShellExecute (fastest & most reliable on Windows)
+    if os.name == 'nt':
+        try:
+            os.startfile(url)
+            return True
+        except Exception:
+            pass
+
+        # 2. Windows CMD start command
+        try:
+            subprocess.Popen(f'start "" "{url}"', shell=True)
+            return True
+        except Exception:
+            pass
+
+        # 3. PowerShell Start-Process
+        try:
+            subprocess.Popen(["powershell", "-NoProfile", "-Command", f"Start-Process '{url}'"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        except Exception:
+            pass
+
+    # 4. Standard Python webbrowser module
+    try:
+        if webbrowser.open(url):
+            return True
+    except Exception:
+        pass
+
+    # 5. OS-specific fallbacks (macOS / Linux)
+    if sys.platform == 'darwin':
+        try:
+            subprocess.Popen(['open', url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        except Exception:
+            pass
+    elif sys.platform.startswith('linux'):
+        try:
+            subprocess.Popen(['xdg-open', url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        except Exception:
+            pass
+
+    return False
+
+def auto_open_browser_when_ready(url: str, port: int = 5173, timeout: int = 60):
+    """Background watchdog that opens the browser the exact moment port 5173 responds."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if _browser_opened:
+            return
+        try:
+            import socket
+            with socket.create_connection(("127.0.0.1", port), timeout=0.8):
+                time.sleep(0.4)
+                open_browser(url)
+                return
+        except Exception:
+            time.sleep(0.3)
+    
+    # Fallback if timeout elapsed
+    if not _browser_opened:
+        open_browser(url)
+
 def run_frontend_dev():
     """Run Vite dev server for the frontend on port 5173."""
     frontend_dir = ROOT_DIR / "frontend"
     npm_cmd = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
     return subprocess.Popen(
-        [npm_cmd, "run", "dev", "--", "--clearScreen", "false", "--no-open"],
+        [npm_cmd, "run", "dev", "--", "--clearScreen", "false"],
         cwd=str(frontend_dir),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -409,7 +484,7 @@ def run_frontend_dev():
         errors='ignore'
     )
 
-def wait_for_port(port, timeout=30):
+def wait_for_port(port, timeout=45):
     import socket
     start = time.time()
     while time.time() - start < timeout:
@@ -452,6 +527,10 @@ def main():
     print(f"[>] Starting Studio UI Server...")
     vite_proc = run_frontend_dev()
 
+    # Launch background auto-open watchdog immediately
+    watcher_thread = threading.Thread(target=auto_open_browser_when_ready, args=(STUDIO_URL, 5173, 60), daemon=True)
+    watcher_thread.start()
+
     # Stream Vite output so user can see startup logs
     def stream_vite():
         for line in vite_proc.stdout:
@@ -465,17 +544,16 @@ def main():
     # Wait for both ports to be ready
     print(f"[*] Initializing on-device vector index & models...")
     wait_for_port(8000, timeout=20)
-    ready = wait_for_port(5173, timeout=30)
+    ready = wait_for_port(5173, timeout=45)
 
     if ready:
         print(f"\n{ANSI_GREEN}{ANSI_BOLD}[✓] InsightRAG Studio is LIVE! Auto-opening browser:{ANSI_RESET}")
         print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
-        try:
-            webbrowser.open(STUDIO_URL)
-        except Exception:
-            pass
+        open_browser(STUDIO_URL)
     else:
-        print(f"\n{ANSI_YELLOW}[!] Open Studio manually: {STUDIO_URL}{ANSI_RESET}")
+        print(f"\n{ANSI_YELLOW}[*] Studio server initialized. Launching browser:{ANSI_RESET}")
+        print(f"{ANSI_CYAN}{ANSI_BOLD}👉 {STUDIO_URL}{ANSI_RESET}\n")
+        open_browser(STUDIO_URL)
 
     # Keep process alive
     try:

@@ -48,6 +48,7 @@ export default defineConfig(async ({ command }) => {
     server: {
       host: "0.0.0.0",
       port: 5173,
+      open: "/app/upload",
       proxy: {
         "/api": {
           target: "http://127.0.0.1:8000",
