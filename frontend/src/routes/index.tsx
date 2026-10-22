@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy,
   Check,
@@ -30,13 +30,122 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
+/* ─── OS Platform Logos (inline SVGs) ─── */
+
+const WindowsLogo = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 88 88" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L.028 71.58l-.026-25.65zm4.326-39.025L87.314 0v41.527l-47.318.376zm47.329 39.349l-.011 41.34-47.318-6.678-.066-34.739z" />
+  </svg>
+);
+
+const AppleLogo = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 384 512" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+  </svg>
+);
+
+const LinuxLogo = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68a1.22 1.22 0 00-.112.49c0 .21.04.413.107.566.067.152.159.283.261.39.103.11.218.19.342.253.124.062.263.095.399.095h.005c.044 0 .088-.002.131-.006.375-.04.645-.243.888-.478.063-.06.122-.13.184-.193.063.033.125.075.187.108.393.202.8.31 1.201.322.202.01.39-.02.575-.074.075.127.163.235.273.322.186.15.402.234.626.264.42.063.847-.058 1.17-.347.084-.075.158-.16.229-.244l.017.012c.063.06.128.12.195.175.337.275.768.436 1.167.404a1.347 1.347 0 00.696-.255c.077-.052.15-.113.217-.18.067.06.139.116.21.173a1.36 1.36 0 00.858.287 1.47 1.47 0 00.463-.073c.16-.054.315-.142.452-.252.092-.074.18-.155.262-.243l.022.012c.086.098.181.185.288.258.249.168.526.265.826.265h.006c.148 0 .297-.024.44-.071a1.42 1.42 0 00.404-.214c.084-.064.163-.138.236-.218.283.158.607.253.946.253.355 0 .697-.105.985-.298a1.47 1.47 0 00.468-.44c.08.038.16.07.243.097.125.04.255.06.387.06h.005c.168 0 .337-.035.497-.096a1.36 1.36 0 00.43-.262 1.37 1.37 0 00.288-.348c.065-.122.108-.257.125-.396l.005-.038c.012-.138-.002-.28-.042-.417a1.42 1.42 0 00-.183-.4 1.74 1.74 0 00-.159-.2c.038-.097.066-.2.083-.307.033-.203.017-.413-.05-.605-.055-.16-.139-.305-.24-.432-.062-.077-.131-.148-.2-.22.089-.163.16-.34.206-.525.06-.242.07-.498.022-.747a2.078 2.078 0 00-.254-.673c-.105-.17-.226-.32-.365-.446l.002-.001c.142-.398.225-.82.225-1.262 0-.705-.197-1.357-.534-1.912.072-.168.127-.347.157-.534.049-.305.034-.617-.04-.908a2.72 2.72 0 00-.319-.733 3.545 3.545 0 00-.547-.685 5.312 5.312 0 00-.72-.611 7.671 7.671 0 00-.84-.531 10.24 10.24 0 00-.902-.43c-.16-.07-.32-.127-.468-.175a.52.52 0 01-.11-.064c-.103-.084-.18-.212-.244-.35a2.23 2.23 0 01-.16-.556c-.04-.213-.065-.45-.078-.716a7.988 7.988 0 01.008-1.003c.018-.236.044-.484.072-.729.103-.9.186-1.816-.017-2.58-.157-.585-.443-1.073-.87-1.395C13.273.12 12.85 0 12.504 0z" />
+  </svg>
+);
+
+/* ─── Platform Configurations ─── */
+
+type PlatformKey = "windows" | "macos" | "linux";
+
+interface PlatformConfig {
+  id: PlatformKey;
+  label: string;
+  icon: typeof WindowsLogo;
+  prompt: string;
+  command: string;
+  shellName: string;
+  accentColor: string;
+  bgGlow: string;
+}
+
+const platforms: PlatformConfig[] = [
+  {
+    id: "windows",
+    label: "Windows",
+    icon: WindowsLogo,
+    prompt: "PS>",
+    command: "irm https://www.insightrag.tech/install.ps1 | iex",
+    shellName: "PowerShell",
+    accentColor: "#0078D4",
+    bgGlow: "rgba(0, 120, 212, 0.15)",
+  },
+  {
+    id: "macos",
+    label: "macOS",
+    icon: AppleLogo,
+    prompt: "$",
+    command: "curl -fsSL https://www.insightrag.tech/install.sh | bash",
+    shellName: "Terminal",
+    accentColor: "#A2AAAD",
+    bgGlow: "rgba(162, 170, 173, 0.15)",
+  },
+  {
+    id: "linux",
+    label: "Linux",
+    icon: LinuxLogo,
+    prompt: "$",
+    command: "curl -fsSL https://www.insightrag.tech/install.sh | sh",
+    shellName: "Terminal",
+    accentColor: "#FCC624",
+    bgGlow: "rgba(252, 198, 36, 0.15)",
+  },
+];
+
+/* ─── Animation Variants ─── */
+
+const commandVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 60 : -60,
+    opacity: 0,
+    scale: 0.95,
+    filter: "blur(6px)",
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 60 : -60,
+    opacity: 0,
+    scale: 0.95,
+    filter: "blur(6px)",
+  }),
+};
+
+const shellInfoVariants = {
+  enter: { opacity: 0, y: 8 },
+  center: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+};
+
 function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const cliCommand = `irm https://www.insightrag.tech/install.ps1 | iex`;
+  const [activePlatform, setActivePlatform] = useState<PlatformKey>("windows");
+  const [direction, setDirection] = useState(0);
+
+  const currentPlatform = platforms.find((p) => p.id === activePlatform)!;
+
+  const handlePlatformSwitch = (platformId: PlatformKey) => {
+    if (platformId === activePlatform) return;
+    const currentIndex = platforms.findIndex((p) => p.id === activePlatform);
+    const nextIndex = platforms.findIndex((p) => p.id === platformId);
+    setDirection(nextIndex > currentIndex ? 1 : -1);
+    setActivePlatform(platformId);
+    setCopied(false);
+  };
 
   const handleCopyCLI = () => {
-    navigator.clipboard.writeText(cliCommand);
+    navigator.clipboard.writeText(currentPlatform.command);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -157,9 +266,13 @@ function LandingPage() {
             enterprise documents into a turnkey, anti-hallucination AI knowledge studio in seconds.
           </p>
 
-          {/* Interactive Command Box with Multi-Platform Tabs */}
-          <div className="max-w-2xl mx-auto bg-black text-white p-3 sm:p-4 rounded-2xl border-2 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] space-y-2.5 font-mono text-xs sm:text-sm text-left">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2">
+          {/* ═══════════════════════════════════════════════════════════════════
+              MULTI-PLATFORM INSTALL COMMAND BOX WITH OS SWITCHER
+              ═══════════════════════════════════════════════════════════════════ */}
+          <div className="max-w-2xl mx-auto bg-black text-white rounded-2xl border-2 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] font-mono text-xs sm:text-sm text-left overflow-hidden">
+            
+            {/* ── Header Row ── */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 px-3 sm:px-4 pt-3 sm:pt-4 pb-2">
               <div className="flex items-center gap-1.5 text-[10px] sm:text-xs">
                 <span className="text-[#ffe600] font-black flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
@@ -173,30 +286,125 @@ function LandingPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-2 justify-between bg-[#0d1117] rounded-xl p-2 sm:px-3 sm:py-2.5 border border-gray-800">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0 scrollbar-none">
-                <span className="text-gray-500 flex-shrink-0 text-xs font-mono">PS&gt;</span>
-                <code className="whitespace-nowrap text-[10px] sm:text-xs text-emerald-300">
-                  {cliCommand}
-                </code>
+            {/* ── OS Platform Tabs ── */}
+            <div className="px-3 sm:px-4 pt-3">
+              <div className="flex items-center gap-1 bg-[#0d1117] rounded-xl p-1 border border-gray-800">
+                {platforms.map((platform) => {
+                  const Icon = platform.icon;
+                  const isActive = activePlatform === platform.id;
+                  return (
+                    <button
+                      key={platform.id}
+                      onClick={() => handlePlatformSwitch(platform.id)}
+                      className="relative flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg font-black text-[10px] sm:text-xs cursor-pointer transition-colors duration-200"
+                      style={{
+                        color: isActive ? "#000" : "#9ca3af",
+                      }}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="os-tab-indicator"
+                          className="absolute inset-0 rounded-lg"
+                          style={{
+                            background: "#ffe600",
+                            boxShadow: `0 0 20px ${platform.bgGlow}, inset 0 1px 0 rgba(255,255,255,0.1)`,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 30,
+                          }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span>{platform.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              <button
-                onClick={handleCopyCLI}
-                className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-1.5 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1 ml-1 sm:ml-2 active:scale-95 transition"
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? "COPIED!" : "COPY"}</span>
-              </button>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400 font-mono pt-0.5">
-              <span className="flex items-center gap-1">
-                <Terminal className="w-3 h-3 text-[#ffe600]" />
-                <span>
-                  Paste &amp; run this in <strong className="text-white">PowerShell</strong>
-                </span>
-              </span>
-              <span className="text-[#ffe600] font-bold">Terminal setup auto-launches Studio upon completion</span>
+            {/* ── Command Display Area (animated) ── */}
+            <div className="px-3 sm:px-4 pt-2.5 pb-1">
+              <div
+                className="relative rounded-xl border border-gray-800 overflow-hidden transition-colors duration-500"
+                style={{
+                  background: `linear-gradient(135deg, ${currentPlatform.bgGlow}, #0d1117 60%)`,
+                }}
+              >
+                {/* Subtle accent glow bar at top */}
+                <motion.div
+                  className="absolute top-0 left-0 right-0 h-[2px]"
+                  style={{ background: currentPlatform.accentColor }}
+                  layoutId="os-glow-bar"
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                />
+
+                <div className="flex items-center gap-2 justify-between p-2 sm:px-3 sm:py-2.5 min-h-[44px]">
+                  <AnimatePresence mode="wait" custom={direction}>
+                    <motion.div
+                      key={activePlatform}
+                      custom={direction}
+                      variants={commandVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{
+                        x: { type: "spring", stiffness: 500, damping: 35 },
+                        opacity: { duration: 0.2 },
+                        scale: { duration: 0.2 },
+                        filter: { duration: 0.25 },
+                      }}
+                      className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0 scrollbar-none"
+                    >
+                      <span
+                        className="flex-shrink-0 text-xs font-mono font-black"
+                        style={{ color: currentPlatform.accentColor }}
+                      >
+                        {currentPlatform.prompt}
+                      </span>
+                      <code className="whitespace-nowrap text-[10px] sm:text-xs text-emerald-300">
+                        {currentPlatform.command}
+                      </code>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  <button
+                    onClick={handleCopyCLI}
+                    className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-1.5 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1 ml-1 sm:ml-2 active:scale-95 transition"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? "COPIED!" : "COPY"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Bottom Info Row (animated per platform) ── */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400 font-mono px-3 sm:px-4 pb-3 sm:pb-4 pt-1">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={`shell-${activePlatform}`}
+                  variants={shellInfoVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center gap-1"
+                >
+                  <Terminal className="w-3 h-3 text-[#ffe600]" />
+                  <span>
+                    Paste &amp; run in{" "}
+                    <strong className="text-white">{currentPlatform.shellName}</strong>
+                    {currentPlatform.id !== "windows" && (
+                      <span className="text-gray-500 ml-1">(or any POSIX shell)</span>
+                    )}
+                  </span>
+                </motion.span>
+              </AnimatePresence>
+              <span className="text-[#ffe600] font-bold">Auto-launches Studio upon completion</span>
             </div>
           </div>
 
