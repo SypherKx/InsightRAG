@@ -67,25 +67,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+    if (!auth) {
       setLoading(false);
-      if (currentUser) {
-        // Record analytics event
-        if (analytics) {
-          try {
-            logEvent(analytics, "login", { method: currentUser.providerData[0]?.providerId || "firebase" });
-          } catch {}
-        }
-        // Record in backend audit logs
-        recordBackendLogin(currentUser);
-      }
-    });
+      return;
+    }
 
-    return () => unsubscribe();
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+        if (currentUser) {
+          // Record analytics event
+          if (analytics) {
+            try {
+              logEvent(analytics, "login", { method: currentUser.providerData[0]?.providerId || "firebase" });
+            } catch {}
+          }
+          // Record in backend audit logs
+          recordBackendLogin(currentUser);
+        }
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn("Auth state listener initialization failed:", err);
+      setLoading(false);
+    }
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!auth || !googleProvider) throw new Error("Firebase Auth is not ready.");
     const res = await signInWithPopup(auth, googleProvider);
     if (res.user) {
       await recordBackendLogin(res.user);
@@ -93,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithEmail = async (email: string, pass: string) => {
+    if (!auth) throw new Error("Firebase Auth is not ready.");
     const res = await signInWithEmailAndPassword(auth, email, pass);
     if (res.user) {
       await recordBackendLogin(res.user);
@@ -100,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUpWithEmail = async (email: string, pass: string, name?: string) => {
+    if (!auth) throw new Error("Firebase Auth is not ready.");
     const res = await createUserWithEmailAndPassword(auth, email, pass);
     if (res.user && name) {
       await updateProfile(res.user, { displayName: name });
@@ -110,11 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
   };
 
   const getIdToken = async () => {
-    if (!auth.currentUser) return null;
+    if (!auth || !auth.currentUser) return null;
     return await auth.currentUser.getIdToken();
   };
 

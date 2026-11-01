@@ -40,7 +40,7 @@ const api = axios.create({
 // Attach Firebase ID Token automatically to all outgoing backend requests
 api.interceptors.request.use(async (config) => {
   try {
-    const currentUser = auth.currentUser;
+    const currentUser = auth?.currentUser;
     if (currentUser) {
       const token = await currentUser.getIdToken();
       config.headers = config.headers || {};
