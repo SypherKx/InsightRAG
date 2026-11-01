@@ -21,6 +21,9 @@ statsmodels>=0.14.0
 # Database
 sqlalchemy>=2.0.0
 
+# Authentication & Access Tracking
+firebase-admin>=7.0.0
+
 # File handling
 python-dateutil>=2.8.0
 chardet>=5.0.0

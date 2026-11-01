@@ -202,52 +202,146 @@ InsightRAG AI is audited and hardened against all major web and LLM vulnerabilit
 
 ---
 
-## 📂 Repository Structure
+## 📂 Repository Structure & Module Architecture
 
 ```
 InsightRAG/
-├── backend/                      # FastAPI Backend & RAG Engine
-│   ├── main.py                   # App entrypoint, OWASP headers & CORS middleware
-│   ├── config.py                 # Pydantic configuration & model parameters
-│   ├── routers/                  # API routers (rag, datasets, anomalies, system)
-│   ├── services/                 # RAG pipeline, embedding loader & Ollama manager
-│   ├── storage/                  # SQLite database models & secure file store
-│   └── utils/                    # Security utilities (path validation, sanitization)
+├── backend/                              # ⚡ FastAPI High-Performance Backend & AI Engine
+│   ├── main.py                           # App entrypoint, OWASP security headers, CORS & SPA mount
+│   ├── config.py                         # Pydantic configuration, env variables & admin whitelists
+│   ├── dependencies.py                   # Dependency injection (FileStore, RAGService, AnalysisService)
+│   ├── requirements.txt                  # Python dependencies for backend & ML engines
+│   ├── models/                           # Pydantic Data Contracts & Schemas
+│   │   ├── requests.py                   # Request validation (RAG queries, feedback, models)
+│   │   └── responses.py                  # Standardized response envelopes & schemas
+│   ├── routers/                          # API Route Controllers (/api/v1)
+│   │   ├── auth.py                       # User login audit, activity tracking & admin logs
+│   │   ├── rag.py                        # Document ingestion, FAISS queries, streaming SSE & ROI cropping
+│   │   ├── datasets.py                   # CSV/TSV uploads, schema inference & validation
+│   │   ├── anomalies.py                  # Statistical anomaly endpoints & severity rankings
+│   │   ├── health.py                     # Health checks & uptime monitoring
+│   │   └── system.py                     # Hardware detection (CUDA/CPU), Ollama model manager
+│   ├── services/                         # Business Logic & Orchestration
+│   │   ├── rag_service.py                # FAISS vector store coordinator & multi-model router
+│   │   ├── dataset_service.py            # File ingestion, normalization & quality scoring
+│   │   └── analysis.py                   # Root-cause analysis & natural language generator
+│   ├── storage/                          # Persistent Storage & Database
+│   │   ├── database.py                   # SQLAlchemy ORM (datasets, anomalies, user_access_logs)
+│   │   └── file_store.py                 # Multi-format local disk & cloud file storage handler
+│   └── utils/                            # Security, Rate Limiting & Auth Hardening
+│       ├── firebase_auth.py              # Firebase Admin SDK, ID token verification & admin RBAC
+│       ├── rate_limiter.py               # In-memory sliding-window anti-DoS & brute-force protection
+│       └── security.py                   # Path traversal protection & safe filename sanitization
 │
-├── frontend/                     # React 19 + Vite 7 Frontend Application
+├── frontend/                             # 🎨 React 19 + Vite 7 Modern Studio SPA
 │   ├── src/
-│   │   ├── routes/               # TanStack Router pages (/, /docs, /app/upload)
-│   │   ├── components/           # Neo-Brutalist design system & studio cards
-│   │   ├── services/             # Axios API client & WebSocket handlers
-│   │   └── styles.css            # Styling, animations & typography
-│   └── package.json              # Frontend dependencies
+│   │   ├── routes/                       # TanStack File-Based Routing System
+│   │   │   ├── __root.tsx                # App root shell, HTML head, query & auth providers
+│   │   │   ├── index.tsx                 # Neo-Brutalist landing page, OS switcher & locked installer
+│   │   │   ├── app.tsx                   # Studio Zero-Trust Auth Guard (requires sign-in)
+│   │   │   ├── app.upload.tsx            # Multi-file drag-and-drop document ingestion studio
+│   │   │   ├── app.query.tsx             # Fullscreen RAG chat studio with zoomable diagram cards
+│   │   │   ├── app.dashboard.tsx         # Document index manager & knowledge base overview
+│   │   │   ├── app.anomalies.tsx         # Anomaly detection & statistical metrics explorer
+│   │   │   ├── app.anomalies.$id.tsx     # Deep-dive root-cause attribution & driver breakdown
+│   │   │   ├── docs.tsx                  # Interactive documentation & API reference
+│   │   │   ├── features.tsx              # Capabilities, benchmark comparisons & specifications
+│   │   │   └── about.tsx                 # Architecture deep-dive & design philosophy
+│   │   ├── components/                   # Component Library & Design System
+│   │   │   ├── auth/                     # Authentication & Access UI
+│   │   │   │   └── AuthModal.tsx         # 1-Click Google Sign-In & Email/Password popup
+│   │   │   ├── brand/                    # Brand assets, vector logos & wordmarks
+│   │   │   ├── dashboard/                # Studio shells, sidebar navigations & stat cards
+│   │   │   ├── marketing/                # Hero visualizers, navbar, and interactive installer guides
+│   │   │   ├── premium/                  # Ambient backgrounds, glass cards & glow badges
+│   │   │   └── ui/                       # Accessible Shadcn/UI primitives (buttons, modals, dialogs)
+│   │   ├── lib/                          # Core Client Utilities & State
+│   │   │   ├── firebase.ts               # Firebase Web SDK initialization & Google Analytics
+│   │   │   ├── auth-context.tsx          # User auth lifecycle, login/logout & token synchronization
+│   │   │   └── utils.ts                  # ClassName merging (`clsx` + `tailwind-merge`)
+│   │   ├── services/                     # HTTP API Client
+│   │   │   └── api.ts                    # Axios client with automatic Bearer token interceptor
+│   │   └── styles.css                    # Tailwind CSS v4 design tokens & responsive typography
+│   └── package.json                      # Frontend dependencies & npm scripts
 │
-├── src/                          # Core analytical and RAG modules
-│   ├── detection/                # Statistical change-point & anomaly detection
-│   ├── explainer/                # Prompt generators & context formatting
-│   ├── ingestion/                # Document cleaning & format parsers
-│   └── rag/                      # FAISS store, Moondream vision, ROI cropper, RLHF
+├── src/                                  # 🧠 Core Algorithmic & AI Engine (Library)
+│   ├── rag/                              # Multimodal RAG Pipeline
+│   │   ├── chunker.py                    # Token-aware sliding chunker with overlap
+│   │   ├── embeddings.py                 # Dense embeddings (all-MiniLM, BGE, Nomic-Embed)
+│   │   ├── vectorstore.py                # 100% on-device FAISS vector indexer
+│   │   ├── image_regions.py              # Visual ROI diagram cropper & perceptual hashes
+│   │   ├── anti_hallucination.py         # Cosine gating & factual shield verification
+│   │   ├── feedback_store.py             # SQLite RLHF rating store for adaptive reranking
+│   │   └── retriever.py                  # Hybrid dense + lexical retrieval coordinator
+│   ├── ingestion/                        # Multi-Format Ingestion Pipeline
+│   │   ├── parser.py                     # High-fidelity PDF, DOCX, CSV, TXT & image extractor
+│   │   ├── cleaner.py                    # Text normalization, unicode repair & whitespace cleaning
+│   │   └── validator.py                  # File structure, schema integrity & security validator
+│   ├── detection/                        # Statistical Anomaly Detection
+│   │   ├── algorithms.py                 # Z-Score, IQR, Isolation Forest & STL decomposition
+│   │   ├── detector.py                   # Multi-algorithm anomaly discovery engine
+│   │   └── scorer.py                     # Severity & confidence ranking algorithms
+│   ├── root_cause/                       # Causal & Attribution Engine
+│   │   ├── analyzer.py                   # Multi-variable driver & segment analysis
+│   │   ├── correlator.py                 # Pearson & Spearman correlation matrices
+│   │   └── segmenter.py                  # High-dimensional slicing & change-point locator
+│   └── explainer/                        # Natural Language Explanation Generator
+│       ├── generator.py                  # Structured natural language insight builder
+│       └── llm_client.py                 # Local Ollama / Groq / OpenAI LLM abstraction
 │
-├── scripts/                      # Utility & automation scripts
-│   ├── run_local.py              # Cross-platform Python local runner
-│   └── generate_obsidian_vault.py# Obsidian knowledge graph generator
+├── scripts/                              # 🛠️ Automation & Operational Scripts
+│   ├── run_local.py                      # Unified local runner (boots backend, frontend & Ollama)
+│   ├── benchmark_rag.py                  # Retrieval speed & accuracy latency benchmarks
+│   └── generate_obsidian_vault.py        # Generates interactive Obsidian markdown vault
 │
-├── launch.ps1                    # 1-Click PowerShell launcher for Windows
-├── install.ps1                   # Universal 1-line web installer
-├── run.bat                       # 1-Click Windows batch launcher
-└── README.md                     # Project documentation
+├── launch.ps1                            # ⚡ 1-Click PowerShell launcher for Windows
+├── install.ps1                           # 🌐 Universal 1-line web installer
+├── run.bat                               # 🖱️ 1-Click double-click Windows desktop batch runner
+└── README.md                             # 📖 Master documentation & specifications
 ```
 
 ---
 
+## 🧭 Developer Quick Navigation Guide (Where Do I Find X?)
+
+For contributors and developers onboarding onto InsightRAG, here is where every key piece of functionality lives:
+
+| What do you want to do? | Key File(s) to Inspect & Modify |
+|:---|:---|
+| 💬 **Customize RAG Chat UI & Diagram Cards** | [`frontend/src/routes/app.query.tsx`](frontend/src/routes/app.query.tsx) |
+| 📄 **Change Document Ingestion / File Upload UI** | [`frontend/src/routes/app.upload.tsx`](frontend/src/routes/app.upload.tsx) |
+| 🔐 **Modify Login / Signup Pop-up & Google Auth** | [`frontend/src/components/auth/AuthModal.tsx`](frontend/src/components/auth/AuthModal.tsx) & [`frontend/src/lib/auth-context.tsx`](frontend/src/lib/auth-context.tsx) |
+| 🛡️ **Update Studio Protected Auth Guard** | [`frontend/src/routes/app.tsx`](frontend/src/routes/app.tsx) |
+| 🌐 **Add / Modify HTTP API Endpoints** | [`backend/routers/`](backend/routers/) (`rag.py`, `auth.py`, `datasets.py`) |
+| ⚙️ **Change Server Ports, LLMs, or Admin Whitelists** | [`backend/config.py`](backend/config.py) |
+| 💾 **Modify Database Tables & Models (SQLAlchemy)** | [`backend/storage/database.py`](backend/storage/database.py) |
+| 🥷 **Tweak Rate Limiting & Anti-Brute Force** | [`backend/utils/rate_limiter.py`](backend/utils/rate_limiter.py) |
+| 🔍 **Tune FAISS Vector Store, Embeddings & Chunker** | [`src/rag/chunker.py`](src/rag/chunker.py), [`src/rag/vectorstore.py`](src/rag/vectorstore.py), [`src/rag/embeddings.py`](src/rag/embeddings.py) |
+| 👁️ **Adjust Vision ROI Diagram Cropper & Hashing** | [`src/rag/image_regions.py`](src/rag/image_regions.py) |
+| 📊 **Tweak Statistical Anomaly Detection (Z-Score/IQR)**| [`src/detection/algorithms.py`](src/detection/algorithms.py) & [`src/detection/scorer.py`](src/detection/scorer.py) |
+| 🚀 **Run the Entire System Locally** | `run.bat` (Windows 1-Click) or `python scripts/run_local.py` |
+
+---
+
 ## 🔌 REST API Reference
+
+### 🔐 Authentication & Audit API
+
+| Method | Endpoint | Access Level | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/record-login` | Rate-Limited | Records user sign-in events (IP, user agent, timestamp) to audit store |
+| `POST` | `/api/v1/auth/track-action` | Rate-Limited | Tracks specific user actions (e.g., copying install command, document view) |
+| `GET` | `/api/v1/auth/me` | Authenticated | Retrieves current verified user profile, email, and admin status |
+| `GET` | `/api/v1/auth/logs` | **Admin Only** | Returns full audit trail of all users accessing the platform and code |
+
+### 🧠 Multimodal RAG & Intelligence API
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/v1/health` | Server health check, uptime, and security headers status |
 | `POST` | `/api/v1/rag/documents` | Upload & vectorize documents with optional `start_page`/`end_page` |
 | `GET` | `/api/v1/rag/documents/{task_id}/status` | Check real-time ingestion status and progress |
-| `POST` | `/api/v1/rag/query` | Grounded multi-turn RAG query with citations & visual snippet |
+| `POST` | `/api/v1/rag/query` | Grounded multi-turn RAG query with citations & visual diagram snippet |
 | `POST` | `/api/v1/rag/query/stream` | Real-time SSE token streaming query response |
 | `GET` | `/api/v1/rag/crop` | Dynamic sub-region diagram cropping and high-resolution rendering |
 | `GET` | `/api/v1/rag/images/{doc}/{img}` | Serves extracted visual diagrams and bounding-box image assets |

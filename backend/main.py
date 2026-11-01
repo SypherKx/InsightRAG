@@ -111,9 +111,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Register routers
-from .routers import health, datasets, anomalies, rag, system
+from .routers import health, datasets, anomalies, rag, system, auth
 
 app.include_router(health.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(datasets.router, prefix="/api/v1")
 app.include_router(anomalies.router, prefix="/api/v1")
 app.include_router(rag.router, prefix="/api/v1")

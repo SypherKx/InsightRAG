@@ -31,10 +31,14 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# Environment
+# Environment & Secrets
 .env
 .env.local
 .env.*
+serviceAccountKey.json
+*serviceAccountKey*.json
+backend/serviceAccountKey.json
+firebase-*.json
 
 # Dynamic User Uploads & Vector Indexes
 uploads/

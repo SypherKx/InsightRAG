@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Menu, X, Sparkles, BookOpen, Layers, Terminal } from "lucide-react";
+import { Download, Menu, X, Sparkles, BookOpen, Layers, Terminal, LogIn, LogOut, User as UserIcon } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 
 const links = [
   { to: "/", label: "Overview" },
@@ -14,6 +15,7 @@ const links = [
 export function Navbar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, openAuthModal, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[rgba(178,182,189,0.12)] bg-[#000000]/95 backdrop-blur-md transition-colors duration-200">
@@ -46,12 +48,47 @@ export function Navbar() {
 
         {/* Action Buttons & Mobile Hamburger Toggle */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Sign In / User Status */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-[#141414] text-white font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[rgba(178,182,189,0.2)]">
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="User"
+                    className="w-4 h-4 rounded-full border border-yellow-400 object-cover"
+                  />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-[#ffe600]" />
+                )}
+                <span className="hidden sm:inline font-bold max-w-[90px] truncate text-white">
+                  {user.displayName || user.email?.split("@")[0] || "User"}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                title="Sign Out"
+                className="p-2 rounded-lg bg-[#141414] border border-[rgba(178,182,189,0.2)] text-gray-400 hover:text-red-400 hover:bg-[#242424] transition"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={openAuthModal}
+              className="inline-flex items-center gap-1.5 bg-[#ffe600] text-black font-mono font-black text-xs px-3 py-2 rounded-lg border border-black hover:bg-yellow-400 transition active:scale-95 cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5 text-black" />
+              <span>Sign In</span>
+            </button>
+          )}
+
           {/* Studio Link for fast access */}
           <Link
             to="/app/upload"
-            className="hidden sm:inline-flex items-center gap-1.5 bg-[#ffe600] text-black font-mono font-black text-xs px-3 py-2 rounded-lg border border-black hover:bg-yellow-400 transition active:scale-95"
+            className="hidden sm:inline-flex items-center gap-1.5 bg-white/10 text-white font-mono font-bold text-xs px-3 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition active:scale-95"
           >
-            <Sparkles className="w-3.5 h-3.5 text-black" />
+            <Sparkles className="w-3.5 h-3.5 text-[#ffe600]" />
             <span>Open Studio</span>
           </Link>
 

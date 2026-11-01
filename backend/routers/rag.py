@@ -7,11 +7,15 @@ from pathlib import Path
 from typing import List, Optional
 
 import uuid
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Response, Query, BackgroundTasks, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Response, Query, BackgroundTasks, status, Depends, Request
+from datetime import datetime
+from typing import Dict, Any
 
 from ..dependencies import get_rag_service
 from ..models.requests import RAGQueryRequest, RAGFeedbackRequest
 from ..models.responses import RAGQueryResponse, RAGUploadResponse, RAGTaskStatusResponse
+from ..utils.firebase_auth import get_current_user_optional
+from ..storage.database import get_session, UserAccessLogRecord
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/rag", tags=["RAG"])
@@ -424,7 +428,11 @@ async def get_diagram_crop(
 
 
 @router.post("/query", response_model=RAGQueryResponse)
-async def query_rag(request: RAGQueryRequest):
+async def query_rag(
+    request: RAGQueryRequest,
+    req: Request,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional),
+):
     """Query RAG knowledge base for relevant context and optional LLM synthesis."""
     rag_svc = get_rag_service()
 
@@ -433,6 +441,26 @@ async def query_rag(request: RAGQueryRequest):
             status_code=503,
             detail="RAG service not available."
         )
+
+    # Security: Audit user query
+    try:
+        db = get_session()
+        log_entry = UserAccessLogRecord(
+            user_id=current_user.get("uid") if current_user else "anonymous",
+            email=current_user.get("email") if current_user else None,
+            name=current_user.get("name") if current_user else None,
+            action="rag_query",
+            path=req.url.path,
+            ip_address=req.client.host if req.client else "unknown",
+            user_agent=req.headers.get("user-agent", "unknown")[:200],
+            meta_info={"query_preview": request.query[:100], "generate_answer": request.generate_answer},
+            created_at=datetime.utcnow(),
+        )
+        db.add(log_entry)
+        db.commit()
+        db.close()
+    except Exception as e:
+        logger.warning(f"Could not record query audit log: {e}")
 
     result = rag_svc.query(
         query=request.query,

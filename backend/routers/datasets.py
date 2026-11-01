@@ -7,7 +7,9 @@ Handles CSV upload, listing, and dataset details.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends, Request
+from typing import Dict, Any
+from datetime import datetime
 
 from ..dependencies import get_dataset_service, get_analysis_service
 from ..models.responses import (
@@ -16,6 +18,8 @@ from ..models.responses import (
     UploadResponse,
     ColumnSchemaResponse,
 )
+from ..utils.firebase_auth import get_current_user_optional
+from ..storage.database import get_session, UserAccessLogRecord
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
@@ -26,10 +30,12 @@ MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_dataset(
+    request: Request,
     file: UploadFile = File(...),
     name: Optional[str] = Form(None),
     time_column: Optional[str] = Form(None),
     dimensions: Optional[str] = Form(None),
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional),
 ):
     """
     Upload a CSV file and run analysis.
@@ -61,6 +67,26 @@ async def upload_dataset(
     )
 
     dataset_id = dataset["id"]
+
+    # Security: Audit log dataset upload
+    try:
+        db = get_session()
+        log_entry = UserAccessLogRecord(
+            user_id=current_user.get("uid") if current_user else "anonymous",
+            email=current_user.get("email") if current_user else None,
+            name=current_user.get("name") if current_user else None,
+            action="upload_dataset",
+            path=request.url.path,
+            ip_address=request.client.host if request.client else "unknown",
+            user_agent=request.headers.get("user-agent", "unknown")[:200],
+            meta_info={"dataset_id": dataset_id, "filename": file.filename, "size_bytes": len(content)},
+            created_at=datetime.utcnow(),
+        )
+        db.add(log_entry)
+        db.commit()
+        db.close()
+    except Exception as e:
+        logger.warning(f"Could not record dataset upload audit log: {e}")
 
     # Run analysis
     try:

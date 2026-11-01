@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     rag_index_path: str = "/tmp/rag_index" if is_serverless else "./rag_index"
     rag_enabled: bool = True
 
+    # Security & Admin Access
+    admin_emails: str = "karanpratapsingh685@gmail.com,itskaranpratapsingh@gmail.com"
+    firebase_project_id: str = "insightrag-ad79a"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -56,6 +60,10 @@ class Settings(BaseSettings):
         if self.cors_origins == "*":
             return ["*"]
         return [o.strip() for o in self.cors_origins.split(",")]
+
+    @property
+    def admin_email_list(self) -> list:
+        return [e.strip().lower() for e in self.admin_emails.split(",") if e.strip()]
 
     def ensure_dirs(self):
         """Create necessary directories safely."""

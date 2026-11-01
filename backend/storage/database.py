@@ -116,6 +116,27 @@ class ExplanationRecord(Base):
     anomaly = relationship("AnomalyRecord", back_populates="explanation")
 
 
+class UserAccessLogRecord(Base):
+    """User access and activity audit log."""
+    __tablename__ = "user_access_logs"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(128), nullable=True)  # Firebase UID
+    email = Column(String(255), nullable=True)
+    name = Column(String(255), nullable=True)
+    action = Column(String(100), default="access")  # login, query, upload, download
+    path = Column(String(500), nullable=True)
+    ip_address = Column(String(50), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    meta_info = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_user_logs_user_id", "user_id"),
+        Index("idx_user_logs_created_at", "created_at"),
+    )
+
+
 # Database engine management
 _engine = None
 _SessionLocal = None
