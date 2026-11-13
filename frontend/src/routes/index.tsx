@@ -183,44 +183,46 @@ function LandingPage() {
                 Capabilities
               </a>
               <Link
-                to="/features"
-                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black"
-              >
-                Features
-              </Link>
-              <Link
                 to="/docs"
                 className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black font-black"
               >
                 Docs
               </Link>
-            </nav>
-
-            {/* Top Right Action Button - GitHub Repo */}
-            <div className="flex items-center gap-2 z-10">
               <a
                 href="https://github.com/SypherKx/InsightRAG"
                 target="_blank"
                 rel="noreferrer"
-                className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 flex items-center gap-1 text-black"
               >
-                <Code className="w-3.5 h-3.5 text-black" />
-                <span>GITHUB</span>
+                <Code className="w-3.5 h-3.5" />
+                <span>GitHub</span>
               </a>
+            </nav>
+
+            {/* Top Right Action Button - COPY CLI */}
+            <div className="flex items-center gap-2 z-10">
+              <button
+                onClick={handleCopyCLI}
+                className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
+                title="Copy 1-Line Launch Command"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5 text-black" />}
+                <span>{copied ? "COPIED CLI!" : "COPY CLI"}</span>
+              </button>
             </div>
           </div>
 
           {/* Mobile Quick Links Bar (< sm) */}
           <div className="sm:hidden mt-2 flex items-center justify-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1 rounded-lg border border-black text-[11px] font-mono font-bold text-black shadow-[1px_1px_0px_#000]">
+            <a href="#capabilities" className="px-2 py-0.5 hover:underline flex items-center gap-1">
+              <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
+              <span>Capabilities</span>
+            </a>
+            <span className="text-gray-300">|</span>
             <Link to="/docs" className="px-2 py-0.5 hover:underline font-black flex items-center gap-1">
               <BookOpen className="w-3.5 h-3.5" />
               <span>Docs</span>
             </Link>
-            <span className="text-gray-300">|</span>
-            <a href="#capabilities" className="px-2 py-0.5 hover:underline flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5 text-[#ffe600]" />
-              <span>Features</span>
-            </a>
             <span className="text-gray-300">|</span>
             <a
               href="https://github.com/SypherKx/InsightRAG"
