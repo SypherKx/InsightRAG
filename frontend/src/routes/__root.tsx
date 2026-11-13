@@ -8,7 +8,6 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth-context";
-import { AuthModal } from "@/components/auth/AuthModal";
 
 import appCss from "../styles.css?url";
 
@@ -168,7 +167,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
-        <AuthModal />
       </AuthProvider>
     </QueryClientProvider>
   );

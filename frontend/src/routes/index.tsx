@@ -14,12 +14,7 @@ import {
   BookOpen,
   Code,
   Zap,
-  Lock,
-  LogIn,
-  LogOut,
-  User as UserIcon,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -133,7 +128,6 @@ const shellInfoVariants = {
 };
 
 function LandingPage() {
-  const { user, openAuthModal, logout } = useAuth();
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activePlatform, setActivePlatform] = useState<PlatformKey>("windows");
@@ -151,10 +145,6 @@ function LandingPage() {
   };
 
   const handleCopyCLI = () => {
-    if (!user) {
-      openAuthModal();
-      return;
-    }
     navigator.clipboard.writeText(currentPlatform.command);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -193,58 +183,30 @@ function LandingPage() {
                 Capabilities
               </a>
               <Link
+                to="/features"
+                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black"
+              >
+                Features
+              </Link>
+              <Link
                 to="/docs"
                 className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 text-black font-black"
               >
                 Docs
               </Link>
+            </nav>
+
+            {/* Top Right Action Button - GitHub Repo */}
+            <div className="flex items-center gap-2 z-10">
               <a
                 href="https://github.com/SypherKx/InsightRAG"
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-1 rounded-full hover:bg-[#ffe600] hover:shadow-[1px_1px_0px_#000] transition-all duration-150 flex items-center gap-1 text-black"
+                className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
               >
-                <Code className="w-3.5 h-3.5" />
-                <span>GitHub</span>
+                <Code className="w-3.5 h-3.5 text-black" />
+                <span>GITHUB</span>
               </a>
-            </nav>
-
-            {/* Top Right Action Button - User Auth / Sign In */}
-            <div className="flex items-center gap-2 z-10">
-              {user ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 bg-black/90 text-white font-mono text-xs px-2.5 py-1.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_#ffe600]">
-                    {user.photoURL ? (
-                      <img
-                        src={user.photoURL}
-                        alt="User Avatar"
-                        className="w-5 h-5 rounded-full border border-yellow-400 object-cover"
-                      />
-                    ) : (
-                      <UserIcon className="w-4 h-4 text-[#ffe600]" />
-                    )}
-                    <span className="hidden sm:inline font-bold max-w-[100px] truncate text-white">
-                      {user.displayName || user.email?.split("@")[0] || "User"}
-                    </span>
-                  </div>
-                  <button
-                    onClick={logout}
-                    title="Sign Out"
-                    className="bg-[#1a1a1a] text-gray-300 hover:text-white hover:bg-red-950/80 font-mono text-[11px] px-2.5 py-1.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1 cursor-pointer transition active:scale-95"
-                  >
-                    <LogOut className="w-3.5 h-3.5 text-red-400" />
-                    <span className="hidden xs:inline">LOGOUT</span>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={openAuthModal}
-                  className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] sm:shadow-[3px_3px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] shrink-0"
-                >
-                  <LogIn className="w-3.5 h-3.5 text-black" />
-                  <span>SIGN IN</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -378,61 +340,43 @@ function LandingPage() {
                   transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 />
 
-                {user ? (
-                  <div className="flex items-center gap-2 justify-between p-2 sm:px-3 sm:py-2.5 min-h-[44px]">
-                    <AnimatePresence mode="wait" custom={direction}>
-                      <motion.div
-                        key={activePlatform}
-                        custom={direction}
-                        variants={commandVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{
-                          x: { type: "spring", stiffness: 500, damping: 35 },
-                          opacity: { duration: 0.2 },
-                          scale: { duration: 0.2 },
-                          filter: { duration: 0.25 },
-                        }}
-                        className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0 scrollbar-none"
+                <div className="flex items-center gap-2 justify-between p-2 sm:px-3 sm:py-2.5 min-h-[44px]">
+                  <AnimatePresence mode="wait" custom={direction}>
+                    <motion.div
+                      key={activePlatform}
+                      custom={direction}
+                      variants={commandVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{
+                        x: { type: "spring", stiffness: 500, damping: 35 },
+                        opacity: { duration: 0.2 },
+                        scale: { duration: 0.2 },
+                        filter: { duration: 0.25 },
+                      }}
+                      className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto text-emerald-400 font-bold flex-1 min-w-0 scrollbar-none"
+                    >
+                      <span
+                        className="flex-shrink-0 text-xs font-mono font-black"
+                        style={{ color: currentPlatform.accentColor }}
                       >
-                        <span
-                          className="flex-shrink-0 text-xs font-mono font-black"
-                          style={{ color: currentPlatform.accentColor }}
-                        >
-                          {currentPlatform.prompt}
-                        </span>
-                        <code className="whitespace-nowrap text-[10px] sm:text-xs text-emerald-300">
-                          {currentPlatform.command}
-                        </code>
-                      </motion.div>
-                    </AnimatePresence>
-
-                    <button
-                      onClick={handleCopyCLI}
-                      className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-1.5 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1 ml-1 sm:ml-2 active:scale-95 transition"
-                    >
-                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copied ? "COPIED!" : "COPY"}</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 sm:px-4 sm:py-3.5 bg-black/75 backdrop-blur-md min-h-[50px]">
-                    <div className="flex items-center gap-2 text-gray-300 text-xs font-mono">
-                      <Lock className="w-4 h-4 text-[#ffe600] shrink-0 animate-pulse" />
-                      <span>
-                        <span className="text-[#ffe600] font-black">ACCESS LOCKED:</span> Sign in to unlock the 1-Line {currentPlatform.shellName} command.
+                        {currentPlatform.prompt}
                       </span>
-                    </div>
-                    <button
-                      onClick={openAuthModal}
-                      className="bg-[#ffe600] text-black hover:bg-yellow-400 font-mono font-black text-xs px-3.5 py-1.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition active:scale-95 shrink-0"
-                    >
-                      <LogIn className="w-3.5 h-3.5 text-black" />
-                      <span>SIGN IN TO UNLOCK</span>
-                    </button>
-                  </div>
-                )}
+                      <code className="whitespace-nowrap text-[10px] sm:text-xs text-emerald-300">
+                        {currentPlatform.command}
+                      </code>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  <button
+                    onClick={handleCopyCLI}
+                    className="bg-[#ffe600] text-black font-black font-mono text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-1.5 rounded-lg border-2 border-black hover:bg-yellow-400 cursor-pointer flex-shrink-0 flex items-center gap-1 ml-1 sm:ml-2 active:scale-95 transition"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? "COPIED!" : "COPY"}</span>
+                  </button>
+                </div>
               </div>
             </div>
 

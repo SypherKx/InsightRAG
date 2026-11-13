@@ -1,9 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Menu, X, Sparkles, BookOpen, Layers, Terminal, LogIn, LogOut, User as UserIcon } from "lucide-react";
+import { Download, Menu, X, Sparkles, BookOpen, Layers, Terminal } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
 
 const links = [
   { to: "/", label: "Overview" },
@@ -15,7 +14,6 @@ const links = [
 export function Navbar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, openAuthModal, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[rgba(178,182,189,0.12)] bg-[#000000]/95 backdrop-blur-md transition-colors duration-200">
@@ -48,49 +46,16 @@ export function Navbar() {
 
         {/* Action Buttons & Mobile Hamburger Toggle */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Sign In / User Status */}
-          {user ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-[#141414] text-white font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[rgba(178,182,189,0.2)]">
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt="User"
-                    className="w-4 h-4 rounded-full border border-yellow-400 object-cover"
-                  />
-                ) : (
-                  <UserIcon className="w-3.5 h-3.5 text-[#ffe600]" />
-                )}
-                <span className="hidden sm:inline font-bold max-w-[90px] truncate text-white">
-                  {user.displayName || user.email?.split("@")[0] || "User"}
-                </span>
-              </div>
-              <button
-                onClick={logout}
-                title="Sign Out"
-                className="p-2 rounded-lg bg-[#141414] border border-[rgba(178,182,189,0.2)] text-gray-400 hover:text-red-400 hover:bg-[#242424] transition"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={openAuthModal}
-              className="inline-flex items-center gap-1.5 bg-[#ffe600] text-black font-mono font-black text-xs px-3 py-2 rounded-lg border border-black hover:bg-yellow-400 transition active:scale-95 cursor-pointer"
-            >
-              <LogIn className="w-3.5 h-3.5 text-black" />
-              <span>Sign In</span>
-            </button>
-          )}
-
-          {/* Studio Link for fast access */}
-          <Link
-            to="/app/upload"
-            className="hidden sm:inline-flex items-center gap-1.5 bg-white/10 text-white font-mono font-bold text-xs px-3 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition active:scale-95"
+          {/* GitHub Repo Link */}
+          <a
+            href="https://github.com/SypherKx/InsightRAG"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 bg-[#ffe600] text-black font-mono font-black text-xs px-3.5 py-2 rounded-lg border border-black hover:bg-yellow-400 transition active:scale-95 cursor-pointer shadow-[2px_2px_0px_#000]"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#ffe600]" />
-            <span>Open Studio</span>
-          </Link>
+            <Terminal className="w-3.5 h-3.5 text-black" />
+            <span>GitHub</span>
+          </a>
 
           {/* Desktop App Download CTA */}
           <a
@@ -141,14 +106,16 @@ export function Navbar() {
           </div>
 
           <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
-            <Link
-              to="/app/upload"
+            <a
+              href="https://github.com/SypherKx/InsightRAG"
+              target="_blank"
+              rel="noreferrer"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center gap-2 bg-[#ffe600] text-black font-mono font-black text-xs py-2.5 rounded-lg border border-black shadow-[2px_2px_0px_#000] active:scale-98"
             >
-              <Sparkles className="w-4 h-4 text-black" />
-              <span>Launch Local Studio Workspace</span>
-            </Link>
+              <Terminal className="w-4 h-4 text-black" />
+              <span>GitHub Repository</span>
+            </a>
 
             <Link
               to="/docs"
